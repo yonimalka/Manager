@@ -30,7 +30,7 @@ app.use((req, res, next) => {
     next();
   });
 
-// const mongoURI = 'mongodb://localhost:27017/ManagoDB';
+
 
 // openai API setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
