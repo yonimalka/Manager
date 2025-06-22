@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  {{!-- <!-- debug block, remove later -->
+<pre style="font-size:10px; direction:ltr;">
+{{{json this}}}
+</pre> --}}
+
+  <style>
+    /* === GLOBAL STYLES === */
+    body  { font-family: Arial, sans-serif; margin: auto; width: auto; height: auto;}
+    .general-details {display: flex; justify-content: space-between;}
+    .quote-details   { margin-right: 30px; margin-bottom: 100px; width: 200px; height: 250px; background-color: #b3d1ea; padding-right: 10px; padding-top: 40px;}
+    .company-details { padding-left: 200px; padding-top: 100px;}
+    h1    { color: #253a4c; }
+    h4    {color: #0B6ABF}
+    .logo { width: 120px; }
+
+    /* === TABLE LOOK & FEEL === */
+    table                 {  border-collapse: collapse; margin-bottom: 40px;}
+    th                    {padding: 10px;}   
+    tr, td                { border-bottom: 1px solid; padding: 15px; text-align: right;}          /* header blue tint   */
+    .payment              {padding-right: 555px;}
+    .total-payment-lyrics {font-weight: bold; padding-right: 555px;}
+    .total, .vat          { background: #e8eefc; } /* totals row */
+    .total-payment        { background: #8b8f92; font-weight: bold; }
+    .description          { align-items: rtl; width: 700px; padding-right: 10px; padding-bottom: 40px; padding-top: 30px; font-size: large;}
+  </style>
+</head>
+<body>
+<div class="general-details">
+    <!-- Quote title and metadata -->
+<div class="quote-details">
+<h4>הצעת מחיר מס' {{header.quoteNo}}</h4>
+  <p>{{header.date}}</p>
+  <h1>לכבוד: <br/>{{header.client}}</h1>
+</div>
+ <!-- company logo -->
+  <div class="company-details">
+    <p>{{header.company}}</p><br/>
+    <p>טלפון {{phoneNumber}}</p>
+    {{!-- <img src="{{logo}}" class="logo"> --}}
+  </div>
+</div>
+ 
+  <h4 class="project-title">{{projectTitle}}</h4>
+
+  
+  <p class="description">{{details}}</p>
+  <!-- === PRICING TABLE === -->
+  <table>
+    <thead>
+      <tr>
+        <th>תיאור</th>
+        <th>כמות</th>
+        <th>מחיר יח'</th>
+        <th>סה״כ</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {{!-- loop over each line item --}}
+      {{#each items}}
+        <tr>
+          <td>{{desc}}</td>
+          <td>{{qty}} {{unit}}</td>
+          <td>{{unitPrice}} ₪</td>
+          <td>{{calcTotal this}} ₪</td>
+        </tr>
+      {{/each}}
+    </tbody>
+
+    <tfoot>
+      <tr><td class = "payment" colspan="3">סה״כ</td>          <td class="total">{{totals.sub}} ₪</td></tr>
+      <tr><td class = "payment" colspan="3">מע״מ</td>          <td class="vat">{{totals.vat}} ₪</td></tr>
+      <tr><td class = "total-payment-lyrics" colspan="3" >סה״כ לתשלום</td>   <td class="total-payment">{{totals.grand}} ₪</td></tr>
+    </tfoot>
+  </table>
+
+  <!-- Payment terms below the table -->
+  <p><strong>תנאי תשלום:</strong> {{paymentTerms}}</p>
+
+</body>
+</html>
