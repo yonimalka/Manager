@@ -23,7 +23,7 @@ app.use(bodyParser.urlencoded({ extended: true}));
 
 
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000', );
+    res.header('Access-Control-Allow-Origin', 'http://localhost:3000', process.env.MONGO_URI);
     res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     res.header('Access-Control-Allow-Credentials', 'true');
@@ -47,7 +47,7 @@ async function connectToDB(userId) {
       await client.connect();
       console.log('Successfully connected to MongoDB!');
 
-      const db = client.db('ManagoDB');
+      const db = client.db('managoDB');
       // Initialize GridFS
       gfsBucket = new GridFSBucket(db, { bucketName: `user_${userId}_bucket`});
       console.log('GridFSBucket initialized');
@@ -178,7 +178,8 @@ app.post("/SignInDetails", async (req, res) => {
 })
 app.get("/getUserDetails/:userId", async (req, res) => {
    const userId = req.params.userId;
-  
+   console.log(userId);
+   
    await UserModel.findById(userId)
    .then((user)=>{
     const userDetails = {
