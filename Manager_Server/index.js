@@ -38,7 +38,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 let gfsBucket;
 
 async function connectToDB(userId) {
-  if (!userId) throw new Error("userId is required");
+  // if (!userId) throw new Error("userId is required");
 
   // Connect Mongoose for data models
   await mongoose.connect(process.env.MONGO_URI, {
