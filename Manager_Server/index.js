@@ -23,7 +23,7 @@ app.use(bodyParser.urlencoded({ extended: true}));
 
 
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+    res.header('Access-Control-Allow-Origin', 'http://localhost:3000', );
     res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     res.header('Access-Control-Allow-Credentials', 'true');
@@ -175,11 +175,21 @@ app.post("/SignInDetails", async (req, res) => {
     console.log("userId: ",user._id);
     res.send({userId: user._id})
     // res.status(200).json({message: "Login successful!"})
-    
-    
-    
+})
+app.get("/getUserDetails/:userId", async (req, res) => {
+   const userId = req.params.userId;
   
-  
+   await UserModel.findById(userId)
+   .then((user)=>{
+    const userDetails = {
+      name: user.name,
+      surname: user.surname,
+      email: user.email
+    }
+    res.json(userDetails)
+   }).catch((err) =>{
+    console.log("error occurd on getUserDetails",err);
+  } )
 })
 app.get("/getUsers/:userId", async (req, res) => {
   const userId = req.params.userId;
@@ -594,6 +604,17 @@ Do NOT wrap in markdown, do NOT add commentary.
     res.status(404).json({ error: 'Error generating quote' });
   }
 });
+
+app.delete("/deleteUser/:userId", async (req, res) => {
+ const userId = req.params.userId;
+
+ const deleteUser = await UserModel.findByIdAndDelete(userId);
+ if (!deleteUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ message: 'User deleted successfully', user: deleteUser });
+
+})
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`);
