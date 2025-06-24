@@ -119,6 +119,7 @@ const HomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 50,
     padding: 16,
     backgroundColor: "#f2f4f7",
   },
