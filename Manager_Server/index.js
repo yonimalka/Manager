@@ -35,16 +35,18 @@ app.use((req, res, next) => {
 // openai API setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Connect Mongoose for data models
+  await mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
+  
 let gfsBucket;
 
 async function connectToDB(userId) {
   // if (!userId) throw new Error("userId is required");
 
-  // Connect Mongoose for data models
-  await mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  });
+  
 
   console.log('✅ Mongoose connected to MongoDB Atlas');
 
