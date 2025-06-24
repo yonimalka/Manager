@@ -618,7 +618,8 @@ Do NOT wrap in markdown, do NOT add commentary.
 
 app.delete("/deleteUser/:userId", async (req, res) => {
  const userId = req.params.userId;
-
+ console.log(userId);
+ 
  const deleteUser = await UserModel.findByIdAndDelete(userId);
  if (!deleteUser) {
       return res.status(404).json({ message: 'User not found' });
