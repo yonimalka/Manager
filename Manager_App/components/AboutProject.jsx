@@ -235,6 +235,7 @@ const StatBlock = ({ label, value }) => (
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 60,
     padding: 16,
     paddingBottom: 40,
     backgroundColor: "#F9F9F9",

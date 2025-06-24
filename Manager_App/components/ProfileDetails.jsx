@@ -39,10 +39,9 @@ const ProfileDetails = () => {
     }
     const handleDelete = async () => {
       navigation.navigate("LoginScreen")
-      await axios.delete(`${SERVER_URL}/deleteUser/${userId}`)
-      .then(res =>{
-        console.log(res.data);
-      })
+      const res = await axios.delete(`${SERVER_URL}/deleteUser/${userId}`)
+      console.log(res.data);
+      
     
     }
     
@@ -62,6 +61,7 @@ const ProfileDetails = () => {
 
 const styles = StyleSheet.create({
     container: {
+      marginTop: 60,
       padding: 16,
       backgroundColor: "#f9f9f9",
     },

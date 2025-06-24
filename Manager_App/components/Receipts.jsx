@@ -118,6 +118,7 @@ const Receipts = () => {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 60,
     padding: 24,
     flexGrow: 1,
     backgroundColor: "#f7f9fc",

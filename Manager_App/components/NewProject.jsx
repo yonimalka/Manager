@@ -181,6 +181,7 @@ const NewProject = () => {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 60,
     flex: 1,
     backgroundColor: "#f8fafc",
     padding: 20,

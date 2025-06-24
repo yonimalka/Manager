@@ -171,6 +171,7 @@ const PriceOffer = () => {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 60,
     flex: 1,
     backgroundColor: "#fefefe",
     paddingHorizontal: 30,

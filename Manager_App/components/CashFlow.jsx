@@ -110,6 +110,7 @@ const CashFlow = () => {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 60,
     padding: 16,
     backgroundColor: "#f9f9f9",
   },
