@@ -91,6 +91,12 @@ const HomeScreen = ({ navigation }) => {
           >
             <Text style={styles.buttonText}>💰 הצעת מחיר</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate("ProfileDetails", { userId })}
+          >
+            <Text style={styles.buttonText}>איזור אישי</Text>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>הפרויקטים שלך</Text>

@@ -19,6 +19,7 @@ import { ValueProvider } from "./ValueContext";
 import PriceOffer from "./PriceOffer";
 import PdfPreview from "./PdfPreview";
 import CashFlow from "./CashFlow";
+import ProfileDetails from "./ProfileDetails";
 // React Navigation Setup
 const Stack = createStackNavigator();
 
@@ -27,6 +28,7 @@ const MainApp = () => {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="LoginScreen">
         <Stack.Screen name="PdfPreview" component={PdfPreview}/>
+        <Stack.Screen name="ProfileDetails" component={ProfileDetails}/>
         <Stack.Screen name="LoginScreen" component={LoginScreen}/>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="SignUp" component={SignUp} />
