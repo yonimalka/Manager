@@ -27,16 +27,16 @@ const MainApp = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="LoginScreen">
-        <Stack.Screen name="PdfPreview" component={PdfPreview}/>
-        <Stack.Screen name="ProfileDetails" component={ProfileDetails}/>
-        <Stack.Screen name="LoginScreen" component={LoginScreen}/>
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="SignUp" component={SignUp} />
-        <Stack.Screen name="AboutProject" component={AboutProject} />
-        <Stack.Screen name="NewProject" component={NewProject} />
-        <Stack.Screen name="PriceOffer" component={PriceOffer}/>
-        <Stack.Screen name="Receipts" component={Receipts} />
-        <Stack.Screen name="CashFlow" component={CashFlow} />
+        <Stack.Screen name="PdfPreview" component={PdfPreview} options={{ headerShown: false }}/>
+        <Stack.Screen name="ProfileDetails" component={ProfileDetails} options={{ headerShown: false }}/>
+        <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }}/>
+        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }}/>
+        <Stack.Screen name="SignUp" component={SignUp} options={{ headerShown: false }}/>
+        <Stack.Screen name="AboutProject" component={AboutProject} options={{ headerShown: false }}/>
+        <Stack.Screen name="NewProject" component={NewProject} options={{ headerShown: false }}/>
+        <Stack.Screen name="PriceOffer" component={PriceOffer} options={{ headerShown: false }}/>
+        <Stack.Screen name="Receipts" component={Receipts} options={{ headerShown: false }}/>
+        <Stack.Screen name="CashFlow" component={CashFlow} options={{ headerShown: false }}/>
       </Stack.Navigator>
     </NavigationContainer>
   );
