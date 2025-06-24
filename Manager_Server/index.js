@@ -138,7 +138,7 @@ const createNewUser = async () =>{
     totalExpenses: 0
   });
   try {
-    // const result = await user.save();
+    const result = await user.save();
     // console.log("User with projects created:", result);
   } catch (err) {
     console.error("Error creating user with projects:", error.message);
