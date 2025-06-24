@@ -36,11 +36,12 @@ app.use((req, res, next) => {
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Connect Mongoose for data models
-  await mongoose.connect(process.env.MONGO_URI, {
+   mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
   });
-  
+   console.log('✅ Mongoose connected to MongoDB Atlas');
+
 let gfsBucket;
 
 async function connectToDB(userId) {
@@ -48,7 +49,7 @@ async function connectToDB(userId) {
 
   
 
-  console.log('✅ Mongoose connected to MongoDB Atlas');
+ 
 
   // Connect MongoClient for GridFS
   const client = new MongoClient(process.env.MONGO_URI);
