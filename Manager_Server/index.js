@@ -35,35 +35,39 @@ app.use((req, res, next) => {
 // openai API setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Connect Mongoose for data models
-   mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  });
-   console.log('✅ Mongoose connected to MongoDB Atlas');
-
 let gfsBucket;
 
-async function connectToDB(userId) {
-  // if (!userId) throw new Error("userId is required");
+async function connectToGridFS(userId = 'default') {
+  const client = new MongoClient(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 
-  
-
- 
-
-  // Connect MongoClient for GridFS
-  const client = new MongoClient(process.env.MONGO_URI);
   await client.connect();
-
-  const db = client.db('managoDB');
-
+  const db = client.db('managoDB'); // Must match your actual DB name
   gfsBucket = new GridFSBucket(db, {
     bucketName: `user_${userId}_bucket`
   });
 
   console.log('📦 GridFSBucket initialized');
 }
-connectToDB();
+
+async function init() {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+
+    console.log('✅ Mongoose connected to MongoDB Atlas');
+
+    await connectToGridFS(); // Ensure GridFS connects after Mongoose
+} catch (err) {
+    console.error('❌ Error connecting:', err);
+  }
+}
+
+init();
 
 
 const ReceiptSchema = new mongoose.Schema({
