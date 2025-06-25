@@ -19,9 +19,26 @@ const CashFlow = () => {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [incomesData, setIncomesData] = useState([]);
   const [totalIncomes, setTotalIncomes] = useState(0);
+  const [thisMonth, setThisMonth] = useState(null);
 
+  const monthNames = [
+ "ינואר",    // January
+  "פברואר",   // February
+  "מרץ",      // March
+  "אפריל",    // April
+  "מאי",      // May
+  "יוני",     // June
+  "יולי",     // July
+  "אוגוסט",   // August
+  "ספטמבר",   // September
+  "אוקטובר",  // October
+  "נובמבר",   // November
+  "דצמבר"     // December
+];
   useEffect(() => {
     fetchData();
+    const now = new Date();
+    setThisMonth(monthNames[now.getMonth()]);
   }, []);
 
   const fetchData = async () => {
@@ -73,7 +90,7 @@ const CashFlow = () => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.headTitle}>תזרים מזומנים</Text>
-
+      <Text style={styles.monthTitle}> חודש {thisMonth}</Text>
       <View style={styles.kpiContainer}>
         <View style={styles.kpiCard}>
           <Text style={styles.kpiTitle}>סה"כ הכנסות</Text>
@@ -110,12 +127,18 @@ const CashFlow = () => {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 60,
+    paddingTop: 70,
     padding: 16,
     backgroundColor: "#f9f9f9",
   },
   headTitle: {
     fontSize: 26,
+    fontWeight: "bold",
+    textAlign: "right",
+    marginBottom: 20,
+  },
+  monthTitle: {
+    fontSize: 20,
     fontWeight: "bold",
     textAlign: "right",
     marginBottom: 20,

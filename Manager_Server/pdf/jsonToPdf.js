@@ -2,6 +2,8 @@ const fs         = require('fs');
 const path       = require('path');
 const handlebars = require('handlebars');
 const puppeteer  = require('puppeteer');
+global.ReadableStream = require('web-streams-polyfill/ponyfill').ReadableStream;
+
 handlebars.registerHelper('json', ctx =>
   JSON.stringify(ctx, null, 2)
 );

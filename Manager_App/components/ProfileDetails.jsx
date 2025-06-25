@@ -30,9 +30,9 @@ const ProfileDetails = () => {
     const fetchData = async () =>{
       try {
       const response = await axios.get(`${SERVER_URL}/getUserDetails/${userId}`);
-      await setUserDetails(response.data);
+      setUserDetails(response.data);
       console.log("response:", response.data);
-      console.log("user Details:", userDetails);
+      
       } catch (error){
         console.error("Error occurred: " + error);
       }
@@ -46,7 +46,7 @@ const ProfileDetails = () => {
     }
     
     return (
-       <View style={StyleSheet.container}>
+       <View style={styles.container}>
         <Text style={styles.headTitle}>איזור אישי</Text>
         <Text style={styles.card}>Name: {userDetails ? userDetails.name : null}</Text> 
         <Text style={styles.card}>Surname: {userDetails ? userDetails.surname : null}</Text>
@@ -54,14 +54,15 @@ const ProfileDetails = () => {
         <TouchableOpacity
          style={styles.actionButton}
          onPress={handleDelete}
-         ><Text>Delete Profile</Text></TouchableOpacity>
+         ><Text style={styles.deleteText}>מחק חשבון</Text></TouchableOpacity>
        </View>
     )
 }
 
 const styles = StyleSheet.create({
     container: {
-      marginTop: 60,
+      paddingTop: 70,
+      paddingBottom: 700,
       padding: 16,
       backgroundColor: "#f9f9f9",
     },
@@ -83,15 +84,18 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   actionButton: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff0f0",
     padding: 14,
     borderRadius: 12,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.10,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 5,
     elevation: 2,
   },
+  deleteText: {
+    color: "#d32f2f",
+  }
 })
 export default ProfileDetails;

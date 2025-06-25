@@ -90,41 +90,41 @@ const NewProject = () => {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>Create New Project</Text>
+        <Text style={styles.heading}>פרוייקט חדש</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Project Name"
+          placeholder="שם הפרוייקט"
           value={details.name}
           onChangeText={(text) => setDetails({ ...details, name: text })}
         />
         <TextInput
           style={styles.input}
-          placeholder="Number of Days"
+          placeholder="מספר ימים"
           keyboardType="numeric"
           value={details.days}
           onChangeText={(text) => setDetails({ ...details, days: text })}
         />
         <TextInput
           style={styles.input}
-          placeholder="Total Payment"
+          placeholder="תשלום כולל"
           keyboardType="numeric"
           value={details.payment}
           onChangeText={(text) => setDetails({ ...details, payment: text })}
         />
 
         {/* Materials Section */}
-        <Text style={styles.sectionTitle}>Materials</Text>
+        <Text style={styles.sectionTitle}>כתב כמויות</Text>
         <View style={styles.row}>
           <TextInput
             style={[styles.input, { flex: 2 }]}
-            placeholder="Material"
+            placeholder="פריט"
             value={inputValue}
             onChangeText={setInputValue}
           />
           <TextInput
             style={[styles.input, { flex: 1, marginLeft: 8 }]}
-            placeholder="Count"
+            placeholder="כמות"
             keyboardType="numeric"
             value={inputCountValue}
             onChangeText={setInputCountValue}
@@ -143,17 +143,17 @@ const NewProject = () => {
         ))}
 
         {/* Tasks Section */}
-        <Text style={styles.sectionTitle}>Tasks</Text>
+        <Text style={styles.sectionTitle}>משימות</Text>
         <View style={styles.row}>
           <TextInput
             style={[styles.input, { flex: 2 }]}
-            placeholder="Task Name"
+            placeholder="משימה"
             value={taskNameInput}
             onChangeText={setTaskNameInput}
           />
           <TextInput
             style={[styles.input, { flex: 2, marginLeft: 8 }]}
-            placeholder="Details"
+            placeholder="תיאור המשימה"
             value={taskDetailsInput}
             onChangeText={setTaskDetailsInput}
           />
@@ -172,7 +172,7 @@ const NewProject = () => {
 
         {/* Submit */}
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Add Project</Text>
+          <Text style={styles.submitText}>צור פרוייקט</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -181,10 +181,11 @@ const NewProject = () => {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 60,
+    paddingTop: 70,
     flex: 1,
     backgroundColor: "#f8fafc",
     padding: 20,
+    
   },
   heading: {
     fontSize: 28,
@@ -192,12 +193,14 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     textAlign: "center",
     marginBottom: 24,
+    paddingBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
     color: "#1e293b",
     marginVertical: 16,
+    textAlign: "right",
   },
   input: {
     backgroundColor: "#ffffff",
@@ -205,13 +208,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 15,
     fontSize: 16,
     marginBottom: 12,
     color: "#1e293b",
+    textAlign: "right",
   },
   row: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   itemRow: {
-  flexDirection: "row",
+  flexDirection: "row-reverse",
   justifyContent: "space-between",
   alignItems: "center",
   backgroundColor: "#ffffff",
@@ -265,6 +269,7 @@ const styles = StyleSheet.create({
 },
 
 itemText: {
+  textAlign: "right",
   fontSize: 16,
   color: "#1e293b",
   fontWeight: "500",

@@ -14,6 +14,7 @@ import { SERVER_URL } from "@env";
 import MaterialsInputModal from "./MaterialsInputModal";
 import TaskInputModal from "./TasksInputModal";
 import { Ionicons } from "@expo/vector-icons";
+import WebView from "react-native-webview";
 
 const AboutProject = () => {
   const navigation = useNavigation();
@@ -88,6 +89,12 @@ const AboutProject = () => {
     setMaterialsArray([...materialsArray, newItem]);
     setMaterialsModalVisible(false);
   };
+
+  const handleReceiptPress = (item) => {
+    // console.log("item");
+      navigation.navigate("ReceiptPreview", { uri: item });
+    
+  }
 
   const visibleReceipts = showAll ? receipts : receipts.slice(0, 6);
 
@@ -214,11 +221,15 @@ const AboutProject = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item }) => (
+           <TouchableOpacity onPress={() => handleReceiptPress(item.data)}>
             <Image
+              
               source={{ uri: item.data }}
               style={styles.receiptImage}
               resizeMode="cover"
             />
+           </TouchableOpacity>
+            
           )}
         />
       </View>
@@ -235,7 +246,7 @@ const StatBlock = ({ label, value }) => (
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 60,
+    paddingTop: 70,
     padding: 16,
     paddingBottom: 40,
     backgroundColor: "#F9F9F9",
@@ -265,10 +276,10 @@ const styles = StyleSheet.create({
   },
   statBlock: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 18,
     paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginHorizontal: 6,
+    paddingHorizontal: 7,
+    marginHorizontal: 1,
     alignItems: "center",
     backgroundColor: "#FAFAFA",
     shadowColor: "#000",

@@ -20,6 +20,7 @@ import PriceOffer from "./PriceOffer";
 import PdfPreview from "./PdfPreview";
 import CashFlow from "./CashFlow";
 import ProfileDetails from "./ProfileDetails";
+import ReceiptPreview from "./ReceiptPreview";
 // React Navigation Setup
 const Stack = createStackNavigator();
 
@@ -36,6 +37,7 @@ const MainApp = () => {
         <Stack.Screen name="NewProject" component={NewProject} options={{ headerShown: false }}/>
         <Stack.Screen name="PriceOffer" component={PriceOffer} options={{ headerShown: false }}/>
         <Stack.Screen name="Receipts" component={Receipts} options={{ headerShown: false }}/>
+        <Stack.Screen name="ReceiptPreview" component={ReceiptPreview} options={{ headerShown: false }}/>
         <Stack.Screen name="CashFlow" component={CashFlow} options={{ headerShown: false }}/>
       </Stack.Navigator>
     </NavigationContainer>

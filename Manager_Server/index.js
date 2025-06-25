@@ -28,7 +28,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:3000',
-    'https://manager-asqh.onrender.com' // replace with your actual domain
+    'https://manager-asqh.onrender.com' 
   ];
 
   const origin = req.headers.origin;
@@ -47,36 +47,30 @@ app.use((req, res, next) => {
 // openai API setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-let gfsBucket;
+let gfsBuckets = new Map(); // Store buckets by userId
 
-async function connectToGridFS(userId = 'default') {
-  const client = new MongoClient(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+async function connectToGridFS(userId) {
+  if (gfsBuckets.has(userId)) return gfsBuckets.get(userId); // ✅ Reuse existing bucket
 
+  const client = new MongoClient(process.env.MONGO_URI);
   await client.connect();
-  const db = client.db('managoDB'); // Must match your actual DB name
-  gfsBucket = new GridFSBucket(db, {
+
+  const db = client.db('managoDB');
+  const bucket = new GridFSBucket(db, {
     bucketName: `user_${userId}_bucket`
   });
 
-  console.log('📦 GridFSBucket initialized');
+  gfsBuckets.set(userId, bucket); // ✅ Store bucket for reuse
+  console.log(`📦 GridFSBucket initialized for user ${userId}`);
+  return bucket;
 }
 
 async function init() {
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      dbName: 'managoDB',
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-
+    await mongoose.connect(process.env.MONGO_URI, { dbName: 'managoDB' });
     console.log('✅ Mongoose connected to MongoDB Atlas');
-
-    await connectToGridFS(); // Ensure GridFS connects after Mongoose
-} catch (err) {
-    console.error('❌ Error connecting:', err);
+  } catch (err) {
+    console.error('❌ Error connecting to MongoDB:', err);
   }
 }
 
@@ -88,6 +82,7 @@ const ReceiptSchema = new mongoose.Schema({
   sumOfReceipt: Number,
   contentType: String,
   date: {
+    day: String,
     month: String,
     year: String,
     time: String,
@@ -111,6 +106,7 @@ const paymentDetailsSchema = new mongoose.Schema({
     year: String,
     month: String,
     day: String,
+    time: String,
   }
 })
 const ProjectSchema = new mongoose.Schema({
@@ -200,7 +196,7 @@ app.post("/SignInDetails", async (req, res) => {
 })
 app.get("/getUserDetails/:userId", async (req, res) => {
    const userId = req.params.userId;
-   console.log(userId);
+  //  console.log(userId);
    
    await UserModel.findById(userId)
    .then((user)=>{
@@ -286,7 +282,7 @@ app.get("/getProject/:userId/:projectId", (req, res) => {
     // console.log(user.projects);
     const project = user.projects.find((p) => p._id.toString() == Id);
     // console.log(project);
-    res.send(project);
+    res.json(project);
     
   }).catch((err) =>{
     console.log(err);
@@ -297,14 +293,14 @@ app.get("/getProject/:userId/:projectId", (req, res) => {
     const userId = req.params.userId;
     const {sumOfReceipt, category, projectId} = req.body;
     const { file } = req;
-    // console.log(file);
+    console.log(file);
     
     if (!file){
       return res.status(400).send('No file uploaded');
     }
     
     console.log(userId);
-    await connectToDB(userId);
+    const gfsBucket = await connectToGridFS(userId);
       // Upload file to GridFS
       const stream = gfsBucket.openUploadStream(req.file.originalname, {
         contentType: req.file.mimetype,
@@ -319,7 +315,7 @@ app.get("/getProject/:userId/:projectId", (req, res) => {
       }
     // Save image metadata in the Image collection
     const now = new Date();
-    const date = now.toLocaleDateString();     // e.g., "5/23/2025"
+    // const date = now.toLocaleDateString();     // e.g., "5/23/2025"
     const time = now.toLocaleTimeString();     // e.g., "2:35:42 PM"
 
     const receiptImage = {
@@ -327,7 +323,7 @@ app.get("/getProject/:userId/:projectId", (req, res) => {
       sumOfReceipt: sumOfReceipt, 
       contentType: req.file.mimetype,
       date: {
-        day: now.getDay() +1,
+        day: now.getDate(),
         month: now.getMonth() +1,
         year: now.getFullYear(),
         time,
@@ -382,12 +378,13 @@ app.get('/getReceipts/:userId/:projectId', async (req, res) =>{
     if (!files || files.length === 0) {
       return res.status(404).json({ message: 'No files found' });
     }
-   await connectToDB(userId)
+   await connectToGridFS(userId) 
     const images = [];
     
+    const bucket = gfsBuckets.get(userId); // get the GridFSBucket for that user
     for (const file of files) {
       const chunks = [];
-      const stream = gfsBucket.openDownloadStreamByName(file.filename);
+      const stream = bucket.openDownloadStreamByName(file.filename);
 
       await new Promise((resolve, reject) => {
         stream.on('data', (chunk) => chunks.push(chunk));
@@ -478,7 +475,7 @@ app.post('/UpdatePayment/:userId/:projectId', async (req, res) =>{
   const {paidAmount} = req.body;
   // console.log(paidAmount);
   const now = new Date();
-
+  const time = now.toLocaleTimeString();
   UserModel.findById(userId)
   .then(user => {
     const project = user.projects.find((p) => p._id.toString() == Id)
@@ -490,7 +487,8 @@ app.post('/UpdatePayment/:userId/:projectId', async (req, res) =>{
       date: {
         year: now.getFullYear(),
         month: now.getMonth() +1,
-        day: now.getDay()+1
+        day: now.getDate(),
+        time,
       }
     })
     user.totalIncomes += paidAmount; 
@@ -521,7 +519,7 @@ app.get("/getCashFlowIncomes/:userId", async (req, res) =>{
     )
     )
     
-    // console.log("incomes", incomesDetailes);
+    console.log("incomes", incomesDetailes);
     
     res.send(incomesDetailes)
   })
@@ -544,7 +542,7 @@ app.get("/getCashFlowExpenses/:userId", async (req, res) =>{
       })
     )
     )
-    console.log(receiptsDetails);
+    // console.log(receiptsDetails);
     res.send(receiptsDetails)
     
 
@@ -595,7 +593,7 @@ Do NOT wrap in markdown, do NOT add commentary.
     //  console.log("Calling OpenAI with model:", model);
      const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
-      response_format: { type: 'json_object'},
+      response_format: { type: "json_object" },
       messages: [
         { role: 'system', content: `אתה יועץ עסקי שמתמחה בתחום ${projectType} שכותב הצעות מחיר יפות, מסודרות וצבעוניות בעברית` },
         { role: 'user', content: `${prompt}` },
@@ -630,7 +628,7 @@ Do NOT wrap in markdown, do NOT add commentary.
 
 app.delete("/deleteUser/:userId", async (req, res) => {
  const userId = req.params.userId;
- console.log(userId);
+
  
  const deleteUser = await UserModel.findByIdAndDelete(userId);
  if (!deleteUser) {
