@@ -1,8 +1,10 @@
 import React from "react";
 import { WebView } from "react-native-webview";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
-const ReceiptPreview = ({ route }) => {
-  const { uri } = route.params;
+const ReceiptPreview = () => {
+    const route = useRoute();
+  const uri  = route.params?.item.data;
   return <WebView source={{ uri }} />;
 };
 

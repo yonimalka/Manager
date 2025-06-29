@@ -92,7 +92,7 @@ const AboutProject = () => {
 
   const handleReceiptPress = (item) => {
     // console.log("item");
-      navigation.navigate("ReceiptPreview", { uri: item });
+      navigation.navigate("ReceiptPreview", {item});
     
   }
 
@@ -223,7 +223,6 @@ const AboutProject = () => {
           renderItem={({ item }) => (
            <TouchableOpacity onPress={() => handleReceiptPress(item.data)}>
             <Image
-              
               source={{ uri: item.data }}
               style={styles.receiptImage}
               resizeMode="cover"
