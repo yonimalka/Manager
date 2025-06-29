@@ -366,45 +366,50 @@ await UserModel.findByIdAndUpdate(
 
 app.get('/getReceipts/:userId/:projectId', async (req, res) =>{
   const projectId = req.params.projectId;
-  const userId = req.params.userId;
-    
-    try {
-    const files = await mongoose.connection.db
+const userId = req.params.userId;
+
+try {
+  // Step 1: Connect to GridFS bucket only if not already
+  if (!gfsBuckets.has(userId)) {
+    await connectToGridFS(userId);
+  }
+  const bucket = gfsBuckets.get(userId);
+
+  // Step 2: Query files for the project
+  const files = await mongoose.connection.db
     .collection(`user_${userId}_bucket.files`)
-    .find({'metadata.projectId': projectId})
+    .find({ 'metadata.projectId': projectId })
     .toArray();
-    // console.log(files);  
-    
-    if (!files || files.length === 0) {
-      return res.status(404).json({ message: 'No files found' });
-    }
-   await connectToGridFS(userId) 
-    const images = [];
-    
-    const bucket = gfsBuckets.get(userId); // get the GridFSBucket for that user
-    for (const file of files) {
+
+  if (!files || files.length === 0) {
+    return res.status(404).json({ message: 'No files found' });
+  }
+
+  // Step 3: Stream and convert files in parallel
+  const images = await Promise.all(files.map(file => {
+    return new Promise((resolve, reject) => {
       const chunks = [];
       const stream = bucket.openDownloadStreamByName(file.filename);
 
-      await new Promise((resolve, reject) => {
-        stream.on('data', (chunk) => chunks.push(chunk));
-        stream.on('end', resolve);
-        stream.on('error', reject);
+      stream.on('data', chunk => chunks.push(chunk));
+      stream.on('end', () => {
+        const imageBase64 = Buffer.concat(chunks).toString('base64');
+        resolve({
+          filename: file.filename,
+          contentType: file.contentType,
+          data: `data:${file.contentType};base64,${imageBase64}`,
+        });
       });
+      stream.on('error', reject);
+    });
+  }));
 
-      const imageBase64 = Buffer.concat(chunks).toString('base64');
+  res.json(images);
+} catch (err) {
+  console.error(err);
+  res.status(500).send('Error fetching images');
+}
 
-      images.push({
-        filename: file.filename,
-        contentType: file.contentType,
-        data: `data:${file.contentType};base64,${imageBase64}`, // Embed Base64 image data
-      });
-    }
-    res.json(images);
-  } catch (err){
-    console.error(err);
-    res.status(500).send('Error fetching images');
-  }
 })
 
 app.get('/getTotalExpenses/:userId', async (req, res) => {
