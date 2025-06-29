@@ -231,7 +231,7 @@ app.get("/getUsers/:userId", async (req, res) => {
 app.post("/updateDetails/:userId", async (req, res) =>{
     const userId = req.params.userId;
     const {name, payment, days, materialsList, toDoList} = req.body;
-    console.log(toDoList);
+    // console.log(toDoList);
     
     const user = await UserModel.findById(userId);
     
@@ -253,7 +253,7 @@ app.post("/updateTasks/:userId/:projectId", async (req, res) => {
   const userId = req.params.userId;
   const projectId = req.params.projectId;
   const updatedTask = req.body;
-  console.log(updatedTask);
+  // console.log(updatedTask);
   
   UserModel.findById(userId)
   .then(user => { 
@@ -294,13 +294,13 @@ app.get("/getProject/:userId/:projectId", (req, res) => {
     const userId = req.params.userId;
     const {sumOfReceipt, category, projectId} = req.body;
     const { file } = req;
-    console.log(file);
+    // console.log(file);
     
     if (!file){
       return res.status(400).send('No file uploaded');
     }
     
-    console.log(userId);
+    // console.log(userId);
     const gfsBucket = await connectToGridFS(userId);
       // Upload file to GridFS
       const stream = gfsBucket.openUploadStream(req.file.originalname, {
@@ -337,7 +337,7 @@ app.get("/getProject/:userId/:projectId", (req, res) => {
       
       project.receipts.push(receiptImage)
       project.expenses += Number(sumOfReceipt);
-      console.log(project.expenses)
+      // console.log(project.expenses)
       return user.save();
     });
     // const expensesUpdate = mongoose
@@ -447,7 +447,7 @@ app.post('/AddItem/:userId/:projectId', async (req, res) => {
   const userId = req.params.userId;
   const Id = req.params.projectId;
   const addItem = req.body;
-  console.log(addItem);
+  // console.log(addItem);
   
   UserModel.findById(userId)
     .then(user => {
@@ -509,7 +509,7 @@ app.get("/getCashFlowIncomes/:userId", async (req, res) =>{
   const now = new Date();
   const thisMonth = now.getMonth() +1;
  const thisDay = now.getDay() +1;
- console.log(thisDay);
+//  console.log(thisDay);
  
   // const incomesDetailes = []
   UserModel.findById(userId)
@@ -525,7 +525,7 @@ app.get("/getCashFlowIncomes/:userId", async (req, res) =>{
     )
     )
     
-    console.log("incomes", incomesDetailes);
+    // console.log("incomes", incomesDetailes);
     
     res.send(incomesDetailes)
   })
