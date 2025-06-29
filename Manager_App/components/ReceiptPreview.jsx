@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 
 const ReceiptPreview = () => {
     const route = useRoute();
-  const uri  = route.params?.item.data;
+  const uri  = route.params?.item;
   return <WebView source={{ uri }} />;
 };
 
