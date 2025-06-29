@@ -158,6 +158,7 @@ createNewUser();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+app.get("/ping", (req, res) => res.send("pong"));
 app.post("/NewUser", async (req, res) => {
   const {name, surname, email, password} = req.body;
   console.log(name, surname, email, password);
