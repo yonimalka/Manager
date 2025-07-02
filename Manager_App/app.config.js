@@ -14,12 +14,6 @@ export default {
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
-    i18n: {
-      rtl: true
-    },
-    locales: {
-      he: "./locales/he.json"
-    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.yonatanmalka.Manager",

@@ -86,7 +86,12 @@ const LoginScreen = () => {
             </TouchableOpacity>
             <Text>Don't have account? Sign Up!</Text>
             <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
+            <View style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', width: '100%', marginBottom: 20 }}>
+  <Text style={{ fontSize: 20 }}>כפתור</Text>
+  <Button title="בדיקה" onPress={() => {}} />
+</View>
         </View>
+        
     )
 }
 const isRTL = I18nManager.isRTL;
