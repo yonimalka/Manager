@@ -103,6 +103,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     backgroundColor: "#f9f9f9",
+    direction: isRTL ? "rtl" : "ltr",
   },
   title: {
     fontSize: 28,
@@ -110,21 +111,24 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     color: "#333",
     textAlign: isRTL ? "right" : "left",
-    width: "100%",
+    alignSelf: "stretch",
   },
   form: {
     width: "100%",
+    direction: isRTL ? "rtl" : "ltr",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
     backgroundColor: "#fff",
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingStart: 16,
+    paddingEnd: 16,
     marginBottom: 16,
     borderRadius: 8,
     fontSize: 16,
     textAlign: isRTL ? "right" : "left",
+    direction: isRTL ? "rtl" : "ltr",
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -132,7 +136,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   button: {
-    backgroundColor: "#1e90ff", // nicer blue
+    backgroundColor: "#1e90ff",
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",
@@ -147,6 +151,10 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 16,
+    textAlign: isRTL ? "right" : "left",
+    paddingStart: 16,
+    paddingEnd: 16,
+    alignSelf: "stretch",
   },
 });
 

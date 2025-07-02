@@ -127,7 +127,8 @@ const isRTL = I18nManager.isRTL;
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
-    padding: 16,
+    paddingStart: 16,
+    paddingEnd: 16,
     backgroundColor: "#f2f4f7",
   },
   welcome: {
@@ -143,12 +144,14 @@ const styles = StyleSheet.create({
   },
   buttonsRow: {
     flexDirection: "column",
-    gap: 10,
+    rowGap: 10, // `gap` is not supported, use `rowGap` if you're using React Native Web or apply margin
     marginBottom: 30,
   },
   actionButton: {
     backgroundColor: "#ffffff",
-    padding: 14,
+    paddingVertical: 14,
+    paddingStart: 16,
+    paddingEnd: 16,
     borderRadius: 12,
     alignItems: "center",
     shadowColor: "#000",
@@ -176,4 +179,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 });
+
+
 export default HomeScreen;

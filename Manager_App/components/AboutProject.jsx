@@ -255,10 +255,12 @@ const isRTL = I18nManager.isRTL;
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
-    paddingHorizontal: width * 0.05,
+    paddingStart: width * 0.05,
+    paddingEnd: width * 0.05,
     paddingBottom: 40,
     backgroundColor: "#F9F9F9",
     flexGrow: 1,
+    direction: isRTL ? "rtl" : "ltr",
   },
   projectCard: {
     backgroundColor: "#FFFFFF",
@@ -344,7 +346,8 @@ const styles = StyleSheet.create({
     color: "#424242",
     fontSize: 16,
     textAlign: isRTL ? "right" : "left",
-    paddingHorizontal: 12,
+    paddingStart: 12,
+    paddingEnd: 12,
   },
   headerText: {
     fontWeight: "700",
@@ -385,7 +388,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "center",
     marginBottom: 25,
-    paddingHorizontal: 24,
+    paddingStart: 24,
+    paddingEnd: 24,
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -396,7 +400,8 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "700",
     fontSize: 18,
-    marginHorizontal: 10,
+    marginStart: 10,
+    marginEnd: 10,
     textAlign: isRTL ? "right" : "left",
   },
   toggleText: {
