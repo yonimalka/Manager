@@ -87,7 +87,7 @@ const LoginScreen = () => {
             <Text>Don't have account? Sign Up!</Text>
             <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
             <View style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', width: '100%', marginBottom: 20 }}>
-  <Text style={{ fontSize: 20 }}>כפתור</Text>
+  <Text style={{ fontSize: 20 }}>{I18nManager.isRTL ? 'true' : 'false'}</Text>
   <Button title="בדיקה" onPress={() => {}} />
 </View>
         </View>
