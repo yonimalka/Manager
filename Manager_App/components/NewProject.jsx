@@ -11,12 +11,17 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  I18nManager,
 } from "react-native";
 import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
+
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const NewProject = () => {
+  
   const navigation = useNavigation();
   const route = useRoute();
   const userId = route.params?.userId;
@@ -179,13 +184,14 @@ const NewProject = () => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
     flex: 1,
     backgroundColor: "#f8fafc",
     padding: 20,
-    
   },
   heading: {
     fontSize: 28,
@@ -200,7 +206,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#1e293b",
     marginVertical: 16,
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
   },
   input: {
     backgroundColor: "#ffffff",
@@ -212,7 +218,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
     color: "#1e293b",
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
   },
   row: {
     flexDirection: "row-reverse",
@@ -221,7 +227,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   addButton: {
-    backgroundColor: "#333", // teal-ish, friendly and clear
+    backgroundColor: "#333",
     paddingVertical: 10,
     marginBottom: 13,
     paddingHorizontal: 16,
@@ -230,18 +236,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   addButtonText: {
-    color: "#e0f2fe", // very light cyan for contrast
+    color: "#e0f2fe",
     fontSize: 20,
     fontWeight: "bold",
   },
   removeButton: {
-    color: "#fb923c", // warm orange for clarity and alert
+    color: "#fb923c",
     fontSize: 20,
     fontWeight: "bold",
     paddingLeft: 10,
   },
   submitButton: {
-    backgroundColor: "#3b49df", // bright green for success action
+    backgroundColor: "#3b49df",
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
@@ -253,29 +259,27 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   itemRow: {
-  flexDirection: "row-reverse",
-  justifyContent: "space-between",
-  alignItems: "center",
-  backgroundColor: "#ffffff",
-  paddingVertical: 14,
-  paddingHorizontal: 16,
-  borderRadius: 10,
-  marginBottom: 10,
-  shadowColor: "#00000010",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.08,
-  shadowRadius: 4,
-  elevation: 1,
-},
-
-itemText: {
-  textAlign: "right",
-  fontSize: 16,
-  color: "#1e293b",
-  fontWeight: "500",
-  flex: 1,
-},
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: "#00000010",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  itemText: {
+    textAlign: isRTL ? "right" : "left",
+    fontSize: 16,
+    color: "#1e293b",
+    fontWeight: "500",
+    flex: 1,
+  },
 });
-
 
 export default NewProject;

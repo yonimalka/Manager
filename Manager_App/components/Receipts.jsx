@@ -10,11 +10,16 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  I18nManager,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
+
+
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const Receipts = () => {
   const navigation = useNavigation();
@@ -116,6 +121,8 @@ const Receipts = () => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
@@ -126,7 +133,7 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 24,
     fontWeight: "600",
-    textAlign: "center",
+    textAlign: "center", // Keep center alignment as is
     marginBottom: 30,
     color: "#333",
   },
@@ -137,6 +144,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     marginBottom: 6,
+    textAlign: isRTL ? "right" : "left", // Align label text according to RTL
   },
   input: {
     backgroundColor: "#fff",
@@ -152,6 +160,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 1,
+    textAlign: isRTL ? "right" : "left", // Align input text accordingly
   },
   selectButton: {
     backgroundColor: "#e0e7ff",
@@ -187,5 +196,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
 
 export default Receipts;

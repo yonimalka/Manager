@@ -4,8 +4,9 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 
 const ReceiptPreview = () => {
     const route = useRoute();
-  const uri  = route.params?.item;
-  return <WebView source={{ uri }} />;
+  const ReceiptUri  = route.params?.item;
+  return <WebView source={{ uri: ReceiptUri.data }} useWebKit={true}
+        originWhitelist={['*']} />;
 };
 
 export default ReceiptPreview;

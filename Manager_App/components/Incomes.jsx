@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, ActivityIndicator, StyleSheet, I18nManager, } from "react-native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants'; 
 import { useValue } from "./ValueContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
+
 const Incomes = ({ userId }) => {
+  
   const { value } = useValue();
   const [totalIncomes, setTotalIncomes] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +47,8 @@ const Incomes = ({ userId }) => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   card: {
     width: 170,
@@ -56,10 +62,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
-    marginRight: 10,
+    // Use marginLeft if RTL, marginRight if LTR for proper spacing
+    marginRight: isRTL ? 0 : 10,
+    marginLeft: isRTL ? 10 : 0,
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row" : "row-reverse", // flip direction for RTL
     alignItems: "center",
     gap: 8,
   },
@@ -67,12 +75,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#1976d2",
+    textAlign: isRTL ? "left" : "right",  // flip textAlign to keep it visually consistent
   },
   amount: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#1976d2",
-    textAlign: "right",
+    textAlign: isRTL ? "left" : "right",
   },
 });
 

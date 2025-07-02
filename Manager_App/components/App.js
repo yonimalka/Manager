@@ -1,47 +1,48 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, Button, ActivityIndicator, FlatList, TouchableOpacity } from "react-native";
-import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
-import axios from "axios";
-import { SERVER_URL } from "@env";
+import { I18nManager, Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Updates from "expo-updates";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
+import MainApp from "./MainApp";
 
-// Import Screens
-import HomeScreen from "./HomeScreen";
-import Incomes from "./Incomes";
-import Expenses from "./Expenses";
-import NewProject from "./NewProject";
-import Project from "./Project";
-import AboutProject from "./AboutProject";
-import Receipts from "./Receipts";
-import SignUp from "./SignUp";
-import LoginScreen from "./LoginScreen";
-import { ValueProvider } from "./ValueContext";
-import PriceOffer from "./PriceOffer";
-import PdfPreview from "./PdfPreview";
-import CashFlow from "./CashFlow";
-import ProfileDetails from "./ProfileDetails";
-import ReceiptPreview from "./ReceiptPreview";
-// React Navigation Setup
-const Stack = createStackNavigator();
+const App = () => {
+  const [isReady, setIsReady] = useState(false);
 
-const MainApp = () => {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="LoginScreen">
-        <Stack.Screen name="PdfPreview" component={PdfPreview} options={{ headerShown: false }}/>
-        <Stack.Screen name="ProfileDetails" component={ProfileDetails} options={{ headerShown: false }}/>
-        <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }}/>
-        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }}/>
-        <Stack.Screen name="SignUp" component={SignUp} options={{ headerShown: false }}/>
-        <Stack.Screen name="AboutProject" component={AboutProject} options={{ headerShown: false }}/>
-        <Stack.Screen name="NewProject" component={NewProject} options={{ headerShown: false }}/>
-        <Stack.Screen name="PriceOffer" component={PriceOffer} options={{ headerShown: false }}/>
-        <Stack.Screen name="Receipts" component={Receipts} options={{ headerShown: false }}/>
-        <Stack.Screen name="ReceiptPreview" component={ReceiptPreview} options={{ headerShown: false }}/>
-        <Stack.Screen name="CashFlow" component={CashFlow} options={{ headerShown: false }}/>
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
+  useEffect(() => {
+    const setupRTL = async () => {
+      try {
+        const rtlFlag = await AsyncStorage.getItem("rtlApplied");
+
+        if (!I18nManager.isRTL && rtlFlag !== "true") {
+          I18nManager.allowRTL(true);
+          I18nManager.forceRTL(true);
+          await AsyncStorage.setItem("rtlApplied", "true");
+
+          if (Platform.OS !== "web") {
+            await Updates.reloadAsync(); // Restarts the app once
+            return;
+          }
+        }
+
+        setIsReady(true);
+      } catch (err) {
+        console.error("Failed to apply RTL:", err);
+        setIsReady(true); // Allow app to load even on failure
+      }
+    };
+
+    setupRTL();
+  }, []);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return <MainApp />;
 };
 
-export default MainApp;
+export default App;

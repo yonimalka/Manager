@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet } from "react-native";
+import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager, } from "react-native";
 import {SERVER_URL} from "@env";
+import Constants from 'expo-constants';
 import axios from "axios";
 import { TextInput } from "react-native-gesture-handler";
 import { useNavigation, NavigationContainer, useFocusEffect } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const SignUp = () => {
   const navigation = useNavigation();
@@ -70,40 +73,47 @@ const SignUp = () => {
   )
 }
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    title: {
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
+    textAlign: isRTL ? "right" : "left",
+    width: "100%", // to make textAlign work properly inside centered container
   },
   form: {
-    width: '100%',
+    width: "100%",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: 'white',
+    borderColor: "#ccc",
+    backgroundColor: "white",
     padding: 12,
     marginBottom: 10,
     borderRadius: 5,
-    width: '100%',
+    width: "100%",
+    textAlign: isRTL ? "right" : "left",
   },
   button: {
-    backgroundColor: 'blue',
+    backgroundColor: "blue",
     padding: 12,
     borderRadius: 5,
-    alignItems: 'center',
-    width: '100%',
+    alignItems: "center",
+    width: "100%",
   },
   buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center", // buttons usually center text regardless of RTL
   },
-  });
+});
+
 
 export default SignUp;

@@ -7,16 +7,22 @@ import {
   Image,
   ScrollView,
   StyleSheet,
+  I18nManager,
+  Dimensions,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
 import MaterialsInputModal from "./MaterialsInputModal";
 import TaskInputModal from "./TasksInputModal";
 import { Ionicons } from "@expo/vector-icons";
 import WebView from "react-native-webview";
 
+  // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
+
 const AboutProject = () => {
+
   const navigation = useNavigation();
   const route = useRoute();
   const project = route.params?.project;
@@ -90,11 +96,11 @@ const AboutProject = () => {
     setMaterialsModalVisible(false);
   };
 
-  const handleReceiptPress = (item) => {
-    // console.log("item");
-      navigation.navigate("ReceiptPreview", {item});
+  // const handleReceiptPress = (item) => {
+  //   // console.log("item");
+  //     navigation.navigate("ReceiptPreview", { item });
     
-  }
+  // }
 
   const visibleReceipts = showAll ? receipts : receipts.slice(0, 6);
 
@@ -112,11 +118,11 @@ const AboutProject = () => {
 
       {/* To-Do List */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>To-Do List</Text>
+        <Text style={styles.sectionTitle}>משימות</Text>
         <View style={styles.tableHeader}>
           <Text style={[styles.cell, styles.headerText, { flex: 0.5 }]}>✔</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>Category</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 1.8 }]}>Details</Text>
+          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>קטגוריה</Text>
+          <Text style={[styles.cell, styles.headerText, { flex: 1.8 }]}>פרטים</Text>
         </View>
 
         <FlatList
@@ -164,10 +170,10 @@ const AboutProject = () => {
 
       {/* Materials List */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Materials List</Text>
+        <Text style={styles.sectionTitle}>כתב כמויות</Text>
         <View style={styles.tableHeader}>
-          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>Quantity</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 2 }]}>Item</Text>
+          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>כמות</Text>
+          <Text style={[styles.cell, styles.headerText, { flex: 2 }]}>פריט</Text>
         </View>
         <FlatList
           data={materialsArray}
@@ -221,7 +227,7 @@ const AboutProject = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item }) => (
-           <TouchableOpacity onPress={() => handleReceiptPress(item.data)}>
+           <TouchableOpacity onPress={() => navigation.navigate("ReceiptPreview", { item })}>
             <Image
               source={{ uri: item.data }}
               style={styles.receiptImage}
@@ -243,12 +249,16 @@ const StatBlock = ({ label, value }) => (
   </View>
 );
 
+const { width } = Dimensions.get("window");
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
-    padding: 16,
+    paddingHorizontal: width * 0.05,
     paddingBottom: 40,
     backgroundColor: "#F9F9F9",
+    flexGrow: 1,
   },
   projectCard: {
     backgroundColor: "#FFFFFF",
@@ -262,15 +272,14 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   projectTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "700",
     color: "#333",
     marginBottom: 20,
-    textAlign: "right",
-    fontFamily: "System",
+    textAlign: isRTL ? "right" : "left",
   },
   projectStats: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     justifyContent: "space-around",
   },
   statBlock: {
@@ -291,13 +300,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: "#212121",
-    fontFamily: "System",
+    textAlign: isRTL ? "right" : "left",
   },
   statLabel: {
     fontSize: 14,
     color: "#616161",
     marginTop: 4,
-    fontFamily: "System",
+    textAlign: isRTL ? "right" : "left",
   },
   section: {
     backgroundColor: "#FFFFFF",
@@ -309,25 +318,23 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
-    position: "relative",
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: "700",
     color: "#444",
     marginBottom: 14,
-    textAlign: "right",
-    fontFamily: "System",
+    textAlign: isRTL ? "right" : "left",
   },
   tableHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     borderBottomWidth: 1,
     borderColor: "#E0E0E0",
     paddingBottom: 10,
     marginBottom: 10,
   },
   row: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: 1,
@@ -336,24 +343,25 @@ const styles = StyleSheet.create({
   cell: {
     color: "#424242",
     fontSize: 16,
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
     paddingHorizontal: 12,
-    fontFamily: "System",
   },
   headerText: {
     fontWeight: "700",
     color: "#666",
     fontSize: 17,
+    textAlign: isRTL ? "right" : "left",
   },
   taskText: {
     color: "#222",
+    textAlign: isRTL ? "right" : "left",
   },
   checkedText: {
     textDecorationLine: "line-through",
     color: "#999",
+    textAlign: isRTL ? "right" : "left",
   },
   fabButton: {
-    // position: "absolute",
     bottom: 0,
     marginTop: 10,
     backgroundColor: "#333",
@@ -372,7 +380,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#3b49df",
     paddingVertical: 14,
     borderRadius: 28,
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
@@ -388,8 +396,8 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "700",
     fontSize: 18,
-    marginRight: 10,
-    fontFamily: "System",
+    marginHorizontal: 10,
+    textAlign: isRTL ? "right" : "left",
   },
   toggleText: {
     color: "#555",
@@ -397,15 +405,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginBottom: 14,
-    fontFamily: "System",
   },
   receiptImage: {
     width: 140,
     height: 140,
-    marginRight: 16,
+    marginStart: isRTL ? 16 : 0,
+    marginEnd: isRTL ? 0 : 16,
     borderRadius: 14,
     backgroundColor: "#F0F0F0",
   },
 });
+
+
+
 
 export default AboutProject;

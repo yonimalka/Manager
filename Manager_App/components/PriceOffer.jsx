@@ -8,10 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  I18nManager, 
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
+
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Buffer } from "buffer";
@@ -20,8 +23,9 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { BlurView } from "expo-blur";
 
 global.Buffer = Buffer;
-
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 const PriceOffer = () => {
+ 
   const navigation = useNavigation();
   const route = useRoute();
   const userId = route.params?.userId;
@@ -169,21 +173,21 @@ const PriceOffer = () => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
     flex: 1,
     backgroundColor: "#fefefe",
     paddingHorizontal: 30,
-  
-    
   },
   heading: {
     fontSize: 30,
     fontWeight: "700",
     color: "#2a3a55",
     marginBottom: 30,
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
   },
   input: {
     backgroundColor: "#fff",
@@ -199,6 +203,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
+    textAlign: isRTL ? "right" : "left",
   },
   submitButton: {
     backgroundColor: "#3a86ff",
@@ -217,23 +222,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   popupContainer: {
-  position: "absolute",
-  flexDirection: "row",
-  top: 0,
-  bottom: 0,
-  left: 0,
-  right: 0,
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 10,
-},
+    position: "absolute",
+    flexDirection: isRTL ? "row-reverse" : "row",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
   actionsRow: {
-    flexDirection: "row",
-  justifyContent: "space-evenly",
-  alignItems: "center",
-  width: "100%",
-  paddingHorizontal: 30,
-    
+    flexDirection: isRTL ? "row-reverse" : "row",
+    justifyContent: "space-evenly",
+    alignItems: "center",
+    width: "100%",
+    paddingHorizontal: 30,
   },
   actionButton: {
     backgroundColor: "#f3f4f6",
@@ -255,7 +259,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: "#2a3a55",
     fontSize: 13,
-    fontWeight: "5000",
+    fontWeight: "500",  // fixed from "5000" to "500"
   },
 });
 

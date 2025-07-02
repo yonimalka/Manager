@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet } from "react-native";
+import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager } from "react-native";
 import {SERVER_URL} from "@env";
+import Constants from 'expo-constants';
 import axios from "axios";
 import { TextInput } from "react-native-gesture-handler";
 import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
@@ -8,7 +9,11 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import SignUp from "./SignUp";
 
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
+
 const LoginScreen = () => {
+  
+
     const navigation = useNavigation();
 
     const [email, setEmail] = useState();
@@ -16,12 +21,28 @@ const LoginScreen = () => {
     const [login, setLogin] = useState(false);
     const [validation, setValidation] = useState();
 
+
+       useEffect(() => {
+  Alert.alert("Testing", "Making request to: " + SERVER_URL + "/ping");
+
+  axios.get(`${SERVER_URL}/ping`)
+    .then(res => {
+      console.log("Server response:", res.data);
+      Alert.alert("Success", "Server responded: " + JSON.stringify(res.data));
+    })
+    .catch(err => {
+      console.log("Request failed:", err.message);
+      Alert.alert("Error", "Request failed: " + err.message);
+    });
+}, []);
+
     const handleSignIn = async () => {
       
         const details = {
             email,
             password
         }
+        
         const response = await axios.post(`${SERVER_URL}/SignInDetails`, details, {
             headers: {"Content-Type": "application/json"},
         })
@@ -43,7 +64,7 @@ const LoginScreen = () => {
     }
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Welcome!</Text>
+            <Text style={styles.title}>Welcome</Text>
 
             <View style={styles.form}>
                 <TextInput
@@ -68,40 +89,60 @@ const LoginScreen = () => {
         </View>
     )
 }
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    backgroundColor: "#f9f9f9",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 24,
+    color: "#333",
+    textAlign: isRTL ? "right" : "left",
+    width: "100%",
   },
   form: {
-    width: '100%',
+    width: "100%",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: 'white',
-    padding: 12,
-    marginBottom: 10,
-    borderRadius: 5,
-    width: '100%',
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    fontSize: 16,
+    textAlign: isRTL ? "right" : "left",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   button: {
-    backgroundColor: 'blue',
-    padding: 12,
-    borderRadius: 5,
-    alignItems: 'center',
-    width: '100%',
+    backgroundColor: "#1e90ff", // nicer blue
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    width: "100%",
+    shadowColor: "#1e90ff",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
   buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
   },
-  });
+});
 
 export default LoginScreen;

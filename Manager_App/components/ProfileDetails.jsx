@@ -7,14 +7,18 @@ import {
   Image,
   ScrollView,
   StyleSheet,
+  I18nManager,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
+
 import MaterialsInputModal from "./MaterialsInputModal";
 import TaskInputModal from "./TasksInputModal";
 import { Ionicons } from "@expo/vector-icons";
 
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const ProfileDetails = () => {
    const navigation = useNavigation();
@@ -59,20 +63,22 @@ const ProfileDetails = () => {
     )
 }
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
-    container: {
-      paddingTop: 70,
-      paddingBottom: 700,
-      padding: 16,
-      backgroundColor: "#f9f9f9",
-    },
-    headTitle: {
+  container: {
+    paddingTop: 70,
+    paddingBottom: 700,
+    padding: 16,
+    backgroundColor: "#f9f9f9",
+  },
+  headTitle: {
     fontSize: 26,
     fontWeight: "bold",
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
     marginBottom: 20,
   },
-    card: {
+  card: {
     backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
@@ -96,6 +102,7 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: "#d32f2f",
+    textAlign: isRTL ? "right" : "left",
   }
-})
+});
 export default ProfileDetails;

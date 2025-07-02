@@ -5,12 +5,17 @@ import {
   FlatList,
   StyleSheet,
   ScrollView,
+  I18nManager,
 } from "react-native";
 import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
+
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const CashFlow = () => {
+  
   const navigation = useNavigation();
   const route = useRoute();
   const userId = route.params?.userId;
@@ -125,6 +130,8 @@ const CashFlow = () => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
@@ -134,17 +141,17 @@ const styles = StyleSheet.create({
   headTitle: {
     fontSize: 26,
     fontWeight: "bold",
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
     marginBottom: 20,
   },
   monthTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
     marginBottom: 20,
   },
   kpiContainer: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     justifyContent: "space-between",
     marginBottom: 20,
   },
@@ -178,7 +185,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
     marginBottom: 10,
   },
   card: {
@@ -193,7 +200,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     justifyContent: "space-between",
     marginBottom: 6,
   },
@@ -201,12 +208,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
     color: "#333",
+    textAlign: isRTL ? "right" : "left",
   },
   value: {
     fontSize: 14,
     color: "#555",
     flexShrink: 1,
-    textAlign: "left",
+    textAlign: isRTL ? "right" : "left",
   },
   amount: {
     color: "#00796b",

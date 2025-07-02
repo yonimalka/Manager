@@ -2,7 +2,7 @@
   "expo": {
     "name": "Manager",
     "slug": "Manager",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,16 +20,23 @@
       }
     },
     "android": {
+      "package": "com.yonatanmalka.Manager",
+      "versionCode": 2,
+      "permissions": [
+        "INTERNET"
+      ],
+      "usesCleartextTraffic": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "package": "com.yonatanmalka.Manager"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "projectId": "a0b72a58-39e1-4ed6-8402-837f500c13e3",
+      "SERVER_URL": "process.env.SERVER_URL",
       "eas": {
         "projectId": "a0b72a58-39e1-4ed6-8402-837f500c13e3"
       }

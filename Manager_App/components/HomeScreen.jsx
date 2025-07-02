@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  I18nManager,
 } from "react-native";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
 
 // Import Screens
 import Incomes from "./Incomes";
@@ -18,7 +20,10 @@ import Expenses from "./Expenses";
 import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
 
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
+
 const HomeScreen = ({ navigation }) => {
+  
   const route = useRoute();
   const userId = route.params?.userId;
 
@@ -117,6 +122,8 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
@@ -126,11 +133,11 @@ const styles = StyleSheet.create({
   welcome: {
     fontSize: 26,
     fontWeight: "bold",
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
     marginBottom: 20,
   },
   overviewRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     justifyContent: "space-between",
     marginBottom: 20,
   },
@@ -154,11 +161,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+    textAlign: isRTL ? "right" : "left",
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
     marginBottom: 12,
   },
   projectCard: {
@@ -168,5 +176,4 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 });
-
 export default HomeScreen;

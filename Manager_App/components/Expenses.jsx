@@ -4,12 +4,18 @@ import {
   Text,
   ActivityIndicator,
   StyleSheet,
+  I18nManager,
 } from "react-native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
+
 const Expenses = ({ userId, refresh }) => {
+  
+
   const [totalExpenses, setTotalExpenses] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +49,8 @@ const Expenses = ({ userId, refresh }) => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   card: {
     width: 170,
@@ -58,7 +66,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     alignItems: "center",
     gap: 8,
   },
@@ -66,14 +74,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#d32f2f",
+    textAlign: isRTL ? "right" : "left",
   },
   amount: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#d32f2f",
-    textAlign: "right",
+    textAlign: isRTL ? "right" : "left",
   },
 });
-
 export default Expenses;
 

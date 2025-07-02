@@ -5,11 +5,15 @@ import {
   Alert,
   TouchableOpacity,
   StyleSheet,
+  I18nManager,
 } from "react-native";
 import axios from "axios";
 import Svg, { Circle } from "react-native-svg";
 import { SERVER_URL } from "@env";
+import Constants from 'expo-constants';
 import { useValue } from "./ValueContext";
+
+// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const Project = ({ userId, projectName, totalAmount, totalDays, id }) => {
   const { setValue } = useValue();
@@ -130,6 +134,8 @@ const Project = ({ userId, projectName, totalAmount, totalDays, id }) => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
@@ -148,10 +154,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 16,
     color: "#333",
-    textAlign: "center",
+    textAlign: "center", // Keep center text alignment as is
   },
   progressRow: {
-    flexDirection: "row",
+    flexDirection: isRTL ? "row-reverse" : "row",
     justifyContent: "space-around",
     width: "100%",
     gap: 10,
@@ -163,8 +169,8 @@ const styles = StyleSheet.create({
   overlay: {
     position: "absolute",
     top: 30,
-    left: 0,
-    right: 0,
+    left: isRTL ? undefined : 0,
+    right: isRTL ? 0 : undefined,
     alignItems: "center",
   },
   amountText: {
