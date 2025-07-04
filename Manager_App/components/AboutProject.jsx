@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: "#F9F9F9",
     flexGrow: 1,
-    direction: isRTL ? "rtl" : "ltr",
+    flexDirection: isRTL ? "row" : "row-reverse",
   },
   projectCard: {
     backgroundColor: "#FFFFFF",
