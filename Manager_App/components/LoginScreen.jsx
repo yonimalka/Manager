@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 24,
     color: "#333",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "rtl" : "ltr",
     alignSelf: "stretch",
   },
   form: {
