@@ -68,8 +68,8 @@ const HomeScreen = ({ navigation }) => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.welcome}>שלום {userName} 👋</Text>
-     <View style={{ flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row', width: '100%', marginBottom: 20 }}>
-       <Text style={{ fontSize: 20 }}>{I18nManager.isRTL ? 'RTL-true' : 'false'}</Text>
+     <View style={{ flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse', width: '100%', marginBottom: 20 }}>
+       <Text style={{ fontSize: 20 }}>{I18nManager.isRTL ? 'RTL is true' : 'false'}</Text>
        </View>
       <ValueProvider>
         <View style={styles.overviewRow}>
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   overviewRow: {
-    flexDirection: I18nManager.isRTL ? "row-reverse" : "row",
+    flexDirection: I18nManager.isRTL ? "row" : "row-reverse",
     justifyContent: "space-between",
     marginBottom: 20,
   },
