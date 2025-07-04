@@ -132,7 +132,6 @@ const styles = StyleSheet.create({
     paddingStart: 16,
     paddingEnd: 16,
     backgroundColor: "#f2f4f7",
-    flexDirection: I18nManager.isRTL ? "row" : "row-reverse",
   },
   welcome: {
     fontSize: 26,
