@@ -178,11 +178,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
     color: "#333",
+    textAlign: "center",
   },
   labelText: {
     fontSize: 12,
     color: "#666",
     marginTop: 4,
+    textAlign: "center",
   },
 });
 

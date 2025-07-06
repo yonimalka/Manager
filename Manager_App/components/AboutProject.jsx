@@ -187,7 +187,7 @@ const AboutProject = () => {
           )}
         />
         <TouchableOpacity
-          style={[styles.fabButton]}
+          style={styles.fabButton}
           onPress={() => setMaterialsModalVisible(true)}
           activeOpacity={0.8}
         >
@@ -379,6 +379,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 6,
     flexDirection: isRTL ? "row-reverse" : "row",
+    alignSelf: isRTL ? "flex-start" : "flex-end",
   },
   uploadButton: {
     backgroundColor: "#3b49df",
