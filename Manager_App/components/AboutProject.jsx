@@ -217,7 +217,7 @@ const AboutProject = () => {
       <View style={styles.section}>
         <TouchableOpacity onPress={() => setShowAll(!showAll)}>
           <Text style={styles.toggleText}>
-            {showAll ? "תראה פחות" : "תראה פחות"}
+            {showAll ? "תראה פחות" : "תראה יותר"}
           </Text>
         </TouchableOpacity>
         <FlatList
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 18,
     paddingVertical: 12,
-    paddingHorizontal: 7,
+    paddingHorizontal: 10,
     marginHorizontal: 1,
     alignItems: "center",
     backgroundColor: "#FAFAFA",
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 6,
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: isRTL ? "row" : "row-reverse",
   },
   uploadButton: {
     backgroundColor: "#3b49df",

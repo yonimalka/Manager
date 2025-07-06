@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   overlay: {
-    position: "absolute",
+    // position: "absolute",
     top: 30,
     left: isRTL ? undefined : 0,
     right: isRTL ? 0 : undefined,
