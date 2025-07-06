@@ -103,8 +103,8 @@ const styles = StyleSheet.create({
     direction: isRTL ? "rtl" : "ltr",
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 200,
+    height: 200,
     marginBottom: 30,
     resizeMode: "contain",
   },
