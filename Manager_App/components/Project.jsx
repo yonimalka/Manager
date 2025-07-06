@@ -161,13 +161,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     width: "100%",
     gap: 10,
+    position: "relative",
   },
   circleWrapper: {
     alignItems: "center",
-    position: "relative",
+    // position: "relative",
   },
   overlay: {
-    // position: "absolute",
+    position: "absolute",
     top: 30,
     left: isRTL ? undefined : 0,
     right: isRTL ? 0 : undefined,

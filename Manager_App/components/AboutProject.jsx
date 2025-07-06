@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 18,
     paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     marginHorizontal: 1,
     alignItems: "center",
     backgroundColor: "#FAFAFA",
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 6,
-    flexDirection: isRTL ? "row" : "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
   },
   uploadButton: {
     backgroundColor: "#3b49df",

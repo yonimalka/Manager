@@ -43,7 +43,7 @@ const Expenses = ({ userId, refresh }) => {
       {loading ? (
         <ActivityIndicator size="large" color="#d32f2f" />
       ) : (
-        <Text style={styles.amount}>{totalExpenses ? `₪${totalExpenses}` : "₪0"}</Text>
+        <Text style={styles.amount}>{totalExpenses ? `${totalExpenses}₪` : "0₪"}</Text>
       )}
     </View>
   );
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#d32f2f",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
   },
 });
 export default Expenses;

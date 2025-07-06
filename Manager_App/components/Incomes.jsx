@@ -40,7 +40,7 @@ const Incomes = ({ userId }) => {
         <ActivityIndicator size="large" color="#1976d2" />
       ) : (
         <Text style={styles.amount}>
-          {value ? `₪${value}` : totalIncomes ? `₪${totalIncomes}` : "₪0"}
+          {value ? `${value}₪` : totalIncomes ? `${totalIncomes}₪` : "0₪"}
         </Text>
       )}
     </View>
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#1976d2",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
   },
 });
 
