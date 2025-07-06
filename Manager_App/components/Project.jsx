@@ -167,13 +167,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     // position: "relative",
   },
+  
   overlay: {
-    position: "absolute",
-    top: 30,
-    left: isRTL ? undefined : 0,
-    right: isRTL ? 0 : undefined,
-    alignItems: "center",
+  ...StyleSheet.absoluteFillObject,
+  justifyContent: "center",
+  alignItems: "center",
   },
+  
   amountText: {
     fontWeight: "bold",
     fontSize: 14,

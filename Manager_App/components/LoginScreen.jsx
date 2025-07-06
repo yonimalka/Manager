@@ -22,19 +22,19 @@ const LoginScreen = () => {
     const [validation, setValidation] = useState();
 
 
-       useEffect(() => {
-  Alert.alert("Testing", "Making request to: " + SERVER_URL + "/ping");
+//        useEffect(() => {
+//   Alert.alert("Testing", "Making request to: " + SERVER_URL + "/ping");
 
-  axios.get(`${SERVER_URL}/ping`)
-    .then(res => {
-      console.log("Server response:", res.data);
-      Alert.alert("Success", "Server responded: " + JSON.stringify(res.data));
-    })
-    .catch(err => {
-      console.log("Request failed:", err.message);
-      Alert.alert("Error", "Request failed: " + err.message);
-    });
-}, []);
+//   axios.get(`${SERVER_URL}/ping`)
+//     .then(res => {
+//       console.log("Server response:", res.data);
+//       Alert.alert("Success", "Server responded: " + JSON.stringify(res.data));
+//     })
+//     .catch(err => {
+//       console.log("Request failed:", err.message);
+//       Alert.alert("Error", "Request failed: " + err.message);
+//     });
+// }, []);
 
     const handleSignIn = async () => {
       
@@ -64,6 +64,7 @@ const LoginScreen = () => {
     }
     return (
         <View style={styles.container}>
+        <Image source={require("../assets/managoLogoTransparent.png")} style={styles.logo} />
             <Text style={styles.title}>Welcome</Text>
 
             <View style={styles.form}>
@@ -100,6 +101,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: "#f9f9f9",
     direction: isRTL ? "rtl" : "ltr",
+  },
+  logo: {
+    width: 150,
+    height: 150,
+    marginBottom: 30,
+    resizeMode: "contain",
   },
   title: {
     fontSize: 28,
@@ -147,7 +154,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 16,
-    textAlign: isRTL ? "right" : "left",
+    textAlign: "center",
     paddingStart: 16,
     paddingEnd: 16,
     alignSelf: "stretch",
