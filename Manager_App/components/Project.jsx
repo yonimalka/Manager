@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     textAlign: "center", // Keep center text alignment as is
   },
   progressRow: {
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: isRTL ? "row" : "row-reverse",
     justifyContent: "space-around",
     width: "100%",
     gap: 10,

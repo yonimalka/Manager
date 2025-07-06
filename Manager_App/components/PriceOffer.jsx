@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#2a3a55",
     marginBottom: 30,
-    textAlign: isRTL ? "right" : "left",
+    textAlign: "center",
   },
   input: {
     backgroundColor: "#fff",
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   popupContainer: {
     position: "absolute",
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: isRTL ? "row" : "row-reverse",
     top: 0,
     bottom: 0,
     left: 0,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   actionsRow: {
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: isRTL ? "row" : "row-reverse",
     justifyContent: "space-evenly",
     alignItems: "center",
     width: "100%",

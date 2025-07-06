@@ -52,9 +52,9 @@ const ProfileDetails = () => {
     return (
        <View style={styles.container}>
         <Text style={styles.headTitle}>איזור אישי</Text>
-        <Text style={styles.card}>Name: {userDetails ? userDetails.name : null}</Text> 
-        <Text style={styles.card}>Surname: {userDetails ? userDetails.surname : null}</Text>
-        <Text style={styles.card}>Email: {userDetails ? userDetails.email : null}</Text>
+        <Text style={styles.card}>שם פרטי: {userDetails ? userDetails.name : null}</Text> 
+        <Text style={styles.card}>שם משפחה: {userDetails ? userDetails.surname : null}</Text>
+        <Text style={styles.card}>אימייל: {userDetails ? userDetails.email : null}</Text>
         <TouchableOpacity
          style={styles.actionButton}
          onPress={handleDelete}
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   headTitle: {
     fontSize: 26,
     fontWeight: "bold",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
     marginBottom: 20,
   },
   card: {

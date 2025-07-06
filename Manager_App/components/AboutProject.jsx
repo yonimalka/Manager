@@ -110,9 +110,9 @@ const AboutProject = () => {
       <View style={styles.projectCard}>
         <Text style={styles.projectTitle}>{project?.name}</Text>
         <View style={styles.projectStats}>
-          <StatBlock label="Total Days" value={project?.days} />
-          <StatBlock label="Total Payment" value={`$${project?.payment}`} />
-          <StatBlock label="Expenses" value={`$${expenses}`} />
+          <StatBlock label="ימים" value={project?.days} />
+          <StatBlock label="תשלום כולל" value={`${project?.payment}₪`} />
+          <StatBlock label="הוצאות" value={`${expenses}₪`} />
         </View>
       </View>
 
@@ -210,14 +210,14 @@ const AboutProject = () => {
         activeOpacity={0.8}
       >
         <Ionicons name="cloud-upload-outline" size={22} color="#FFF" />
-        <Text style={styles.uploadButtonText}>Upload Receipt</Text>
+        <Text style={styles.uploadButtonText}>העלאת חשבונית</Text>
       </TouchableOpacity>
 
       {/* Receipts Gallery */}
       <View style={styles.section}>
         <TouchableOpacity onPress={() => setShowAll(!showAll)}>
           <Text style={styles.toggleText}>
-            {showAll ? "Show Less" : "Show Receipts"}
+            {showAll ? "תראה פחות" : "תראה פחות"}
           </Text>
         </TouchableOpacity>
         <FlatList
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#444",
-    marginBottom: 14,
+    marginBottom: 18,
     textAlign: isRTL ? "left" : "right",
   },
   tableHeader: {
@@ -378,6 +378,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 6,
+    flexDirection: isRTL ? "row-reverse" : "row",
   },
   uploadButton: {
     backgroundColor: "#3b49df",

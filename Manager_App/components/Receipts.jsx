@@ -80,13 +80,13 @@ const Receipts = () => {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.header}>Upload a Receipt</Text>
+        <Text style={styles.header}>הוספת חשבונית</Text>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Category</Text>
+          <Text style={styles.label}>קטגוריה</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Meals, Travel"
+            placeholder="כמו: ציוד, חומר וכו'"
             placeholderTextColor="#999"
             value={category}
             onChangeText={setCategory}
@@ -94,10 +94,10 @@ const Receipts = () => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Amount</Text>
+          <Text style={styles.label}>סכום</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. 49.99"
+            placeholder="סכום החשבונית"
             placeholderTextColor="#999"
             keyboardType="numeric"
             value={sum}
@@ -106,7 +106,7 @@ const Receipts = () => {
         </View>
 
         <TouchableOpacity style={styles.selectButton} onPress={pickImage}>
-          <Text style={styles.selectButtonText}>📷 Select Receipt Image</Text>
+          <Text style={styles.selectButtonText}>📷 בחר תמונה</Text>
         </TouchableOpacity>
 
         {image && (
@@ -114,7 +114,7 @@ const Receipts = () => {
         )}
 
         <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
-          <Text style={styles.uploadButtonText}>Upload Receipt</Text>
+          <Text style={styles.uploadButtonText}>העלאת חשבונית</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

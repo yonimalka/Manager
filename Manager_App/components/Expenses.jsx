@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   header: {
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
     gap: 8,
   },
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#d32f2f",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
   },
   amount: {
     fontSize: 28,

@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#1976d2",
-    textAlign: isRTL ? "left" : "right",
+    textAlign: isRTL ? "right" : "left",
   },
 });
 

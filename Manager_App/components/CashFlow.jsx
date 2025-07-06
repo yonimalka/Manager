@@ -141,17 +141,17 @@ const styles = StyleSheet.create({
   headTitle: {
     fontSize: 26,
     fontWeight: "bold",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
     marginBottom: 20,
   },
   monthTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
     marginBottom: 20,
   },
   kpiContainer: {
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: isRTL ? "row" : "row-reverse",
     justifyContent: "space-between",
     marginBottom: 20,
   },
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
     marginBottom: 10,
   },
   card: {
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardRow: {
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: isRTL ? "row" : "row-reverse",
     justifyContent: "space-between",
     marginBottom: 6,
   },
@@ -208,13 +208,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
     color: "#333",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
   },
   value: {
     fontSize: 14,
     color: "#555",
     flexShrink: 1,
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
   },
   amount: {
     color: "#00796b",

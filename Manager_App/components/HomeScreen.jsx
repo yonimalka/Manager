@@ -68,9 +68,7 @@ const HomeScreen = ({ navigation }) => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.welcome}>שלום {userName} 👋</Text>
-     <View style={{ flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse', width: '100%', marginBottom: 20 }}>
-       <Text style={{ fontSize: 20 }}>{I18nManager.isRTL ? 'RTL is true' : 'false'}</Text>
-       </View>
+    
       <ValueProvider>
         <View style={styles.overviewRow}>
           <Incomes userId={userId} />

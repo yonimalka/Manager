@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#1e293b",
     marginVertical: 16,
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
   },
   input: {
     backgroundColor: "#ffffff",
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     textAlign: isRTL ? "right" : "left",
   },
   row: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   itemRow: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row" : "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#ffffff",
