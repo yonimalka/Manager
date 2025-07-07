@@ -1,10 +1,12 @@
 import 'dotenv/config';
 
+const version = "1.0.1";
+
 export default {
   expo: {
     name: "Manager",
     slug: "Manager",
-    version: "1.0.1",
+    version: version,
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -43,8 +45,8 @@ export default {
       projectId: "a0b72a58-39e1-4ed6-8402-837f500c13e3"
     },
     runtimeVersion: {
-        android: "1.0.1",
-        ios: "1.0.1",
+        android: version,
+        ios: version,
     },
     updates: {
       url: "https://u.expo.dev/a0b72a58-39e1-4ed6-8402-837f500c13e3"
