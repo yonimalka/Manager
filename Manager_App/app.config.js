@@ -43,7 +43,8 @@ export default {
       projectId: "a0b72a58-39e1-4ed6-8402-837f500c13e3"
     },
     runtimeVersion: {
-      policy: "appVersion"
+        android: "1.0.1",
+        ios: "1.0.1",
     },
     updates: {
       url: "https://u.expo.dev/a0b72a58-39e1-4ed6-8402-837f500c13e3"
