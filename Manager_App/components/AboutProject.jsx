@@ -9,6 +9,7 @@ import {
   StyleSheet,
   I18nManager,
   Dimensions,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
@@ -103,7 +104,35 @@ const AboutProject = () => {
   // }
 
   const visibleReceipts = showAll ? receipts : receipts.slice(0, 6);
+  
+  const handleProjectDelete = async () => {
+    Alert.alert(
+      "אישור מחיקה",
+      "האם אתה בטוח שברצונך למחוק את הפרויקט?",
+      [
+        {
+          text: "ביטול",
+          style: "cancel",
+        },
+        {
+          text: "מחק",
+          style: "destructive", 
+          onPress: async () => {
+          try {
+           const res = await axios.delete(`${SERVER_URL}/deleteProject/${userId}/${projectId}`);
+            // Optionally update local state or navigate back
+            Alert.alert(res.data);
+            navigation.goBack();
+          } catch (error) {
+            console.error("Failed to delete project:", error);
+            Alert.alert("שגיאה", "לא ניתן היה למחוק את הפרויקט.");
+          }
+        }
+      }
+     ]
+    )
 
+  }
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       {/* Project Summary */}
@@ -238,6 +267,7 @@ const AboutProject = () => {
           )}
         />
       </View>
+      <TouchableOpacity onPress={handleProjectDelete}>Delete Project</TouchableOpacity>
     </ScrollView>
   );
 };
