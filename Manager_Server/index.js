@@ -159,6 +159,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 app.get("/ping", (req, res) => res.send("pong"));
+
 app.post("/NewUser", async (req, res) => {
   const {name, surname, email, password} = req.body;
   console.log(name, surname, email, password);
@@ -636,11 +637,27 @@ app.delete("/deleteProject/:userId/:projectId", async (req, res) =>{
   const userId = req.params.userId;
   const projectId = req.params.projectId;
 
-  await UserModel.findByIdAndDelete(projectId)
-  // .then(user =>{ 
-  //   user.projects.findByIdAndDelete((p) => p._id.toString() == projectId)
-    res.send("Project Deleted")
-  // })
+  try {
+    const result = await UserModel.updateOne(
+      {
+        _id: userId,
+      },
+      {
+        $pull: {
+          projects: { _id: projectId },
+        },
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Project not found or already deleted." });
+    }
+
+    res.status(200).json({ message: "Project deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting nested project:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
   
 })
 
