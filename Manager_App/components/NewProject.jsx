@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
   I18nManager,
 } from "react-native";
 import axios from "axios";
@@ -187,6 +188,7 @@ const NewProject = () => {
   );
 };
 
+const { width } = Dimensions.get("window");
 const isRTL = I18nManager.isRTL;
 
   //  paddingTop: 70,
