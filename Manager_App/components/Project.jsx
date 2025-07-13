@@ -227,7 +227,7 @@ modalTitle: {
   fontSize: 18,
   fontWeight: "bold",
   marginBottom: 12,
-  textAlign: "right",
+  textAlign: "left",
 },
 modalInput: {
   borderWidth: 1,
