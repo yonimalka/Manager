@@ -43,14 +43,14 @@ const NewProject = () => {
   const [taskList, setTaskList] = useState([]);
 
   const handleSubmit = async () => {
-    
+    navigation.goBack();
     if (!details.name || !details.days || !details.payment) {
       Alert.alert("Missing Fields", "Please fill in all main project details.");
       return;
     }
 
     try {
-      navigation.goBack();
+      
       const newDetails = { ...details, materialsList, toDoList: taskList };
 
       await axios.post(`${SERVER_URL}/updateDetails/${userId}`, newDetails, {
