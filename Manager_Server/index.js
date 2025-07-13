@@ -636,11 +636,11 @@ app.delete("/deleteProject/:userId/:projectId", async (req, res) =>{
   const userId = req.params.userId;
   const projectId = req.params.projectId;
 
-  await UserModel.findById(userId)
-  .then(user =>{ 
-    user.projects.findByIdAndDelete((p) => p._id.toString() == projectId)
+  await UserModel.findByIdAndDelete(projectId)
+  // .then(user =>{ 
+  //   user.projects.findByIdAndDelete((p) => p._id.toString() == projectId)
     res.send("Project Deleted")
-  })
+  // })
   
 })
 
