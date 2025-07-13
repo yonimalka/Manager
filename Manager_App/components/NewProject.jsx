@@ -195,7 +195,7 @@ const isRTL = I18nManager.isRTL;
   //   flexGrow: 1,
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 70,
+    // paddingTop: 70,
     paddingStart: width * 0.05,
     paddingEnd: width * 0.05,
     paddingBottom: 40,
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   itemText: {
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
     fontSize: 16,
     color: "#1e293b",
     fontWeight: "500",
