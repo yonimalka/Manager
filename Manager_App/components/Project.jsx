@@ -81,30 +81,30 @@ const handleConfirmPayment = async () => {
   const daysPercentage = (daysPassed / totalDays) * 100;
 
   return (
- <>
-    <Modal visible={modalVisible} transparent animationType="fade">
-     <View style={styles.modalOverlay}>
-      <View style={styles.modalContainer}>
-      <Text style={styles.modalTitle}>כמה ברצונך להוסיף?</Text>
-      <TextInput
-        style={styles.modalInput}
-        keyboardType="numeric"
-        value={paymentInput}
-        onChangeText={setPaymentInput}
-        placeholder="סכום"
-        textAlign="right"
-      />
-      <View style={styles.modalButtons}>
-        <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.cancelButton}>
-          <Text style={styles.cancelText}>ביטול</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleConfirmPayment} style={styles.confirmButton}>
-          <Text style={styles.confirmText}>אישור</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+ 
+//     <Modal visible={modalVisible} transparent animationType="fade">
+//      <View style={styles.modalOverlay}>
+//       <View style={styles.modalContainer}>
+//       <Text style={styles.modalTitle}>כמה ברצונך להוסיף?</Text>
+//       <TextInput
+//         style={styles.modalInput}
+//         keyboardType="numeric"
+//         value={paymentInput}
+//         onChangeText={setPaymentInput}
+//         placeholder="סכום"
+//         textAlign="right"
+//       />
+//       <View style={styles.modalButtons}>
+//         <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.cancelButton}>
+//           <Text style={styles.cancelText}>ביטול</Text>
+//         </TouchableOpacity>
+//         <TouchableOpacity onPress={handleConfirmPayment} style={styles.confirmButton}>
+//           <Text style={styles.confirmText}>אישור</Text>
+//         </TouchableOpacity>
+//       </View>
+//     </View>
+//   </View>
+// </Modal>
 
     <View style={styles.card}>
       <Text style={styles.projectName}>{projectName}</Text>
@@ -154,7 +154,7 @@ const handleConfirmPayment = async () => {
         </View>
       </View>
     </View>
-    </>
+    
   );
 };
 
