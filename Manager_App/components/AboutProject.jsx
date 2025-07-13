@@ -121,7 +121,7 @@ const AboutProject = () => {
           try {
            const res = await axios.delete(`${SERVER_URL}/deleteProject/${userId}/${projectId}`);
             // Optionally update local state or navigate back
-            Alert.alert(res.data);
+            Alert.alert(res.data.message);
             navigation.goBack();
           } catch (error) {
             console.error("Failed to delete project:", error);
