@@ -55,14 +55,14 @@ const NewProject = () => {
       await axios.post(`${SERVER_URL}/updateDetails/${userId}`, newDetails, {
         headers: { "Content-Type": "application/json" },
       });
-      navigation.goBack();
+      
       Alert.alert("Success", "Project added successfully!");
       
     } catch (error) {
       console.error("Submission error:", error);
       Alert.alert("Error", "Failed to add project.");
     }
-    
+    navigation.goBack();
   };
 
   const handleAddMaterial = () => {
