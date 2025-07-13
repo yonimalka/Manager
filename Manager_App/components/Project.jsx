@@ -3,6 +3,7 @@ import {
   Modal,
   View,
   Text,
+  TextInput,
   Alert,
   TouchableOpacity,
   StyleSheet,
@@ -81,11 +82,8 @@ const handleConfirmPayment = async () => {
   const daysPercentage = (daysPassed / totalDays) * 100;
 
   return (
- 
-
-
-    <View style={styles.card}>
-     <Modal visible={modalVisible} transparent animationType="fade">
+ <>
+   <Modal visible={modalVisible} transparent animationType="fade">
      <View style={styles.modalOverlay}>
      <View style={styles.modalContainer}>
        <Text style={styles.modalTitle}>כמה ברצונך להוסיף?</Text>
@@ -108,6 +106,7 @@ const handleConfirmPayment = async () => {
     </View>
   </View>
 </Modal>
+    <View style={styles.card}>
       <Text style={styles.projectName}>{projectName}</Text>
       <View style={styles.progressRow}>
         {/* Payment Circle */}
@@ -155,7 +154,7 @@ const handleConfirmPayment = async () => {
         </View>
       </View>
     </View>
-    
+    </>
   );
 };
 
