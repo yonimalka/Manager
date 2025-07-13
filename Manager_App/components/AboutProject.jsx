@@ -267,7 +267,7 @@ const AboutProject = () => {
           )}
         />
       </View>
-      <TouchableOpacity onPress={handleProjectDelete}>Delete Project</TouchableOpacity>
+      <TouchableOpacity style={styles.deleteButton} onPress={handleProjectDelete}><Text style={styles.deleteText}>Delete Project</Text></TouchableOpacity>
     </ScrollView>
   );
 };
@@ -451,6 +451,21 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#F0F0F0",
   },
+  deleteButton: {
+    backgroundColor: "#fff0f0",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  deleteText: {
+    color: "#d32f2f",
+    textAlign: isRTL ? "right" : "left",
+  }
 });
 
 
