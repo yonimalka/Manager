@@ -49,15 +49,13 @@ const NewProject = () => {
       Alert.alert("Missing Fields", "Please fill in all main project details.");
       return;
     }
-    navigation.goBack();
+    
     try {
-      
       const newDetails = { ...details, materialsList, toDoList: taskList };
-
       await axios.post(`${SERVER_URL}/updateDetails/${userId}`, newDetails, {
         headers: { "Content-Type": "application/json" },
       });
-      
+      navigation.goBack();
       Alert.alert("Success", "Project added successfully!");
       
     } catch (error) {
