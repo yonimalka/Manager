@@ -57,12 +57,12 @@ const NewProject = () => {
       });
       
       Alert.alert("Success", "Project added successfully!");
-      
+      navigation.goBack(-1);
     } catch (error) {
       console.error("Submission error:", error);
       Alert.alert("Error", "Failed to add project.");
     }
-    navigation.goBack();
+    
   };
 
   const handleAddMaterial = () => {
