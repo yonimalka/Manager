@@ -67,7 +67,7 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.welcome}>שלום {userName} 👋</Text>
+      <Text style={styles.welcome}>שלום {userName}</Text>
     
       <ValueProvider>
         <View style={styles.overviewRow}>

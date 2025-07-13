@@ -81,7 +81,7 @@ const handleConfirmPayment = async () => {
   const daysPercentage = (daysPassed / totalDays) * 100;
 
   return (
- <View >
+ <>
     <Modal visible={modalVisible} transparent animationType="fade">
      <View style={styles.modalOverlay}>
       <View style={styles.modalContainer}>
@@ -154,7 +154,7 @@ const handleConfirmPayment = async () => {
         </View>
       </View>
     </View>
-    </View>
+    </>
   );
 };
 
