@@ -56,7 +56,7 @@ const NewProject = () => {
       });
 
       Alert.alert("Success", "Project added successfully!");
-      navigation.navigate("Home");
+      navigation.goBack();
     } catch (error) {
       console.error("Submission error:", error);
       Alert.alert("Error", "Failed to add project.");
@@ -186,12 +186,19 @@ const NewProject = () => {
 
 const isRTL = I18nManager.isRTL;
 
+  //  paddingTop: 70,
+  //  
+  //   backgroundColor: "#F9F9F9",
+  //   flexGrow: 1,
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
-    flex: 1,
+    paddingStart: width * 0.05,
+    paddingEnd: width * 0.05,
+    paddingBottom: 40,
+    flexGrow: 1,
     backgroundColor: "#f8fafc",
-    padding: 20,
+    
   },
   heading: {
     fontSize: 28,
