@@ -43,7 +43,7 @@ const NewProject = () => {
   const [taskList, setTaskList] = useState([]);
 
   const handleSubmit = async () => {
-    navigation.goBack();
+    
     if (!details.name || !details.days || !details.payment) {
       Alert.alert("Missing Fields", "Please fill in all main project details.");
       return;
@@ -63,6 +63,7 @@ const NewProject = () => {
       console.error("Submission error:", error);
       Alert.alert("Error", "Failed to add project.");
     }
+    navigation.navigate("Home");
   };
 
   const handleAddMaterial = () => {
