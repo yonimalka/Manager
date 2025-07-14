@@ -58,8 +58,8 @@ const NewProject = () => {
       
       Alert.alert("Success", "Project added successfully!");
       setTimeout(() => {
-      navigation.navigate("Home");
-    }, 500);
+      navigation.goBack();
+    }, 200);
     } catch (error) {
       console.error("Submission error:", error);
       Alert.alert("Error", "Failed to add project.");
