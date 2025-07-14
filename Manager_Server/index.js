@@ -248,7 +248,8 @@ app.post("/updateDetails/:userId", async (req, res) =>{
     user.projects.push(newProjectData);
     const result = await user.save();
     console.log("Updated user with new project:", result);
-})
+    res.status(200).json({ message: "Success" });
+});
 
 app.post("/updateTasks/:userId/:projectId", async (req, res) => {
   const userId = req.params.userId;
