@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   I18nManager,
+  Platform,
 } from "react-native";
 import axios from "axios";
 import Svg, { Circle } from "react-native-svg";
@@ -162,16 +163,23 @@ const isRTL = I18nManager.isRTL;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    // shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-    alignItems: "center",
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  padding: 20,
+  marginBottom: 16,
+  alignItems: "center",
+  ...Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+    },
+    android: {
+      elevation: 4,
+      shadowColor: "#000",
+    },
+  }),
   },
   projectName: {
     fontSize: 20,
