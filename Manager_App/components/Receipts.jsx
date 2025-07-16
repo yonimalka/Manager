@@ -44,7 +44,7 @@ const Receipts = () => {
   };
 
   const handleUpload = async () => {
-    navigation.goBack();
+    
     if (!image || !category || !sum) {
       Alert.alert("Missing Info", "Please complete all fields.");
       return;
@@ -67,7 +67,7 @@ const Receipts = () => {
       });
 
       Alert.alert("Success", "Receipt uploaded.");
-      
+      navigation.goBack();
     } catch (error) {
       console.error("Uploading reciept error:", error);
       Alert.alert("Upload Failed", "Something went wrong.");

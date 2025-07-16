@@ -340,7 +340,8 @@ app.get("/getProject/:userId/:projectId", (req, res) => {
       project.receipts.push(receiptImage)
       project.expenses += Number(sumOfReceipt);
       // console.log(project.expenses)
-      return user.save();
+      res.status(200).json({ message: "Success" });
+      return user.save(); 
     });
     // const expensesUpdate = mongoose
     // .connection
