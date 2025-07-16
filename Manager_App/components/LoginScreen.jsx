@@ -85,7 +85,7 @@ const LoginScreen = () => {
             <TouchableOpacity style={styles.button} onPress={handleSignIn}>
                 <Text style={styles.buttonText}>Sign In</Text>
             </TouchableOpacity>
-            {validation ? <Text>{validation}</Text> : null}
+            {validation && <Text>{validation}</Text>}
             <Text>Don't have account? Sign Up!</Text>
             <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
         </View>
