@@ -19,7 +19,7 @@ const LoginScreen = () => {
     const [email, setEmail] = useState();
     const [password, setPassword] = useState();
     const [login, setLogin] = useState(false);
-    const [validation, setValidation] = useState();
+    const [validation, setValidation] = useState(null);
 
 
 //        useEffect(() => {
@@ -85,6 +85,7 @@ const LoginScreen = () => {
             <TouchableOpacity style={styles.button} onPress={handleSignIn}>
                 <Text style={styles.buttonText}>Sign In</Text>
             </TouchableOpacity>
+            {validation ? <Text>{validation}</Text> : null}
             <Text>Don't have account? Sign Up!</Text>
             <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
         </View>

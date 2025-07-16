@@ -408,8 +408,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 6,
-    flexDirection: isRTL ? "row-reverse" : "row",
-    alignSelf: isRTL ? "flex-start" : "flex-end",
+    flexDirection: isRTL ? "row" : "row-reverse",
+    alignSelf: isRTL ? "flex-end" : "flex-start",
   },
   uploadButton: {
     backgroundColor: "#3b49df",
