@@ -19,6 +19,8 @@ import Incomes from "./Incomes";
 import Expenses from "./Expenses";
 import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
+import BottomNavBar from "../components/BottomNavBar";
+
 
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
@@ -118,7 +120,9 @@ const HomeScreen = ({ navigation }) => {
           />
         )}
       </ValueProvider>
+      <BottomNavBar userId={userId} />
     </ScrollView>
+    
   );
 };
 
