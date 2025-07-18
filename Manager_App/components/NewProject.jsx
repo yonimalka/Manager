@@ -95,7 +95,7 @@ const NewProject = () => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#f2f4f7" }}
+      style={{ flex: 1, backgroundColor: "#f8fafc" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
@@ -264,6 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     marginTop: 32,
+    marginEnd: 30,
   },
   submitText: {
     color: "#f1f5f9",

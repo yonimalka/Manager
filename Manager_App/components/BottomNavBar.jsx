@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    paddingVertical: 17,
+    paddingVertical: 22,
     borderTopWidth: 1,
     borderTopColor: "#e0e0e0",
     shadowColor: "#000",

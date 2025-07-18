@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "bold",
     textAlign: I18nManager.isRTL ? "left" : "right",
-    marginBottom: 20,
+    marginBottom: 37,
   },
   overviewRow: {
     flexDirection: I18nManager.isRTL ? "row" : "row-reverse",
