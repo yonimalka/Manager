@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 32,
+    // marginTop: 32,
     marginEnd: 45,
   },
   submitText: {
