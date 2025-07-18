@@ -182,12 +182,12 @@ const styles = StyleSheet.create({
     textAlign: I18nManager.isRTL ? "left" : "right",
     marginBottom: 12,
   },
-  projectCard: {
-    marginBottom: 12,
-    borderRadius: 10,
-    padding: 10,
-    elevation: 2,
-  },
+  // projectCard: {
+  //   marginBottom: 12,
+  //   borderRadius: 10,
+  //   padding: 10,
+  //   elevation: 2,
+  // },
 });
 
 
