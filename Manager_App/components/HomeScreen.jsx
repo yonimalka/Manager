@@ -68,6 +68,7 @@ const HomeScreen = ({ navigation }) => {
   );
 
   return (
+    <View style={styles.screen}>
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.welcome}>שלום {userName}</Text>
     
@@ -77,7 +78,7 @@ const HomeScreen = ({ navigation }) => {
           <Expenses userId={userId} refresh={loading} />
         </View>
 
-        <View style={styles.buttonsRow}>
+        {/* <View style={styles.buttonsRow}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate("CashFlow", { userId })}
@@ -104,7 +105,7 @@ const HomeScreen = ({ navigation }) => {
           >
             <Text style={styles.buttonText}>איזור אישי</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         <Text style={styles.sectionTitle}>הפרויקטים שלך</Text>
 
@@ -120,19 +121,24 @@ const HomeScreen = ({ navigation }) => {
           />
         )}
       </ValueProvider>
-      <BottomNavBar userId={userId} />
     </ScrollView>
-    
+    <BottomNavBar userId={userId} />
+    </View>
   );
 };
 
 const isRTL = I18nManager.isRTL;
 
 const styles = StyleSheet.create({
+   screen: {
+    flex: 1,
+    backgroundColor: "#f2f4f7",
+  },
   container: {
     paddingTop: 70,
     paddingStart: 16,
     paddingEnd: 16,
+    paddingBottom: 90,
     backgroundColor: "#f2f4f7",
   },
   welcome: {
