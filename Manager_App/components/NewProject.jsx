@@ -179,11 +179,11 @@ const NewProject = () => {
           </View>
         ))}
 
-        {/* Submit */}
+      </ScrollView>
+      {/* Submit */}
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
           <Text style={styles.submitText}>צור פרוייקט</Text>
         </TouchableOpacity>
-      </ScrollView>
     </KeyboardAvoidingView>
   );
 };

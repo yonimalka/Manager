@@ -150,32 +150,32 @@ const styles = StyleSheet.create({
   overviewRow: {
     flexDirection: I18nManager.isRTL ? "row" : "row-reverse",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 35,
   },
-  buttonsRow: {
-    flexDirection: "column",
-    rowGap: 10, // `gap` is not supported, use `rowGap` if you're using React Native Web or apply margin
-    marginBottom: 30,
-  },
-  actionButton: {
-    backgroundColor: "#ffffff",
-    paddingVertical: 14,
-    paddingStart: 16,
-    paddingEnd: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    textAlign: I18nManager.isRTL ? "right" : "left",
-  },
+  // buttonsRow: {
+  //   flexDirection: "column",
+  //   rowGap: 10, // `gap` is not supported, use `rowGap` if you're using React Native Web or apply margin
+  //   marginBottom: 30,
+  // },
+  // actionButton: {
+  //   backgroundColor: "#ffffff",
+  //   paddingVertical: 14,
+  //   paddingStart: 16,
+  //   paddingEnd: 16,
+  //   borderRadius: 12,
+  //   alignItems: "center",
+  //   shadowColor: "#000",
+  //   shadowOpacity: 0.05,
+  //   shadowOffset: { width: 0, height: 2 },
+  //   shadowRadius: 5,
+  //   elevation: 2,
+  // },
+  // buttonText: {
+  //   fontSize: 16,
+  //   fontWeight: "bold",
+  //   color: "#333",
+  //   textAlign: I18nManager.isRTL ? "right" : "left",
+  // },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
