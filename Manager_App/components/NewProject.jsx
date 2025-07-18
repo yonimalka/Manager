@@ -262,9 +262,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#3b49df",
     paddingVertical: 16,
     borderRadius: 12,
+    justifyContent: "center",
     alignItems: "center",
     marginTop: 32,
-    marginEnd: 30,
+    marginEnd: 45,
   },
   submitText: {
     color: "#f1f5f9",
