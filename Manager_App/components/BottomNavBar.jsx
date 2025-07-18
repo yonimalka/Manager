@@ -1,6 +1,6 @@
 // components/BottomNavBar.js
 import React from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -40,11 +40,18 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderTopWidth: 1,
     borderTopColor: "#e0e0e0",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: -2 },
-    shadowRadius: 5,
-    elevation: 5,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowOffset: { width: 0, height: -2 },
+        shadowRadius: 5,
+      },
+      android:{
+        elevation: 5,
+        shadowColor: "#000",
+      }
+    }),
   },
   navButton: {
     alignItems: "center",

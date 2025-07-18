@@ -266,6 +266,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     // marginTop: 32,
     // marginEnd: 45,
+    marginBottom: 30,
     marginHorizontal: 20,
   },
   submitText: {
