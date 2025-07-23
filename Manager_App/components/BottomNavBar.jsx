@@ -34,6 +34,7 @@ const styles = StyleSheet.create({
   navContainer: {
     height: 80,
     flexDirection: "row",
+    borderRadius: 16,
     justifyContent: "space-around",
     alignItems: "center",
     backgroundColor: "#ffffff",
