@@ -193,10 +193,7 @@ const NewProject = () => {
 const { width } = Dimensions.get("window");
 const isRTL = I18nManager.isRTL;
 
-  //  paddingTop: 70,
-  //  
-  //   backgroundColor: "#F9F9F9",
-  //   flexGrow: 1,
+  
 const styles = StyleSheet.create({
   container: {
     paddingTop: 70,
@@ -208,15 +205,13 @@ const styles = StyleSheet.create({
     
   },
   heading: {
-    width: 300,
-    height: 50,
     paddingTop: 70,
-    paddingLeft: 20,
+    paddingVertical: 30,
+    paddingRight: 20,
     paddingEnd: 50,
     marginBottom: 70,
     backgroundColor: "#3b49df",
     borderBottomRightRadius: 40,
-    justifyContent: "center",
     alignItems: "center",
   },
   title: {
