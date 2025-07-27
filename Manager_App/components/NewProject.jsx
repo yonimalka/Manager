@@ -196,7 +196,7 @@ const isRTL = I18nManager.isRTL;
   
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 70,
+    // paddingTop: 70,
     paddingStart: width * 0.05,
     paddingEnd: width * 0.05,
     paddingBottom: 40,
@@ -206,11 +206,11 @@ const styles = StyleSheet.create({
   },
   heading: {
     // paddingTop: 70,
-    paddingVertical: 30,
-    paddingRight: 30,
-    marginLeft: 20,
+    paddingVertical: 40,
+    paddingLeft: 30,
+    marginRight: 20,
     // paddingEnd: 50,
-    marginVertical: 50,
+    marginVertical: 23,
     backgroundColor: "#3b49df",
     borderBottomRightRadius: 40,
     // alignItems: "center",
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#f1f5f9",
     textAlign: isRTL ? "left" : "right",
-    marginBottom: 17,
+    marginBottom: 7,
   },
   sectionTitle: {
     fontSize: 20,
