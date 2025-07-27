@@ -3,3 +3,16 @@ import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, K
 import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
+
+const Employees = () =>{
+
+
+    return (
+        <View>
+        
+            
+        </View>
+    )
+}
+
+export default Employees;

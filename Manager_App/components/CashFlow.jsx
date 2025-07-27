@@ -48,7 +48,7 @@ const CashFlow = () => {
 
   const fetchData = async () => {
     const incomesResponse = await axios.get(`${SERVER_URL}/getCashFlowIncomes/${userId}`);
-    setIncomesData(incomesResponse.data);
+    setIncomesData(incomesResponse.data); 
     setTotalIncomes(incomesResponse.data.reduce((sum, item) => sum + item.payments.amount, 0));
 
     const expensesResponse = await axios.get(`${SERVER_URL}/getCashFlowExpenses/${userId}`);
