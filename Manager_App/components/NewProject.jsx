@@ -208,10 +208,12 @@ const styles = StyleSheet.create({
     
   },
   heading: {
-    width: 230,
-    height: 100,
+    width: 300,
+    height: 50,
+    paddingStart: width * 0.05,
+    paddingEnd: 50,
     backgroundColor: "#3b49df",
-    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   title: {
     fontSize: 28,
