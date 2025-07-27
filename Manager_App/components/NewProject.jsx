@@ -209,11 +209,11 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     paddingLeft: 30,
     marginRight: 20,
-    marginBottom: 40,
+    // marginBottom: 40,
     backgroundColor: "#3b49df",
     borderBottomRightRadius: 40,
     justifyContent: "flex-end",
-    alignItems: isRTL ? "flex-end" : "flex-start",
+    alignItems: isRTL ? "flex-start" : "flex-end",
   },
   title: {
     fontSize: 28,
