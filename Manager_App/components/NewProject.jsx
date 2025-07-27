@@ -98,10 +98,10 @@ const NewProject = () => {
       style={{ flex: 1, backgroundColor: "#f8fafc" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.heading}>
+    <View style={styles.heading}>
         <Text style={styles.title}>פרוייקט חדש</Text>
       </View>
+      <ScrollView contentContainerStyle={styles.container}>
 
         <TextInput
           style={styles.input}
@@ -205,14 +205,14 @@ const styles = StyleSheet.create({
     
   },
   heading: {
-    paddingTop: 70,
+    // paddingTop: 70,
     paddingVertical: 30,
-    paddingRight: 20,
-    paddingEnd: 50,
+    paddingRight: 40,
+    // paddingEnd: 50,
     marginBottom: 70,
     backgroundColor: "#3b49df",
     borderBottomRightRadius: 40,
-    alignItems: "center",
+    // alignItems: "center",
   },
   title: {
     fontSize: 28,
