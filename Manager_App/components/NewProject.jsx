@@ -211,12 +211,12 @@ const styles = StyleSheet.create({
     width: 300,
     height: 50,
     paddingTop: 70,
-    paddingRight: 70,
+    paddingRight: 20,
     paddingEnd: 50,
-    marginEnd: 100,
+    marginBottom: 100,
     backgroundColor: "#3b49df",
     borderBottomRightRadius: 40,
-    alignItem: "center",
+    alignContent: "center",
   },
   title: {
     fontSize: 28,
@@ -224,7 +224,6 @@ const styles = StyleSheet.create({
     color: "#f1f5f9",
     textAlign: isRTL ? "left" : "right",
     marginBottom: 24,
-    paddingBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
