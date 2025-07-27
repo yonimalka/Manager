@@ -211,10 +211,12 @@ const styles = StyleSheet.create({
     width: 300,
     height: 50,
     paddingTop: 70,
+    paddingRight: 70,
     paddingEnd: 50,
     marginEnd: 100,
     backgroundColor: "#3b49df",
     borderBottomRightRadius: 40,
+    alignItem: "center",
   },
   title: {
     fontSize: 28,
