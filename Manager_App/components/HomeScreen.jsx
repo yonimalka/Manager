@@ -9,10 +9,10 @@ import {
   ScrollView,
   I18nManager,
 } from "react-native";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
-import Constants from 'expo-constants';
+import { MaterialIcons } from "@expo/vector-icons"; // ✅ אייקונים
 
 // Import Screens
 import Incomes from "./Incomes";
@@ -21,11 +21,7 @@ import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
 
-
-// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
-
 const HomeScreen = ({ navigation }) => {
-  
   const route = useRoute();
   const userId = route.params?.userId;
 
@@ -54,7 +50,9 @@ const HomeScreen = ({ navigation }) => {
 
   const renderProjectCard = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate("AboutProject", { project: item, userId })}
+      onPress={() =>
+        navigation.navigate("AboutProject", { project: item, userId })
+      }
       style={styles.projectCard}
     >
       <Project
@@ -69,126 +67,169 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.screen}>
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.welcome}>שלום {userName}</Text>
-    
-      <ValueProvider>
-        <View style={styles.overviewRow}>
-          <Incomes userId={userId} />
-          <Expenses userId={userId} refresh={loading} />
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.iconButton}>
+            <MaterialIcons name="notifications" size={24} color="#555" />
+            {/* אפשר להוסיף בול אדום קטן כמו ב-Stitch אם תרצה */}
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerSub}>שלום בחזרה,</Text>
+            <Text style={styles.headerTitle}>{userName}</Text>
+          </View>
+          <TouchableOpacity style={styles.iconButton}>
+            <MaterialIcons name="menu" size={24} color="#555" />
+          </TouchableOpacity>
         </View>
 
-        {/* <View style={styles.buttonsRow}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("CashFlow", { userId })}
-          >
-            <Text style={styles.buttonText}>📈 תזרים מזומנים</Text>
-          </TouchableOpacity>
+        <ValueProvider>
+          {/* Summary Cards */}
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryCard, { borderColor: "#4caf50" }]}>
+              <View style={styles.summaryHeader}>
+                <MaterialIcons name="arrow-upward" size={22} color="#4caf50" />
+                <Text style={styles.summaryTitle}>הכנסות</Text>
+              </View>
+              <Incomes userId={userId} />
+            </View>
+            <View style={[styles.summaryCard, { borderColor: "#f44336" }]}>
+              <View style={styles.summaryHeader}>
+                <MaterialIcons name="arrow-downward" size={22} color="#f44336" />
+                <Text style={styles.summaryTitle}>הוצאות</Text>
+              </View>
+              <Expenses userId={userId} refresh={loading} />
+            </View>
+          </View>
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("NewProject", { userId })}
-          >
-            <Text style={styles.buttonText}>➕ פרויקט חדש</Text>
-          </TouchableOpacity>
+          {/* Projects */}
+          <View style={styles.projectsHeader}>
+            <Text style={styles.sectionTitle}>פרויקטים</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAll}>הצג הכל</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("PriceOffer", { userId })}
-          >
-            <Text style={styles.buttonText}>💰 הצעת מחיר</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("ProfileDetails", { userId })}
-          >
-            <Text style={styles.buttonText}>איזור אישי</Text>
-          </TouchableOpacity>
-        </View> */}
+          {loading ? (
+            <ActivityIndicator size="large" color="#3b82f6" />
+          ) : (
+            <FlatList
+              data={projectDetails}
+              scrollEnabled={false}
+              keyExtractor={(item) => item._id}
+              renderItem={renderProjectCard}
+              contentContainerStyle={{ paddingBottom: 30 }}
+            />
+          )}
+        </ValueProvider>
+      </ScrollView>
 
-        <Text style={styles.sectionTitle}>הפרויקטים שלך</Text>
-
-        {loading ? (
-          <ActivityIndicator size="large" color="#00796b" />
-        ) : (
-          <FlatList
-            data={projectDetails}
-            scrollEnabled={false}
-            keyExtractor={(item) => item._id}
-            renderItem={renderProjectCard}
-            contentContainerStyle={{ paddingBottom: 30 }}
-          />
-        )}
-      </ValueProvider>
-    </ScrollView>
-    <BottomNavBar userId={userId} />
+      {/* Bottom Navigation */}
+      <BottomNavBar userId={userId} />
     </View>
   );
 };
 
-const isRTL = I18nManager.isRTL;
-
 const styles = StyleSheet.create({
-   screen: {
+  screen: {
     flex: 1,
-    backgroundColor: "#f2f4f7",
+    backgroundColor: "#f0f4ff",
   },
   container: {
-    paddingTop: 70,
-    paddingStart: 16,
-    paddingEnd: 16,
     paddingBottom: 90,
-    backgroundColor: "#f2f4f7",
+    backgroundColor: "#f0f4ff",
   },
-  welcome: {
-    fontSize: 26,
-    fontWeight: "bold",
-    textAlign: I18nManager.isRTL ? "left" : "right",
-    marginBottom: 37,
-  },
-  overviewRow: {
-    flexDirection: I18nManager.isRTL ? "row" : "row-reverse",
+  // Header
+  header: {
+    flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 35,
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  // buttonsRow: {
-  //   flexDirection: "column",
-  //   rowGap: 10, // `gap` is not supported, use `rowGap` if you're using React Native Web or apply margin
-  //   marginBottom: 30,
-  // },
-  // actionButton: {
-  //   backgroundColor: "#ffffff",
-  //   paddingVertical: 14,
-  //   paddingStart: 16,
-  //   paddingEnd: 16,
-  //   borderRadius: 12,
-  //   alignItems: "center",
-  //   shadowColor: "#000",
-  //   shadowOpacity: 0.05,
-  //   shadowOffset: { width: 0, height: 2 },
-  //   shadowRadius: 5,
-  //   elevation: 2,
-  // },
-  // buttonText: {
-  //   fontSize: 16,
-  //   fontWeight: "bold",
-  //   color: "#333",
-  //   textAlign: I18nManager.isRTL ? "right" : "left",
-  // },
-  sectionTitle: {
+  headerCenter: {
+    alignItems: "center",
+  },
+  headerSub: {
+    fontSize: 14,
+    color: "#666",
+  },
+  headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    textAlign: I18nManager.isRTL ? "left" : "right",
+    color: "#111",
+  },
+  iconButton: {
+    backgroundColor: "#fff",
+    borderRadius: 50,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  // Summary
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: -20,
+    marginHorizontal: 16,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 6,
+    borderLeftWidth: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  summaryHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#444",
+  },
+
+  // Projects
+  projectsHeader: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 24,
     marginBottom: 12,
   },
-  // projectCard: {
-  //   marginBottom: 12,
-  //   borderRadius: 10,
-  //   padding: 10,
-  //   elevation: 2,
-  // },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#111",
+  },
+  viewAll: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#3b82f6",
+  },
+  projectCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
 });
-
 
 export default HomeScreen;

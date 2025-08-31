@@ -197,6 +197,7 @@ const isRTL = I18nManager.isRTL;
 const styles = StyleSheet.create({
   container: {
     // paddingTop: 70,
+    marginTop: 40,
     paddingStart: width * 0.05,
     paddingEnd: width * 0.05,
     paddingBottom: 40,
@@ -206,6 +207,7 @@ const styles = StyleSheet.create({
   },
   heading: {
     // paddingTop: 70,
+    minHeight: 120,
     paddingVertical: 40,
     paddingLeft: 30,
     marginRight: 20,
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#f1f5f9",
     textAlign: isRTL ? "left" : "right",
-    marginBottom: 7,
+    marginTop: 33,
   },
   sectionTitle: {
     fontSize: 20,
