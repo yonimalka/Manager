@@ -38,6 +38,7 @@ const HomeScreen = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       setLoadingProjects(true);
       const response = await axios.get(`${SERVER_URL}/getUsers/${userId}`);
       setUserName(response.data.name);
