@@ -14,7 +14,8 @@ import { useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
-import { LineChart, Grid } from "react-native-svg-charts";
+// import { LineChart, Grid } from "react-native-svg-charts";
+import { LineChart } from "react-native-chart-kit";
 
 const isRTL = I18nManager.isRTL;
 
