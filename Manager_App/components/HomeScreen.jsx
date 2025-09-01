@@ -20,7 +20,7 @@ import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
 
-const isRTL = I18nManager.isRTL;
+
 
 const HomeScreen = () => {
   const route = useRoute();
@@ -30,6 +30,7 @@ const HomeScreen = () => {
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -39,7 +40,7 @@ const HomeScreen = () => {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      setLoadingProjects(true);
       const response = await axios.get(`${SERVER_URL}/getUsers/${userId}`);
       setUserName(response.data.name);
       setProjectDetails(response.data.projects);
@@ -89,7 +90,7 @@ const HomeScreen = () => {
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
-                <Incomes userId={userId} />
+                <Incomes style={styles.summaryAmount} userId={userId} />
               )}
               <MaterialIcons
                 name="account-balance-wallet"
@@ -115,7 +116,7 @@ const HomeScreen = () => {
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
-                <Expenses userId={userId} refresh={loading} />
+                <Expenses style={styles.summaryAmount} userId={userId} refresh={loading} />
               )}
               <MaterialIcons
                 name="shopping-cart"
@@ -129,7 +130,7 @@ const HomeScreen = () => {
           {/* Projects Section */}
           <Text style={styles.sectionTitle}>הפרויקטים שלך</Text>
 
-          {loading ? (
+          {loadingProjects ? (
             <ActivityIndicator size="large" color="#00796b" />
           ) : (
             <FlatList
@@ -147,15 +148,18 @@ const HomeScreen = () => {
   );
 };
 
+const isRTL = I18nManager.isRTL;
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f2f4f7" },
   container: { paddingTop: 70, paddingStart: 16, paddingEnd: 16, paddingBottom: 90 },
   welcome: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 37 },
-  summaryRow: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between", marginBottom: 35 },
+  summaryRow: { flexDirection: isRTL ? "row-reverse" : "row", justifyContent: "space-between", marginBottom: 35 },
   gradientCard: { flex: 1, borderRadius: 20, padding: 16, marginHorizontal: 6, overflow: "hidden", position: "relative" },
   summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   iconCircle: { backgroundColor: "rgba(255,255,255,0.2)", padding: 6, borderRadius: 50 },
   summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff" },
   bgIcon: { position: "absolute", bottom: -20, right: -20, transform: [{ rotate: "-12deg" }] },
   sectionTitle: { fontSize: 20, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 12 },
   projectCard: { marginBottom: 12 },
