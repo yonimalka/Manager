@@ -9,9 +9,10 @@ import {
   ScrollView,
   I18nManager,
 } from "react-native";
-import { useFocusEffect, useRoute, useNavigation } from "@react-navigation/native";
+import { useEffect, useRoute, useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
+import { SERVER_URL } from "@env";
 import axios from "axios";
 
 import Incomes from "./Incomes";
