@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,25 +9,27 @@ import {
   ScrollView,
   I18nManager,
 } from "react-native";
-import { useFocusEffect, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useRoute, useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import { MaterialIcons } from "@expo/vector-icons";
 import axios from "axios";
-import { SERVER_URL } from "@env";
-import { MaterialIcons } from "@expo/vector-icons"; // ✅ אייקונים
 
-// Import Screens
 import Incomes from "./Incomes";
 import Expenses from "./Expenses";
 import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
 
-const HomeScreen = ({ navigation }) => {
+const isRTL = I18nManager.isRTL;
+
+const HomeScreen = () => {
   const route = useRoute();
+  const navigation = useNavigation();
   const userId = route.params?.userId;
 
   const [loading, setLoading] = useState(false);
-  const [projectDetails, setProjectDetails] = useState([]);
   const [userName, setUserName] = useState(null);
+  const [projectDetails, setProjectDetails] = useState([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -41,8 +43,8 @@ const HomeScreen = ({ navigation }) => {
       const response = await axios.get(`${SERVER_URL}/getUsers/${userId}`);
       setUserName(response.data.name);
       setProjectDetails(response.data.projects);
-    } catch (error) {
-      console.error("Error occurred: " + error);
+    } catch (err) {
+      console.error("Error fetching user data: ", err);
     } finally {
       setLoading(false);
     }
@@ -50,9 +52,7 @@ const HomeScreen = ({ navigation }) => {
 
   const renderProjectCard = ({ item }) => (
     <TouchableOpacity
-      onPress={() =>
-        navigation.navigate("AboutProject", { project: item, userId })
-      }
+      onPress={() => navigation.navigate("AboutProject", { project: item, userId })}
       style={styles.projectCard}
     >
       <Project
@@ -68,50 +68,69 @@ const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.iconButton}>
-            <MaterialIcons name="notifications" size={24} color="#555" />
-            {/* אפשר להוסיף בול אדום קטן כמו ב-Stitch אם תרצה */}
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerSub}>שלום בחזרה,</Text>
-            <Text style={styles.headerTitle}>{userName}</Text>
-          </View>
-          <TouchableOpacity style={styles.iconButton}>
-            <MaterialIcons name="menu" size={24} color="#555" />
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.welcome}>שלום {userName}</Text>
 
         <ValueProvider>
-          {/* Summary Cards */}
+          {/* Summary Row */}
           <View style={styles.summaryRow}>
-            <View style={[styles.summaryCard, { borderColor: "#4caf50" }]}>
+            {/* Incomes Card */}
+            <LinearGradient
+              colors={["#4ade80", "#10b981"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.gradientCard}
+            >
               <View style={styles.summaryHeader}>
-                <MaterialIcons name="arrow-upward" size={22} color="#4caf50" />
-                <Text style={styles.summaryTitle}>הכנסות</Text>
+                <View style={styles.iconCircle}>
+                  <MaterialIcons name="trending-up" size={22} color="#fff" />
+                </View>
+                <Text style={styles.summaryTitleWhite}>הכנסות</Text>
               </View>
-              <Incomes userId={userId} />
-            </View>
-            <View style={[styles.summaryCard, { borderColor: "#f44336" }]}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
+              ) : (
+                <Incomes userId={userId} />
+              )}
+              <MaterialIcons
+                name="account-balance-wallet"
+                size={100}
+                color="rgba(255,255,255,0.2)"
+                style={styles.bgIcon}
+              />
+            </LinearGradient>
+
+            {/* Expenses Card */}
+            <LinearGradient
+              colors={["#f87171", "#ef4444"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.gradientCard}
+            >
               <View style={styles.summaryHeader}>
-                <MaterialIcons name="arrow-downward" size={22} color="#f44336" />
-                <Text style={styles.summaryTitle}>הוצאות</Text>
+                <View style={styles.iconCircle}>
+                  <MaterialIcons name="trending-down" size={22} color="#fff" />
+                </View>
+                <Text style={styles.summaryTitleWhite}>הוצאות</Text>
               </View>
-              <Expenses userId={userId} refresh={loading} />
-            </View>
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
+              ) : (
+                <Expenses userId={userId} refresh={loading} />
+              )}
+              <MaterialIcons
+                name="shopping-cart"
+                size={100}
+                color="rgba(255,255,255,0.2)"
+                style={styles.bgIcon}
+              />
+            </LinearGradient>
           </View>
 
-          {/* Projects */}
-          <View style={styles.projectsHeader}>
-            <Text style={styles.sectionTitle}>פרויקטים</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAll}>הצג הכל</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Projects Section */}
+          <Text style={styles.sectionTitle}>הפרויקטים שלך</Text>
 
           {loading ? (
-            <ActivityIndicator size="large" color="#3b82f6" />
+            <ActivityIndicator size="large" color="#00796b" />
           ) : (
             <FlatList
               data={projectDetails}
@@ -123,113 +142,23 @@ const HomeScreen = ({ navigation }) => {
           )}
         </ValueProvider>
       </ScrollView>
-
-      {/* Bottom Navigation */}
       <BottomNavBar userId={userId} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#f0f4ff",
-  },
-  container: {
-    paddingBottom: 90,
-    backgroundColor: "#f0f4ff",
-  },
-  // Header
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  headerCenter: {
-    alignItems: "center",
-  },
-  headerSub: {
-    fontSize: 14,
-    color: "#666",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#111",
-  },
-  iconButton: {
-    backgroundColor: "#fff",
-    borderRadius: 50,
-    padding: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  // Summary
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: -20,
-    marginHorizontal: 16,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 6,
-    borderLeftWidth: 5,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  summaryHeader: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#444",
-  },
-
-  // Projects
-  projectsHeader: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#111",
-  },
-  viewAll: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#3b82f6",
-  },
-  projectCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
+  screen: { flex: 1, backgroundColor: "#f2f4f7" },
+  container: { paddingTop: 70, paddingStart: 16, paddingEnd: 16, paddingBottom: 90 },
+  welcome: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 37 },
+  summaryRow: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between", marginBottom: 35 },
+  gradientCard: { flex: 1, borderRadius: 20, padding: 16, marginHorizontal: 6, overflow: "hidden", position: "relative" },
+  summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  iconCircle: { backgroundColor: "rgba(255,255,255,0.2)", padding: 6, borderRadius: 50 },
+  summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  bgIcon: { position: "absolute", bottom: -20, right: -20, transform: [{ rotate: "-12deg" }] },
+  sectionTitle: { fontSize: 20, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 12 },
+  projectCard: { marginBottom: 12 },
 });
 
 export default HomeScreen;
