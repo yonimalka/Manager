@@ -222,7 +222,7 @@ app.get("/getUsers/:userId", async (req, res) => {
 app.post("/updateDetails/:userId", async (req, res) =>{
     const userId = req.params.userId;
     const {name, payment, days, materialsList, toDoList} = req.body;
-    // console.log(toDoList);
+    console.log(userId);
     
     const user = await UserModel.findById(userId);
     
