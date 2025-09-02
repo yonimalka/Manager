@@ -81,7 +81,7 @@ const ReceiptSchema = new mongoose.Schema({
   filename: String,
   sumOfReceipt: Number,
   contentType: String,
-  date: { type: Date, default: Date.now },ד
+  date: { type: Date, default: Date.now },
 });
 
 const MaterialsSchema = new mongoose.Schema({
