@@ -503,7 +503,7 @@ app.get("/getCashFlowIncomes/:userId", async (req, res) => {
     const period = req.query.period || "חודשי"; // חודשי ברירת מחדל
     const now = new Date();
     let startDate;
-
+    console.log(" incomes period: ", period);
     // הגדרת תאריך התחלה לפי התקופה
     switch (period) {
       case "חודשי":
@@ -521,7 +521,7 @@ app.get("/getCashFlowIncomes/:userId", async (req, res) => {
 
     // שליפת המשתמש מהמסד
     const user = await UserModel.findById(userId);
-
+    console.log(user);
     if (!user) return res.status(404).send({ message: "User not found" });
 
     // איסוף כל התשלומים לפי תקופת זמן
@@ -533,7 +533,8 @@ app.get("/getCashFlowIncomes/:userId", async (req, res) => {
           projectName: project.name,
         }))
     );
-
+    console.log("incomes detailes ", incomesDetailes);
+    
     // מיון לפי תאריך
     incomesDetailes.sort(
       (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
@@ -552,7 +553,8 @@ app.get("/getCashFlowExpenses/:userId", async (req, res) => {
     const period = req.query.period || "חודשי"; // ברירת מחדל חודשי
     const now = new Date();
     let startDate;
-
+    console.log("period: ", period);
+    
     switch (period) {
       case "חודשי":
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -571,17 +573,18 @@ app.get("/getCashFlowExpenses/:userId", async (req, res) => {
     if (!user) return res.status(404).send({ message: "User not found" });
 
     let expensesDetailes = user.projects.flatMap((project) =>
-      project.paymentDetails
+      project.receipts
         .filter(
           (payment) =>
-            payment.type === "expense" && new Date(payment.date) >= startDate
+          payment.date >= startDate
         )
         .map((payment) => ({
           payments: payment,
           projectName: project.name,
         }))
     );
-
+    console.log("expenses Detailes: ",expensesDetailes);
+    
     // מיון לפי תאריך
     expensesDetailes.sort(
       (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
