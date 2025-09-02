@@ -201,7 +201,7 @@ const CashFlow = () => {
 
 const styles = StyleSheet.create({
   container: { paddingTop: 70, paddingStart: 16, paddingEnd: 16, paddingBottom: 90 , backgroundColor: "#f9f9f9" },
-  headTitle: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 16 },
+  headTitle: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 25 },
   periodSelector: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
   periodButton: { flex: 1, marginHorizontal: 4, paddingVertical: 8, borderRadius: 12, backgroundColor: "#f0f2f4", alignItems: "center" },
   periodButtonActive: { backgroundColor: "#3b49df", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },

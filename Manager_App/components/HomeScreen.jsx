@@ -48,6 +48,7 @@ const HomeScreen = () => {
       console.error("Error fetching user data: ", err);
     } finally {
       setLoading(false);
+      setLoadingProjects(false);
     }
   };
 
@@ -90,7 +91,9 @@ const HomeScreen = () => {
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
-                <Incomes style={styles.summaryAmount} userId={userId} />
+                <Text style={styles.summaryAmount}>
+                <Incomes userId={userId} refresh={loading} />
+                </Text>
               )}
               <MaterialIcons
                 name="account-balance-wallet"
@@ -116,7 +119,9 @@ const HomeScreen = () => {
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
-                <Expenses style={styles.summaryAmount} userId={userId} refresh={loading} />
+                <Text style={styles.summaryAmount}>
+                <Expenses userId={userId} refresh={loading} />
+                </Text>
               )}
               <MaterialIcons
                 name="shopping-cart"
