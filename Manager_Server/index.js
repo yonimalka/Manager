@@ -81,12 +81,7 @@ const ReceiptSchema = new mongoose.Schema({
   filename: String,
   sumOfReceipt: Number,
   contentType: String,
-  date: {
-    day: String,
-    month: String,
-    year: String,
-    time: String,
-  },
+  date: { type: Date, default: Date.now },ד
 });
 
 const MaterialsSchema = new mongoose.Schema({
@@ -102,12 +97,7 @@ const toDoListSchema = new mongoose.Schema({
 const paymentDetailsSchema = new mongoose.Schema({
   amount: Number,
   method: String,
-  date: {
-    year: String,
-    month: String,
-    day: String,
-    time: String,
-  }
+  date: { type: Date, default: Date.now },
 })
 const ProjectSchema = new mongoose.Schema({
   name: {type: String, required: true},
@@ -323,7 +313,7 @@ app.get("/getProject/:userId/:projectId", (req, res) => {
 
     const receiptImage = {
       filename: category,
-      sumOfReceipt: sumOfReceipt, 
+      sumOfReceipt: Number(sumOfReceipt), 
       contentType: req.file.mimetype,
       date: now,
     };
@@ -485,9 +475,9 @@ app.post('/UpdatePayment/:userId/:projectId', async (req, res) =>{
     const project = user.projects.find((p) => p._id.toString() == Id)
     // console.log(project);
     // console.log(typeof(project.paid));
-    project.paid += paidAmount;
+    project.paid += Number(paidAmount);
     project.paymentDetails.push({
-      amount: paidAmount,
+      amount: Number(paidAmount),
       date: now,
     })
     user.totalIncomes += paidAmount; 
@@ -499,103 +489,94 @@ app.post('/UpdatePayment/:userId/:projectId', async (req, res) =>{
 
 app.get("/getCashFlowIncomes/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const period = req.query.period || "חודשי"; // חודשי ברירת מחדל
+    const { userId } = req.params;
+    const raw = req.query.period || "חודשי";
     const now = new Date();
+
+    // תמיכה גם בעברית וגם באנגלית
+    const map = {
+      "חודשי": "month", "3 חודשים": "quarter", "שנתי": "year",
+      "month": "month", "quarter": "quarter", "year": "year",
+    };
+    const period = map[raw] || "month";
+
     let startDate;
-    console.log(" incomes period: ", period);
-    // הגדרת תאריך התחלה לפי התקופה
-    switch (period) {
-      case "חודשי":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "3 חודשים":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // כולל החודש הנוכחי
-        break;
-      case "שנתי":
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (period === "month") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (period === "quarter") {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // כולל החודש הנוכחי
+    } else { // "year"
+      startDate = new Date(now.getFullYear(), 0, 1);
     }
 
-    // שליפת המשתמש מהמסד
     const user = await UserModel.findById(userId);
-    console.log(user);
-    if (!user) return res.status(404).send({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    // איסוף כל התשלומים לפי תקופת זמן
-    let incomesDetailes = user.projects.flatMap((project) =>
-      project.paymentDetails
-        .filter((payment) => new Date(payment.date) >= startDate)
-        .map((payment) => ({
-          payments: payment,
+    const incomes = (user.projects || []).flatMap((project) =>
+      (project.paymentDetails || [])
+        .filter((p) => {
+          const d = new Date(p.date);
+          return d >= startDate && d <= now;
+        })
+        .map((p) => ({
+          payments: p,          // שומר את האובייקט המלא: { amount, date, ... }
           projectName: project.name,
         }))
     );
-    console.log("incomes detailes ", incomesDetailes);
-    
-    // מיון לפי תאריך
-    incomesDetailes.sort(
-      (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
-    );
-
-    res.send(incomesDetailes);
+    console.log("incomes detailes", incomes)
+    incomes.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
+    res.json(incomes);
   } catch (err) {
     console.error("Error fetching cash flow incomes:", err);
-    res.status(500).send({ message: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
+// GET /getCashFlowExpenses/:userId?period=חודשי|3 חודשים|שנתי (תומך גם באנגלית)
 app.get("/getCashFlowExpenses/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const period = req.query.period || "חודשי"; // ברירת מחדל חודשי
+    const { userId } = req.params;
+    const raw = req.query.period || "חודשי";
     const now = new Date();
+
+    const map = {
+      "חודשי": "month", "3 חודשים": "quarter", "שנתי": "year",
+      "month": "month", "quarter": "quarter", "year": "year",
+    };
+    const period = map[raw] || "month";
+
     let startDate;
-    console.log("period: ", period);
-    
-    switch (period) {
-      case "חודשי":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "3 חודשים":
-        startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-        break;
-      case "שנתי":
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (period === "month") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (period === "quarter") {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    } else { // "year"
+      startDate = new Date(now.getFullYear(), 0, 1);
     }
 
     const user = await UserModel.findById(userId);
-    if (!user) return res.status(404).send({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    let expensesDetailes = user.projects.flatMap((project) =>
-      project.receipts
-        .filter(
-          (payment) =>
-          payment.date >= startDate
-        )
-        .map((payment) => ({
-          payments: payment,
+    const expenses = (user.projects || []).flatMap((project) =>
+      (project.receipts || [])
+        .filter((r) => {
+          const d = new Date(r.date);
+          return d >= startDate && d <= now;
+        })
+        .map((r) => ({
+          payments: r,          // כאן חשוב להחזיר את כל האובייקט (כולל date ו-sumOfReceipt)
           projectName: project.name,
         }))
     );
-    console.log("expenses Detailes: ",expensesDetailes);
-    
-    // מיון לפי תאריך
-    expensesDetailes.sort(
-      (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
-    );
-
-    res.send(expensesDetailes);
+    console.log("expenses detailes", expenses)
+    expenses.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
+    res.json(expenses);
   } catch (err) {
     console.error("Error fetching cash flow expenses:", err);
-    res.status(500).send({ message: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
+
 
 app.post('/quoteGenerator/:userId', upload.none(), async (req,res) =>{
   const userId = req.params.userId;
