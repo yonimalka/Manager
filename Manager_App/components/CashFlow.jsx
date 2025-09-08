@@ -79,7 +79,11 @@ setTotalIncomes(totalInc);
       );
       const expensesData = expensesResponse.data;
       setExpenses(expensesData);
-      const totalExp = expensesData.reduce((sum, e) => sum + e.payments.sumOfReceipt, 0);
+
+      const totalExp = expensesData.reduce(
+       (sum, e) => sum + (e?.payments?.sumOfReceipt || 0),
+       0
+      );
       setPrevTotals((prev) => ({ ...prev, expenses: totalExpenses }));
       setTotalExpenses(totalExp);
 

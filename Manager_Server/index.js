@@ -574,7 +574,7 @@ app.get("/getCashFlowExpenses/:userId", async (req, res) => {
           projectName: project.name,
         }))
     );
-    console.log("expenses detailes", expenses)
+    console.log("expenses detailes", json(expenses))
     expenses.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
     res.json(expenses);
   } catch (err) {

@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   modalButtons: {
-    flexDirection: "row",
+    flexDirection:  isRTL ? "row-reverse" : "row",
     justifyContent: "space-between",
     width: "100%",
   },
