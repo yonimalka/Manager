@@ -55,11 +55,23 @@ const CashFlow = () => {
       const incomesResponse = await axios.get(
         `${SERVER_URL}/getCashFlowIncomes/${userId}?period=${period}`
       );
-      const incomesData = incomesResponse.data;
-      setIncomes(incomesData);
-      const totalInc = incomesData.reduce((sum, i) => sum + i.payments.amount, 0);
-      setPrevTotals((prev) => ({ ...prev, incomes: totalIncomes }));
-      setTotalIncomes(totalInc);
+      
+const incomesData = incomesResponse.data;
+
+// Ensure we always work with an array
+const safeIncomes = Array.isArray(incomesData) ? incomesData : [];
+
+setIncomes(safeIncomes);
+
+// Safely calculate total incomes
+const totalInc = safeIncomes.reduce((sum, i) => {
+  // make sure payments exists and has amount
+  const amount = i?.payments?.amount ?? 0;
+  return sum + amount;
+}, 0);
+
+setPrevTotals((prev) => ({ ...prev, incomes: totalInc }));
+setTotalIncomes(totalInc);
 
       // Expenses
       const expensesResponse = await axios.get(
