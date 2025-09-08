@@ -80,6 +80,7 @@ setTotalIncomes(totalInc);
       );
       const expensesData = expensesResponse.data;
       const safeExpenses = Array.isArray(expensesData) ? expensesData : [];
+
       setExpenses(safeExpenses);
 
       const totalExp = safeExpenses.reduce((sum, e) => {
@@ -90,23 +91,6 @@ setTotalIncomes(totalInc);
       setPrevTotals((prev) => ({ ...prev, expenses: totalExp }));
       setTotalExpenses(totalExp);
 
-       const imessage = incomes
-    .map(
-      (e) =>
-        `${e.projectName} - ${e.payments.method}: ₪${e.payments.amount}`
-    )
-    .join("\n");
-
-  Alert.alert("פירוט הכנסות", imessage);
-
-       const message = expenses
-    .map(
-      (e) =>
-        `${e.projectName} - ${e.payments.filename}: ₪${e.payments.sumOfReceipt}`
-    )
-    .join("\n");
-
-  Alert.alert("פירוט הוצאות", message);
       
       // גרף – ממזג הכנסות והוצאות לפי תאריך
       const merged = [];
