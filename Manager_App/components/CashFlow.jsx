@@ -81,7 +81,7 @@ setTotalIncomes(totalInc);
       const safeExpenses = Array.isArray(expensesData) ? expensesData : [];
       setExpenses(safeExpenses);
 
-      const totalExp = expensesData.reduce((sum, e) => {
+      const totalExp = safeExpenses.reduce((sum, e) => {
         const amount = e?.payments?.sumOfReceipt ?? 0;
       return sum + amount;
      }, 0);
