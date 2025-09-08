@@ -78,13 +78,15 @@ setTotalIncomes(totalInc);
         `${SERVER_URL}/getCashFlowExpenses/${userId}?period=${period}`
       );
       const expensesData = expensesResponse.data;
-      setExpenses(expensesData);
+      const safeExpenses = Array.isArray(expensesData) ? expensesData : [];
+      setExpenses(safeExpenses);
 
-      const totalExp = expensesData.reduce(
-       (sum, e) => sum + (e?.payments?.sumOfReceipt || 0),
-       0
-      );
-      setPrevTotals((prev) => ({ ...prev, expenses: totalExpenses }));
+      const totalExp = expensesData.reduce((sum, e) => {
+        const amount = e?.payments?.sumOfReceipt ?? 0;
+      return sum + amount;
+     }, 0);
+    
+      setPrevTotals((prev) => ({ ...prev, expenses: totalExp }));
       setTotalExpenses(totalExp);
 
       // גרף – ממזג הכנסות והוצאות לפי תאריך
@@ -155,7 +157,7 @@ setTotalIncomes(totalInc);
       <View style={styles.kpiContainer}>
         <LinearGradient colors={["#4ade80", "#10b981"]} style={styles.kpiCard}>
           <Text style={styles.kpiTitle}>סה"כ הכנסות</Text>
-          <Text style={styles.kpiValue}>₪{totalIncomes}</Text>
+          <Text style={styles.kpiValue}>{totalIncomes}₪</Text>
           <Text style={[styles.percentChange, { color: percentChange(totalIncomes, prevTotals.incomes) >= 0 ? "#10b981" : "#ef4444" }]}>
             {percentChange(totalIncomes, prevTotals.incomes)}%
           </Text>
@@ -163,7 +165,7 @@ setTotalIncomes(totalInc);
 
         <LinearGradient colors={["#f87171", "#ef4444"]} style={styles.kpiCard}>
           <Text style={styles.kpiTitle}>סה"כ הוצאות</Text>
-          <Text style={styles.kpiValue}>₪{totalExpenses}</Text>
+          <Text style={styles.kpiValue}>{totalExpenses}₪</Text>
           <Text style={[styles.percentChange, { color: percentChange(totalExpenses, prevTotals.expenses) >= 0 ? "#ef4444" : "#10b981" }]}>
             {percentChange(totalExpenses, prevTotals.expenses)}%
           </Text>

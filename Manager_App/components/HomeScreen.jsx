@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
   summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff" },
   bgIcon: { position: "absolute", bottom: -20, right: -20, transform: [{ rotate: "-12deg" }] },
-  sectionTitle: { fontSize: 20, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 12 },
+  sectionTitle: { fontSize: 20, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 20 },
   projectCard: { marginBottom: 12 },
 });
 
