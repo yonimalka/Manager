@@ -71,6 +71,8 @@ const totalInc = safeIncomes.reduce((sum, i) => {
   return sum + amount;
 }, 0);
 
+// Alert.alert("totalInc", totalInc)
+
 setPrevTotals((prev) => ({ ...prev, incomes: totalInc }));
 setTotalIncomes(totalInc);
 
@@ -87,35 +89,36 @@ setTotalIncomes(totalInc);
         const amount = e?.payments?.sumOfReceipt ?? 0;
       return sum + amount;
      }, 0);
-      Alert.alert("expenses", totalExp);
+      // Alert.alert("expenses", totalExp);
+      
       setPrevTotals((prev) => ({ ...prev, expenses: totalExp }));
       setTotalExpenses(totalExp);
 
       
       // גרף – ממזג הכנסות והוצאות לפי תאריך
-      const merged = [];
+//       const merged = [];
 
-safeIncomes.forEach((i) =>
-  merged.push({
-    date: new Date(i.payments.date).getTime(), // use timestamp for sorting
-    value: i.payments.amount,
-    type: "income",
-  })
-);
+// safeIncomes.forEach((i) =>
+//   merged.push({
+//     date: new Date(i.payments.date).getTime(), // use timestamp for sorting
+//     value: i.payments.amount,
+//     type: "income",
+//   })
+// );
 
-safeExpenses.forEach((e) =>
-  merged.push({
-    date: new Date(e.payments.date).getTime(),
-    value: -e.payments.sumOfReceipt,
-    type: "expense",
-  })
-);
+// safeExpenses.forEach((e) =>
+//   merged.push({
+//     date: new Date(e.payments.date).getTime(),
+//     value: -e.payments.sumOfReceipt,
+//     type: "expense",
+//   })
+// );
 
-// Sort by timestamp
-merged.sort((a, b) => a.date - b.date);
+// // Sort by timestamp
+// merged.sort((a, b) => a.date - b.date);
 
-// Option 1: if chart only needs values
-setChartData(merged.map((m) => m.value));
+// // Option 1: if chart only needs values
+// setChartData(merged.map((m) => m.value));
     } catch (err) {
       console.error("Error fetching CashFlow data:", err);
     } finally {
