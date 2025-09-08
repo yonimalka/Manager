@@ -8,6 +8,7 @@ import {
   StyleSheet,
   I18nManager,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import axios from "axios";
 import { useRoute } from "@react-navigation/native";
@@ -88,7 +89,8 @@ setTotalIncomes(totalInc);
     
       setPrevTotals((prev) => ({ ...prev, expenses: totalExp }));
       setTotalExpenses(totalExp);
-
+      Alert.alert("incomes ", incomes)
+      Alert.alert("expenses ", expenses)
       // גרף – ממזג הכנסות והוצאות לפי תאריך
       const merged = [];
       safeIncomes.forEach((i) => merged.push({ date: i.payments.date.day, value: i.payments.amount, type: "income" }));
