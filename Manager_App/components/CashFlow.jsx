@@ -91,8 +91,8 @@ setTotalIncomes(totalInc);
 
       // גרף – ממזג הכנסות והוצאות לפי תאריך
       const merged = [];
-      incomesData.forEach((i) => merged.push({ date: i.payments.date.day, value: i.payments.amount, type: "income" }));
-      expensesData.forEach((e) => merged.push({ date: e.payments.date.day, value: -e.payments.sumOfReceipt, type: "expense" }));
+      safeIncomes.forEach((i) => merged.push({ date: i.payments.date.day, value: i.payments.amount, type: "income" }));
+      safeExpenses.forEach((e) => merged.push({ date: e.payments.date.day, value: -e.payments.sumOfReceipt, type: "expense" }));
       merged.sort((a, b) => a.date - b.date);
       setChartData(merged.map((m) => m.value));
     } catch (err) {
