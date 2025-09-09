@@ -90,35 +90,35 @@ setTotalIncomes(totalInc);
       return sum + amount;
      }, 0);
       // Alert.alert("expenses", totalExp);
-      
+
       setPrevTotals((prev) => ({ ...prev, expenses: totalExp }));
       setTotalExpenses(totalExp);
 
       
       // גרף – ממזג הכנסות והוצאות לפי תאריך
-//       const merged = [];
+      const merged = [];
 
-// safeIncomes.forEach((i) =>
-//   merged.push({
-//     date: new Date(i.payments.date).getTime(), // use timestamp for sorting
-//     value: i.payments.amount,
-//     type: "income",
-//   })
-// );
+safeIncomes.forEach((i) =>
+  merged.push({
+    date: new Date(i.payments.date).getMonth(), // use timestamp for sorting
+    value: i.payments.amount,
+    type: "income",
+  })
+);
 
-// safeExpenses.forEach((e) =>
-//   merged.push({
-//     date: new Date(e.payments.date).getTime(),
-//     value: -e.payments.sumOfReceipt,
-//     type: "expense",
-//   })
-// );
+safeExpenses.forEach((e) =>
+  merged.push({
+    date: new Date(e.payments.date).getMonth(),
+    value: -e.payments.sumOfReceipt,
+    type: "expense",
+  })
+);
 
-// // Sort by timestamp
-// merged.sort((a, b) => a.date - b.date);
+// Sort by timestamp
+merged.sort((a, b) => a.date - b.date);
 
-// // Option 1: if chart only needs values
-// setChartData(merged.map((m) => m.value));
+
+setChartData(merged.map((m) => m.value));
     } catch (err) {
       console.error("Error fetching CashFlow data:", err);
     } finally {
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   percentChange: { fontSize: 14, fontWeight: "700", marginTop: 2 },
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 18, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 8 },
-  card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginVertical: 6, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginVertical: 6, elevation: 2 },
   cardRow: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between", marginBottom: 4 },
   label: { fontWeight: "bold", fontSize: 14, color: "#333" },
   value: { fontSize: 14, color: "#555", flexShrink: 1 },

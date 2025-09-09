@@ -189,8 +189,8 @@ const styles = StyleSheet.create({
   menuButton: {
     position: "absolute",
     top: 10,
-    left: !isRTL ? 10 : undefined,
-    right: isRTL ? 10 : undefined,
+    left: !isRTL ? 6 : undefined,
+    right: isRTL ? 6 : undefined,
     padding: 6,
     zIndex: 2,
   },
