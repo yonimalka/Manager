@@ -117,8 +117,8 @@ safeExpenses.forEach((e) =>
 // Sort by timestamp
 merged.sort((a, b) => a.date - b.date);
 
-
 setChartData(merged.map((m) => m.value));
+
     } catch (err) {
       console.error("Error fetching CashFlow data:", err);
     } finally {
