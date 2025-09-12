@@ -9,6 +9,7 @@ import {
   I18nManager,
   Alert,
 } from "react-native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
 import CashFlowChart from "./CashFlowChart"; // your separate chart component
@@ -16,7 +17,11 @@ import CashFlowChart from "./CashFlowChart"; // your separate chart component
 // RTL support
 const isRTL = I18nManager.isRTL;
 
-export default function CashFlow({ userId }) {
+export default function CashFlow() {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const userId = route.params?.userId;
+
   const [selectedPeriod, setSelectedPeriod] = useState("חודשי");
   const [incomes, setIncomes] = useState([]);
   const [expenses, setExpenses] = useState([]);
