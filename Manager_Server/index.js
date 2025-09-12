@@ -493,26 +493,24 @@ app.post('/UpdatePayment/:userId/:projectId', async (req, res) =>{
   });
 });
 
+// GET /getCashFlowIncomes/:userId?period=month|quarter|year
 app.get("/getCashFlowIncomes/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const raw = req.query.period || "חודשי";
+    const raw = req.query.period || "month"; // default month
     const now = new Date();
 
-    // תמיכה גם בעברית וגם באנגלית
-    const map = {
-      "חודשי": "month", "3 חודשים": "quarter", "שנתי": "year",
-      "month": "month", "quarter": "quarter", "year": "year",
-    };
-    const period = map[raw] || "month";
+    // Only English values expected
+    const validPeriods = ["month", "quarter", "year"];
+    const period = validPeriods.includes(raw) ? raw : "month";
 
     let startDate;
     if (period === "month") {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     } else if (period === "quarter") {
-      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // כולל החודש הנוכחי
-    } else { // "year"
-      startDate = new Date(now.getFullYear(), 0, 1);
+      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // current + 2 months back
+    } else {
+      startDate = new Date(now.getFullYear(), 0, 1); // start of year
     }
 
     const user = await UserModel.findById(userId);
@@ -522,14 +520,14 @@ app.get("/getCashFlowIncomes/:userId", async (req, res) => {
       (project.paymentDetails || [])
         .filter((p) => {
           const d = new Date(p.date);
-          return d >= startDate && d <= now;
+          return !isNaN(d) && d >= startDate && d <= now;
         })
         .map((p) => ({
-          payments: p,          // שומר את האובייקט המלא: { amount, date, ... }
+          payments: p, // keep full object
           projectName: project.name,
         }))
     );
-    console.log("incomes detailes", incomes)
+
     incomes.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
     res.json(incomes);
   } catch (err) {
@@ -538,25 +536,22 @@ app.get("/getCashFlowIncomes/:userId", async (req, res) => {
   }
 });
 
-// GET /getCashFlowExpenses/:userId?period=חודשי|3 חודשים|שנתי (תומך גם באנגלית)
+// GET /getCashFlowExpenses/:userId?period=month|quarter|year
 app.get("/getCashFlowExpenses/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const raw = req.query.period || "חודשי";
+    const raw = req.query.period || "month";
     const now = new Date();
 
-    const map = {
-      "חודשי": "month", "3 חודשים": "quarter", "שנתי": "year",
-      "month": "month", "quarter": "quarter", "year": "year",
-    };
-    const period = map[raw] || "month";
+    const validPeriods = ["month", "quarter", "year"];
+    const period = validPeriods.includes(raw) ? raw : "month";
 
     let startDate;
     if (period === "month") {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     } else if (period === "quarter") {
       startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-    } else { // "year"
+    } else {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
 
@@ -567,14 +562,14 @@ app.get("/getCashFlowExpenses/:userId", async (req, res) => {
       (project.receipts || [])
         .filter((r) => {
           const d = new Date(r.date);
-          return d >= startDate && d <= now;
+          return !isNaN(d) && d >= startDate && d <= now;
         })
         .map((r) => ({
-          payments: r,          // כאן חשוב להחזיר את כל האובייקט (כולל date ו-sumOfReceipt)
+          payments: r, // keep full object
           projectName: project.name,
         }))
     );
-    console.log("expenses detailes", expenses)
+
     expenses.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
     res.json(expenses);
   } catch (err) {
@@ -582,7 +577,6 @@ app.get("/getCashFlowExpenses/:userId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 app.post('/quoteGenerator/:userId', upload.none(), async (req,res) =>{
   const userId = req.params.userId;
