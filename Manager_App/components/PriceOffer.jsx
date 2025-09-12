@@ -347,7 +347,7 @@ const isRTL = I18nManager.isRTL;
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#f1f5f9" },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -379,10 +379,10 @@ const styles = StyleSheet.create({
     color: "#2563eb",
     marginBottom: 4,
     marginTop: 8,
-    textAlign: "right",
+    textAlign: isRTL ? "left" : "right",
   },
   inputWrapper: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#e5e7eb",
@@ -406,10 +406,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: "#111827",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: isRTL ? "left" : "right",
   },
   cardHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
     marginBottom: 12,
   },
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
   },
   submitButton: {
-    flexDirection: "row-reverse",
+    flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 14,
