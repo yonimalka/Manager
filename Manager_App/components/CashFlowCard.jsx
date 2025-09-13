@@ -1,90 +1,52 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import CashFlowChart from "./CashFlowChart";
 
-const CashFlowCard = ({ net, percent, incomes, expenses, chartPoints }) => {
+export default function CashFlowCard({ net = 0, percent = 0, incomes = 0, expenses = 0, chartPoints = [] }) {
   return (
-    <View
-      style={{
-        backgroundColor: "white",
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: "#e6e8eb",
-        padding: 20,
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-      }}
-    >
-      {/* Top Section */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+    <View style={styles.card}>
+      <View style={styles.row}>
         <View>
-          <Text style={{ color: "#617589", fontSize: 16, fontWeight: "500" }}>
-            תזרים מזומנים נטו
-          </Text>
-          <Text
-            style={{
-              color: "#111418",
-              fontSize: 32,
-              fontWeight: "bold",
-              marginTop: 4,
-            }}
-          >
-            ₪{net.toLocaleString()}
-          </Text>
+          <Text style={styles.label}>תזרים מזומנים נטו</Text>
+          <Text style={styles.net}>₪{(net ?? 0).toLocaleString()}</Text>
         </View>
-
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: "#dcfce7",
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-            borderRadius: 20,
-            alignSelf: "center",
-          }}
-        >
-          <MaterialIcons name="trending-up" size={16} color="#16a34a" />
-          <Text style={{ color: "#16a34a", fontWeight: "600", marginLeft: 4 }}>
-            +{percent}%
+        <View style={styles.percentBox}>
+          <MaterialIcons name={percent >= 0 ? "trending-up" : "trending-down"} size={18} color={percent >= 0 ? "#10b981" : "#ef4444"} />
+          <Text style={[styles.percent, { color: percent >= 0 ? "#10b981" : "#ef4444" }]}>
+            {percent >= 0 ? "+" : ""}{Math.round(percent)}%
           </Text>
         </View>
       </View>
 
-      {/* Chart */}
-      <View style={{ marginVertical: 20 }}>
+      <View style={styles.chartWrapper}>
         <CashFlowChart points={chartPoints} />
       </View>
 
-      {/* Bottom Totals */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          borderTopWidth: 1,
-          borderStyle: "dashed",
-          borderColor: "#e5e7eb",
-          paddingTop: 12,
-        }}
-      >
-        <View style={{ alignItems: "center" }}>
-          <Text style={{ color: "#617589", fontSize: 12 }}>הכנסות</Text>
-          <Text style={{ color: "#22c55e", fontSize: 18, fontWeight: "bold" }}>
-            ₪{incomes.toLocaleString()}
-          </Text>
+      <View style={styles.bottomRow}>
+        <View style={styles.col}>
+          <Text style={styles.bottomLabel}>הכנסות</Text>
+          <Text style={[styles.bottomValue, { color: "#10b981" }]}>₪{(incomes ?? 0).toLocaleString()}</Text>
         </View>
-
-        <View style={{ alignItems: "center" }}>
-          <Text style={{ color: "#617589", fontSize: 12 }}>הוצאות</Text>
-          <Text style={{ color: "#ef4444", fontSize: 18, fontWeight: "bold" }}>
-            ₪{expenses.toLocaleString()}
-          </Text>
+        <View style={styles.col}>
+          <Text style={styles.bottomLabel}>הוצאות</Text>
+          <Text style={[styles.bottomValue, { color: "#ef4444" }]}>₪{(expenses ?? 0).toLocaleString()}</Text>
         </View>
       </View>
     </View>
   );
-};
+}
 
-export default CashFlowCard;
+const styles = StyleSheet.create({
+  card: { borderRadius: 16, backgroundColor: "#fff", padding: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 3 },
+  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  label: { fontSize: 14, color: "#617589" },
+  net: { fontSize: 28, fontWeight: "bold", color: "#111418", marginTop: 4 },
+  percentBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#f0fdf4", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  percent: { marginLeft: 4, fontWeight: "600" },
+  chartWrapper: { height: 160, marginVertical: 16 },
+  bottomRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#e6e8eb", paddingTop: 12 },
+  col: { alignItems: "center" },
+  bottomLabel: { fontSize: 12, color: "#617589" },
+  bottomValue: { fontSize: 16, fontWeight: "bold" },
+});

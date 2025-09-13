@@ -2,306 +2,144 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  ActivityIndicator,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
   I18nManager,
   Alert,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
 import axios from "axios";
+import { useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
-import CashFlowChart from "./CashFlowChart"; // your separate chart component
+import CashFlowCard from "./CashFlowCard";
 
-// RTL support
 const isRTL = I18nManager.isRTL;
 
 export default function CashFlow() {
   const route = useRoute();
-  const navigation = useNavigation();
   const userId = route.params?.userId;
 
   const [selectedPeriod, setSelectedPeriod] = useState("חודשי");
+  const periods = ["חודשי", "רבעוני", "שנתי"];
+
+  const [loading, setLoading] = useState(false);
   const [incomes, setIncomes] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [totalIncomes, setTotalIncomes] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [prevTotals, setPrevTotals] = useState({ incomes: 0, expenses: 0 });
   const [chartData, setChartData] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  const periods = ["חודשי", "רבעוני", "שנתי"];
-
-  // Client-side map: UI → API values
   const periodMap = {
     "חודשי": "month",
     "רבעוני": "quarter",
     "שנתי": "year",
+    "3 חודשים": "quarter",
+    month: "month",
+    quarter: "quarter",
+    year: "year",
   };
 
-  const fetchData = async (period) => {
+  useEffect(() => {
+    if (!userId) {
+      console.warn("CashFlow: missing userId, skipping fetch");
+      return;
+    }
+    fetchData(selectedPeriod);
+  }, [selectedPeriod, userId]);
+
+  const fetchData = async (periodLabel) => {
     try {
       setLoading(true);
-
-      const periodParam = periodMap[period];
-      if (!periodParam) throw new Error("Invalid period selected");
+      const periodParam = periodMap[periodLabel] || "month";
 
       // Incomes
       const incomesResponse = await axios.get(
-        `${SERVER_URL}/getCashFlowIncomes/${userId}?period=${periodParam}`
+        `${SERVER_URL}/getCashFlowIncomes/${encodeURIComponent(userId)}?period=${encodeURIComponent(periodParam)}`
       );
-      const safeIncomes = Array.isArray(incomesResponse.data)
-        ? incomesResponse.data
-        : [];
+      const safeIncomes = Array.isArray(incomesResponse.data) ? incomesResponse.data : [];
       setIncomes(safeIncomes);
 
       const totalInc = safeIncomes.reduce(
-        (sum, i) => sum + (i?.payments?.amount ?? 0),
+        (sum, i) => sum + (Number(i?.payments?.amount) || 0),
         0
       );
+      setPrevTotals((prev) => ({ ...prev, incomes: prev.incomes ?? totalInc }));
       setTotalIncomes(totalInc);
 
       // Expenses
       const expensesResponse = await axios.get(
-        `${SERVER_URL}/getCashFlowExpenses/${userId}?period=${periodParam}`
+        `${SERVER_URL}/getCashFlowExpenses/${encodeURIComponent(userId)}?period=${encodeURIComponent(periodParam)}`
       );
-      const safeExpenses = Array.isArray(expensesResponse.data)
-        ? expensesResponse.data
-        : [];
+      const safeExpenses = Array.isArray(expensesResponse.data) ? expensesResponse.data : [];
       setExpenses(safeExpenses);
 
       const totalExp = safeExpenses.reduce(
-        (sum, e) => sum + (e?.payments?.sumOfReceipt ?? 0),
+        (sum, e) => sum + (Number(e?.payments?.sumOfReceipt) || 0),
         0
       );
+      setPrevTotals((prev) => ({ ...prev, expenses: prev.expenses ?? totalExp }));
       setTotalExpenses(totalExp);
 
-      // Merge for chart
+      // Chart data
       const merged = [];
-      safeIncomes.forEach((i) =>
-        merged.push({
-          date: new Date(i?.payments?.date).getTime() || 0,
-          value: i?.payments?.amount ?? 0,
-          type: "income",
-        })
-      );
-      safeExpenses.forEach((e) =>
-        merged.push({
-          date: new Date(e?.payments?.date).getTime() || 0,
-          value: -(e?.payments?.sumOfReceipt ?? 0),
-          type: "expense",
-        })
-      );
+      safeIncomes.forEach((i) => {
+        const ts = i?.payments?.date ? new Date(i.payments.date).getTime() : 0;
+        merged.push({ date: ts, value: Number(i?.payments?.amount) || 0, type: "income" });
+      });
+      safeExpenses.forEach((e) => {
+        const ts = e?.payments?.date ? new Date(e.payments.date).getTime() : 0;
+        merged.push({ date: ts, value: -(Number(e?.payments?.sumOfReceipt) || 0), type: "expense" });
+      });
 
-      merged.sort((a, b) => a.date - b.date);
-      setChartData(merged);
+      merged.sort((a, b) => (a.date || 0) - (b.date || 0));
+      setChartData(merged.map((m) => Number(m.value) || 0));
     } catch (err) {
       console.error("Error fetching CashFlow data:", err);
-      Alert.alert("שגיאה", "לא ניתן לטעון את תזרים המזומנים");
+      Alert.alert("שגיאה", "לא ניתן לטעון את תזרים המזומנים כעת.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData(selectedPeriod);
-  }, [selectedPeriod]);
-
-  const showMore = (type) => {
-    const data = type === "incomes" ? incomes : expenses;
-    const title = type === "incomes" ? "הכנסות" : "הוצאות";
-
-    if (!data.length) {
-      Alert.alert(title, "אין נתונים להצגה");
-      return;
-    }
-
-    const message = data
-      .map(
-        (item, idx) =>
-          `${idx + 1}. ${item.projectName || "לא ידוע"} - ₪${
-            item?.payments?.amount ?? item?.payments?.sumOfReceipt ?? 0
-          }`
-      )
-      .join("\n");
-
-    Alert.alert(title, message);
-  };
-
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 32 }}
-    >
-      {/* Period selector */}
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.headTitle}>תזרים מזומנים</Text>
+
       <View style={styles.periodSelector}>
         {periods.map((p) => (
           <TouchableOpacity
             key={p}
-            style={[
-              styles.periodButton,
-              selectedPeriod === p && styles.periodButtonActive,
-            ]}
             onPress={() => setSelectedPeriod(p)}
+            style={[styles.periodButton, selectedPeriod === p && styles.periodButtonActive]}
           >
-            <Text
-              style={[
-                styles.periodText,
-                selectedPeriod === p && styles.periodTextActive,
-              ]}
-            >
-              {p}
-            </Text>
+            <Text style={[styles.periodButtonText, selectedPeriod === p && styles.periodButtonTextActive]}>{p}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#137fec" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color="#137fec" style={{ marginTop: 24 }} />
       ) : (
-        <>
-          {/* Chart */}
-          <CashFlowChart data={chartData} />
-
-          {/* Totals */}
-          <View style={styles.totals}>
-            <View style={styles.totalBox}>
-              <Text style={styles.label}>הכנסות</Text>
-              <Text style={styles.incomeText}>₪{totalIncomes}</Text>
-            </View>
-            <View style={styles.totalBox}>
-              <Text style={styles.label}>הוצאות</Text>
-              <Text style={styles.expenseText}>₪{totalExpenses}</Text>
-            </View>
-          </View>
-
-          {/* Incomes preview */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>הכנסות</Text>
-              <TouchableOpacity onPress={() => showMore("incomes")}>
-                <Text style={styles.showMore}>הצג הכל</Text>
-              </TouchableOpacity>
-            </View>
-            {incomes.slice(0, 5).map((item, idx) => (
-              <View key={idx} style={styles.itemRow}>
-                <Text style={styles.itemText}>
-                  {item.projectName || "לא ידוע"}
-                </Text>
-                <Text style={styles.incomeText}>
-                  ₪{item?.payments?.amount ?? 0}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Expenses preview */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>הוצאות</Text>
-              <TouchableOpacity onPress={() => showMore("expenses")}>
-                <Text style={styles.showMore}>הצג הכל</Text>
-              </TouchableOpacity>
-            </View>
-            {expenses.slice(0, 5).map((item, idx) => (
-              <View key={idx} style={styles.itemRow}>
-                <Text style={styles.itemText}>
-                  {item.projectName || "לא ידוע"}
-                </Text>
-                <Text style={styles.expenseText}>
-                  ₪{item?.payments?.sumOfReceipt ?? 0}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </>
+        <CashFlowCard
+          net={(totalIncomes - totalExpenses) || 0}
+          percent={prevTotals.incomes ? ((totalIncomes - totalExpenses - (prevTotals.incomes - prevTotals.expenses)) / Math.max(prevTotals.incomes - prevTotals.expenses, 1)) * 100 : 0}
+          incomes={totalIncomes}
+          expenses={totalExpenses}
+          chartPoints={chartData}
+        />
       )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-  },
-  periodSelector: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 16,
-    backgroundColor: "#f0f2f4",
-    borderRadius: 12,
-    padding: 4,
-  },
-  periodButton: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  periodButtonActive: {
-    backgroundColor: "#137fec",
-  },
-  periodText: {
-    color: "#617589",
-    fontWeight: "600",
-  },
-  periodTextActive: {
-    color: "#fff",
-  },
-  totals: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  totalBox: {
-    alignItems: "center",
-    flex: 1,
-  },
-  label: {
-    fontSize: 14,
-    color: "#617589",
-    marginBottom: 4,
-  },
-  incomeText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "green",
-  },
-  expenseText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "red",
-  },
-  section: {
-    marginTop: 24,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#111418",
-  },
-  showMore: {
-    color: "#137fec",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  itemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-  },
-  itemText: {
-    color: "#111418",
-    fontSize: 14,
-  },
+  container: { padding: 16, backgroundColor: "#f9f9f9" },
+  headTitle: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 16 },
+  periodSelector: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16, backgroundColor: "#f0f2f4", borderRadius: 12, padding: 4 },
+  periodButton: { flex: 1, marginHorizontal: 4, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
+  periodButtonActive: { backgroundColor: "#137fec" },
+  periodButtonText: { color: "#617589", fontWeight: "700" },
+  periodButtonTextActive: { color: "#fff" },
 });
