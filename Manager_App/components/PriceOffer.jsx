@@ -347,14 +347,15 @@ const isRTL = I18nManager.isRTL;
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#f1f5f9" },
   header: {
+    paddingTop: 70,
     flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: "rgba(255,255,255,0.9)",
-    borderBottomWidth: 1,
-    borderColor: "#e5e7eb",
+    // borderBottomWidth: 1,
+    // borderColor: "#e5e7eb",
   },
   headerTitle: {
     fontSize: 20,
@@ -400,13 +401,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
   },
-  icon: { marginLeft: 8 },
+  icon: { marginRight: 8 },
   input: {
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
     color: "#111827",
-    textAlign: isRTL ? "left" : "right",
+    textAlign: isRTL ? "right" : "left",
   },
   cardHeader: {
     flexDirection: isRTL ? "row" : "row-reverse",
@@ -419,12 +420,12 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginRight: 8,
   },
-  footer: {
-    padding: 16,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderTopWidth: 1,
-    borderColor: "#e5e7eb",
-  },
+  // footer: {
+  //   padding: 16,
+  //   backgroundColor: "rgba(255,255,255,0.9)",
+  //   borderTopWidth: 1,
+  //   borderColor: "#e5e7eb",
+  // },
   submitButton: {
     flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
@@ -442,6 +443,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+    margin: 8,
   },
   popupContainer: {
     position: "absolute",

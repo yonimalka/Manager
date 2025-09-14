@@ -234,11 +234,6 @@ app.post("/updateDetails/:userId", async (req, res) =>{
       materials: [{items: materialsList}],
       toDoList: toDoList,
       expenses: 0,
-      paymentDetails: {
-        amount: 2000,
-        method: "מזומן",
-        date:  new Date(),
-        }
     }
     //[{task: {type: String}}, {length: {type: Number}}]
     user.projects.push(newProjectData);

@@ -12,6 +12,7 @@ import {
 import axios from "axios";
 import { useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
+import { MaterialIcons } from "@expo/vector-icons";
 import CashFlowCard from "./CashFlowCard";
 
 const isRTL = I18nManager.isRTL;
@@ -103,10 +104,33 @@ export default function CashFlow() {
     }
   };
 
+  const showMore = (type) => {
+    const data = type === "incomes" ? incomes : expenses;
+    const title = type === "incomes" ? "הכנסות" : "הוצאות";
+
+    if (!data || data.length === 0) {
+      Alert.alert(title, "אין נתונים להצגה");
+      return;
+    }
+
+    const message = data
+      .map((item, idx) => {
+        const amount =
+          type === "incomes"
+            ? Number(item?.payments?.amount) || 0
+            : Number(item?.payments?.sumOfReceipt) || 0;
+        return `${idx + 1}. ${item.projectName || "לא ידוע"} — ₪${amount}`;
+      })
+      .join("\n");
+
+    Alert.alert(title, message);
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.headTitle}>תזרים מזומנים</Text>
 
+      {/* Period Selector */}
       <View style={styles.periodSelector}>
         {periods.map((p) => (
           <TouchableOpacity
@@ -119,27 +143,131 @@ export default function CashFlow() {
         ))}
       </View>
 
+      {/* KPI Card + Chart */}
       {loading ? (
         <ActivityIndicator size="large" color="#137fec" style={{ marginTop: 24 }} />
       ) : (
         <CashFlowCard
           net={(totalIncomes - totalExpenses) || 0}
-          percent={prevTotals.incomes ? ((totalIncomes - totalExpenses - (prevTotals.incomes - prevTotals.expenses)) / Math.max(prevTotals.incomes - prevTotals.expenses, 1)) * 100 : 0}
+          percent={
+            prevTotals.incomes
+              ? ((totalIncomes - totalExpenses - (prevTotals.incomes - prevTotals.expenses)) /
+                  Math.max(prevTotals.incomes - prevTotals.expenses, 1)) *
+                100
+              : 0
+          }
           incomes={totalIncomes}
           expenses={totalExpenses}
           chartPoints={chartData}
         />
       )}
+
+      {/* פירוט הכנסות */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>מקורות הכנסה</Text>
+          <TouchableOpacity onPress={() => showMore("incomes")}>
+            <Text style={styles.showMore}>הצג הכל</Text>
+          </TouchableOpacity>
+        </View>
+
+        {incomes.slice(0, 5).map((item, idx) => {
+          const amount = Number(item?.payments?.amount) || 0;
+          const percent = totalIncomes ? Math.round((amount / totalIncomes) * 100) : 0;
+
+          return (
+            <View key={idx} style={styles.itemCard}>
+              <View style={styles.iconBoxIncome}>
+                <MaterialIcons name="work" size={20} color="#137fec" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>{item.projectName || "לא ידוע"}</Text>
+                <Text style={styles.itemSubtitle}>₪{amount.toLocaleString()}</Text>
+              </View>
+              <Text style={styles.itemPercent}>{percent}%</Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* פירוט הוצאות */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>הוצאות</Text>
+          <TouchableOpacity onPress={() => showMore("expenses")}>
+            <Text style={styles.showMore}>הצג הכל</Text>
+          </TouchableOpacity>
+        </View>
+
+        {expenses.slice(0, 5).map((item, idx) => {
+          const amount = Number(item?.payments?.sumOfReceipt) || 0;
+          const percent = totalExpenses ? Math.round((amount / totalExpenses) * 100) : 0;
+
+          return (
+            <View key={idx} style={styles.itemCard}>
+              <View style={styles.iconBoxExpense}>
+                <MaterialIcons name="receipt" size={20} color="#ef4444" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>{item.projectName || "לא ידוע"}</Text>
+                <Text style={styles.itemSubtitle}>₪{amount.toLocaleString()}</Text>
+              </View>
+              <Text style={styles.itemPercent}>{percent}%</Text>
+            </View>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: "#f9f9f9" },
+  container: { paddingTop: 70, padding: 16, backgroundColor: "#f9f9f9" },
   headTitle: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 16 },
   periodSelector: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16, backgroundColor: "#f0f2f4", borderRadius: 12, padding: 4 },
   periodButton: { flex: 1, marginHorizontal: 4, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
   periodButtonActive: { backgroundColor: "#137fec" },
   periodButtonText: { color: "#617589", fontWeight: "700" },
   periodButtonTextActive: { color: "#fff" },
+
+  section: { marginTop: 20 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#111418" },
+  showMore: { color: "#137fec", fontSize: 14, fontWeight: "600" },
+
+  itemCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    marginVertical: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#f0f2f4",
+  },
+  iconBoxIncome: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#e6f2ff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  iconBoxExpense: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#fee2e2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  itemTitle: { fontSize: 16, fontWeight: "600", color: "#111418", textAlign: isRTL ? "left" : "right", },
+  itemSubtitle: { fontSize: 14, color: "#617589", textAlign: isRTL ? "left" : "right", },
+  itemPercent: { fontSize: 16, fontWeight: "700", color: "#111418", textAlign: isRTL ? "right" : "left", },
 });
