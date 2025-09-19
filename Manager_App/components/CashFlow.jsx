@@ -190,7 +190,8 @@ export default function CashFlow() {
           const percent = totalIncomes ? Math.round((amount / totalIncomes) * 100) : 0;
 
           return (
-            <View key={idx} style={styles.itemCard} onPress={() => detailedSource("incomes", item)}>
+            <TouchableOpacity onPress={() => detailedSource("incomes", item)}>
+             <View key={idx} style={styles.itemCard}>
               <View style={styles.iconBoxIncome}>
                 <MaterialIcons name="work" size={20} color="#137fec" />
               </View>
@@ -200,6 +201,8 @@ export default function CashFlow() {
               </View>
               <Text style={styles.itemPercent}>{percent}%</Text>
             </View>
+            </TouchableOpacity>
+            
           );
         })}
       </View>
@@ -218,7 +221,8 @@ export default function CashFlow() {
           const percent = totalExpenses ? Math.round((amount / totalExpenses) * 100) : 0;
 
           return (
-            <View key={idx} style={styles.itemCard} onPress={() => detailedSource("expenses", item)}>
+            <TouchableOpacity onPress={() => detailedSource("incomes", item)}>
+             <View key={idx} style={styles.itemCard} onPress={() => detailedSource("expenses", item)}>
               <View style={styles.iconBoxExpense}>
                 <MaterialIcons name="receipt" size={20} color="#ef4444" />
               </View>
@@ -228,6 +232,7 @@ export default function CashFlow() {
               </View>
               <Text style={styles.itemPercent}>{percent}%</Text>
             </View>
+            </TouchableOpacity> 
           );
         })}
       </View>

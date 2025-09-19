@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, use } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -38,7 +38,7 @@ const HomeScreen = () => {
     if (isFocused){
       fetchData();
     }
-  },[]);
+  },[isFocused]);
 
   const fetchData = async () => {
     try {
@@ -73,7 +73,7 @@ const HomeScreen = () => {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.welcome}>שלום {userName}</Text>
+        <Text style={styles.welcome}>ברוך השב,{"\n"}{userName}</Text>
 
         <ValueProvider>
           {/* Summary Row */}
