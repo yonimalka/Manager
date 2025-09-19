@@ -169,7 +169,6 @@ app.post("/NewUser", async (req, res) => {
 
 app.post("/SignInDetails", async (req, res) => {
   const { email, password } = req.body;
-  console.log(email , password);
   
   const user = await UserModel.findOne({email: email});
   if(!user) {

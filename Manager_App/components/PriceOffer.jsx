@@ -129,7 +129,14 @@ const PriceOffer = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back-ios" size={24} color="#374151" />
+          <MaterialIcons
+           name="arrow-back-ios" 
+           size={24} 
+           color="#374151" 
+           style={{
+            transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }],
+           }}
+           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>יצירת הצעת מחיר</Text>
         <View style={{ width: 24 }} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, use } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ScrollView,
   I18nManager,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SERVER_URL } from "@env";
@@ -27,6 +27,7 @@ const HomeScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const userId = route.params?.userId;
+  const isFocused = useIsFocused();
 
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState(null);
@@ -34,7 +35,9 @@ const HomeScreen = () => {
   const [loadingProjects, setLoadingProjects] = useState(false);
 
   useEffect(()=>{
-   fetchData();
+    if (isFocused){
+      fetchData();
+    }
   },[]);
 
   const fetchData = async () => {
