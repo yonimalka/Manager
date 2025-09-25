@@ -2,30 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  ScrollView,
-  StyleSheet,
-  I18nManager,
-  Dimensions,
-  Alert,
-} from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import axios from "axios";
-import { SERVER_URL } from "@env";
-import Constants from 'expo-constants';
-import MaterialsInputModal from "./MaterialsInputModal";
-import TaskInputModal from "./TasksInputModal";
-import { Ionicons } from "@expo/vector-icons";
-import WebView from "react-native-webview";
-
-  // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
-
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
   ScrollView,
   FlatList,
   TouchableOpacity,
