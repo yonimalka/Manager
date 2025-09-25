@@ -226,6 +226,8 @@ app.get("/getUserDetails/:userId", async (req, res) => {
 // JWT-protected route
 app.get("/getUser", authMiddleware, async (req, res) => {
   try {
+    console.log(req.userId);
+    
     const user = await UserModel.findById(req.userId).populate("projects").select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
