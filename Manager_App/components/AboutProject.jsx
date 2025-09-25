@@ -17,7 +17,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "@env";
 
-import TaskInputModal from "./TaskInputModal";
+import TasksInputModal from "./TasksInputModal";
 import MaterialsInputModal from "./MaterialsInputModal";
 
 const AboutProject = () => {

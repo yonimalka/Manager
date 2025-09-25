@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
-const TaskInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
+const TasksInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
     const [itemValue, setItemValue] = useState("");
     const [countValue, setCountValue] = useState("");
 
@@ -80,4 +80,4 @@ const styles = StyleSheet.create({
     textAlign: isRTL ? "right" : "left",
   },
 });
-export default TaskInputModal;
+export default TasksInputModal;

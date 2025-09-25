@@ -3,6 +3,7 @@ import { Modal, View, Text, TextInput, Button, StyleSheet, I18nManager } from "r
 import axios from "axios";
 import { SERVER_URL } from "@env";
 import Constants from 'expo-constants';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 // אני צריך עכשיו לקבל מהמשתמש את הנתונים ולהעביר אותם לשרתת בנוסף אני צריך שהטבלה תתעדכן מיד עם קבלת הנתונים ולעשות את התהליך הזה גם ךרשימת המשימות
 const MaterialsInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
@@ -20,8 +21,9 @@ const MaterialsInputModal = ({ userId, visible, onClose, onSubmit, projectId }) 
     setItemValue(null);
     setCountValue(null);
     try {
-              await axios.post(`${SERVER_URL}/AddItem/${userId}/${projectId}`, newItem, {
-                headers: { "Content-Type": "application/json" },
+      const token = AsyncStorage.getItem("token");
+              await axios.post(`${SERVER_URL}/AddItem/${projectId}`, newItem, {
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
               });
             } catch (error) {
               console.error("Error adding product:", error);

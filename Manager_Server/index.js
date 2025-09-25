@@ -437,8 +437,8 @@ app.post('/AddTask/:userId/:projectId', async (req, res) => {
     });
 })
 
-app.post('/AddItem/:userId/:projectId', async (req, res) => {
-  const userId = req.params.userId;
+app.post('/AddItem/:projectId', authMiddleware, async (req, res) => {
+  const userId = req.userId;
   const Id = req.params.projectId;
   const addItem = req.body;
   // console.log(addItem);
