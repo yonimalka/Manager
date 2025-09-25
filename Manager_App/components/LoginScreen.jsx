@@ -7,6 +7,7 @@ import { TextInput } from "react-native-gesture-handler";
 import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import SignUp from "./SignUp";
 
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
@@ -22,45 +23,34 @@ const LoginScreen = () => {
     const [validation, setValidation] = useState(null);
 
 
-//        useEffect(() => {
-//   Alert.alert("Testing", "Making request to: " + SERVER_URL + "/ping");
-
-//   axios.get(`${SERVER_URL}/ping`)
-//     .then(res => {
-//       console.log("Server response:", res.data);
-//       Alert.alert("Success", "Server responded: " + JSON.stringify(res.data));
-//     })
-//     .catch(err => {
-//       console.log("Request failed:", err.message);
-//       Alert.alert("Error", "Request failed: " + err.message);
-//     });
-// }, []);
-
     const handleSignIn = async () => {
       
-        const details = {
-            email,
-            password
-        }
-        
-        const response = await axios.post(`${SERVER_URL}/SignInDetails`, details, {
-            headers: {"Content-Type": "application/json"},
-        })
-        // const message = response;
-        console.log("response: ",response.data);
-        const userId = response.data.userId;
-        console.log(userId);
-        
-        if(response.status === 200){
-            setLogin(true);
-            navigation.navigate("Home", {userId})
-        } else {
-          setValidation(message);
-        }
-        // if (!response.ok){
-        //     throw new Error(result.message);
-        // }
-        // console.log('Success:', result.message);
+     try {
+      const details = { email, password };
+
+      const response = await axios.post(
+      `${SERVER_URL}/SignInDetails`,
+      details,
+      { headers: { "Content-Type": "application/json" } }
+      );
+
+      if (response.status === 200) {
+      const { token, userId } = response.data; // expect server to return { token, userId }
+
+      // Save JWT for later
+      await AsyncStorage.setItem("token", token);
+
+      console.log("JWT stored:", token);
+
+      setLogin(true);
+      navigation.navigate("Home", { userId });
+    } else {
+      setValidation(response.data?.message || "Login failed");
+    }
+  } catch (error) {
+    console.log("Login error:", error.message);
+    setValidation("Login failed. Please try again.");
+  }
     }
     return (
         <View style={styles.container}>

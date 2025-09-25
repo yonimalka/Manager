@@ -15,22 +15,30 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import axios from "axios";
 import { SERVER_URL } from "@env";
 import { useValue } from "./ValueContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const Project = ({ userId, projectName, totalAmount, id }) => {
+const Project = ({ projectName, totalAmount, id }) => {
   const [paidAmount, setPaidAmount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
 
   const { setValue } = useValue();
-
+  
+  const getToken = async () => {
+    return await AsyncStorage.getItem("token");
+  };
   useEffect(() => {
     fetchProjectData();
   }, []);
 
   const fetchProjectData = async () => {
     try {
-      const response = await axios.get(`${SERVER_URL}/getProject/${userId}/${id}`);
+      const token = await getToken();
+      const response = await axios.get(`${SERVER_URL}/getProject/${id}`, {
+       headers: {Authorization: `Bearer ${token}`},
+      });
+
       setPaidAmount(response.data.paid);
     } catch (error) {
       console.error("Error fetching project data:", error);
@@ -50,8 +58,11 @@ const Project = ({ userId, projectName, totalAmount, id }) => {
     setMenuVisible(false);
 
     try {
+      const token = await getToken();
       const response = await axios.post(
-        `${SERVER_URL}/updatePayment/${userId}/${id}`,
+        `${SERVER_URL}/updatePayment/${id}`, {
+          headers: {Authorization: `Bearer ${token}`},
+        },
         { paidAmount: amount }
       );
       setValue(response.data);

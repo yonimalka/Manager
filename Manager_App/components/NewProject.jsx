@@ -18,6 +18,7 @@ import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
 import Constants from 'expo-constants';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
@@ -51,9 +52,13 @@ const NewProject = () => {
     }
     
     try {
+      const token = AsyncStorage.getItem("token");
+
       const newDetails = { ...details, materialsList, toDoList: taskList };
-      await axios.post(`${SERVER_URL}/updateDetails/${userId}`, newDetails, {
-        headers: { "Content-Type": "application/json" },
+      await axios.post(`${SERVER_URL}/updateDetails`, newDetails, {
+        headers: { "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+         },
       });
       
       Alert.alert("Success", "Project added successfully!");

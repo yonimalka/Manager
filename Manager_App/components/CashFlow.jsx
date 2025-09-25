@@ -14,12 +14,13 @@ import { useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
 import { MaterialIcons } from "@expo/vector-icons";
 import CashFlowCard from "./CashFlowCard";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import useAuth from "./useAuth";
 const isRTL = I18nManager.isRTL;
 
 export default function CashFlow() {
   const route = useRoute();
-  const userId = route.params?.userId;
+  const { userId, isAuthenticated } = useAuth();
 
   const [selectedPeriod, setSelectedPeriod] = useState("חודשי");
   const periods = ["חודשי", "רבעוני", "שנתי"];
@@ -31,6 +32,10 @@ export default function CashFlow() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [prevTotals, setPrevTotals] = useState({ incomes: 0, expenses: 0 });
   const [chartData, setChartData] = useState([]);
+
+  const getToken = async () => {
+    return await AsyncStorage.getItem("token");
+  }
 
   const periodMap = {
     "חודשי": "month",
@@ -52,12 +57,18 @@ export default function CashFlow() {
 
   const fetchData = async (periodLabel) => {
     try {
+      const token = getToken();
+
       setLoading(true);
       const periodParam = periodMap[periodLabel] || "month";
 
       // Incomes
       const incomesResponse = await axios.get(
-        `${SERVER_URL}/getCashFlowIncomes/${encodeURIComponent(userId)}?period=${encodeURIComponent(periodParam)}`
+        `${SERVER_URL}/getCashFlowIncomes/?period=${encodeURIComponent(periodParam)}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
       const safeIncomes = Array.isArray(incomesResponse.data) ? incomesResponse.data : [];
       setIncomes(safeIncomes);
@@ -71,7 +82,9 @@ export default function CashFlow() {
 
       // Expenses
       const expensesResponse = await axios.get(
-        `${SERVER_URL}/getCashFlowExpenses/${encodeURIComponent(userId)}?period=${encodeURIComponent(periodParam)}`
+        `${SERVER_URL}/getCashFlowExpenses/?period=${encodeURIComponent(periodParam)}`, {
+          headers: {Authorization: `Bearer ${token}`}
+        }
       );
       const safeExpenses = Array.isArray(expensesResponse.data) ? expensesResponse.data : [];
       setExpenses(safeExpenses);

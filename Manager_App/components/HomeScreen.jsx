@@ -14,25 +14,36 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SERVER_URL } from "@env";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Incomes from "./Incomes";
 import Expenses from "./Expenses";
 import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
-
+import { useAuth } from "./useAuth";
 
 
 const HomeScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const userId = route.params?.userId;
+  const { userId, authLoading, isAuthenticated } = useAuth();
   const isFocused = useIsFocused();
 
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  
+ 
+useEffect(() => {
+  if (!authLoading && !isAuthenticated) {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
+  }
+}, [authLoading, isAuthenticated]);
 
   useEffect(()=>{
     if (isFocused){
@@ -40,13 +51,29 @@ const HomeScreen = () => {
     }
   },[isFocused]);
 
+   if (authLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
   const fetchData = async () => {
     try {
       setLoading(true);
       setLoadingProjects(true);
-      const response = await axios.get(`${SERVER_URL}/getUsers/${userId}`);
-      setUserName(response.data.name);
-      setProjectDetails(response.data.projects);
+
+      const token = await AsyncStorage.getItem("token");
+    if (!token) {
+      console.log("No token found, redirect to login");
+      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+      return;
+    }
+      const response = await axios.get(`${SERVER_URL}/getUser`,{
+      headers: { Authorization: `Bearer ${token}` },
+  });
+      setUserName(response.data?.name ?? "משתמש");
+      setProjectDetails(response.data?.projects ?? [])
     } catch (err) {
       console.error("Error fetching user data: ", err);
     } finally {
@@ -57,7 +84,7 @@ const HomeScreen = () => {
 
   const renderProjectCard = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate("AboutProject", { project: item, userId })}
+      onPress={() => navigation.navigate("AboutProject", { project: item })}
       style={styles.projectCard}
     >
       <Project
@@ -151,7 +178,7 @@ const HomeScreen = () => {
           )}
         </ValueProvider>
       </ScrollView>
-      <BottomNavBar userId={userId} />
+      <BottomNavBar />
     </View>
   );
 };

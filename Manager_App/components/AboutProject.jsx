@@ -22,14 +22,34 @@ import WebView from "react-native-webview";
 
   // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
-const AboutProject = () => {
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Alert,
+  Dimensions,
+  I18nManager,
+} from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SERVER_URL } from "@env";
 
+import TaskInputModal from "./TaskInputModal";
+import MaterialsInputModal from "./MaterialsInputModal";
+
+const AboutProject = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const project = route.params?.project;
   const projectId = project?._id;
   const shouldRefresh = route.params?.shouldRefresh;
-  const userId = route.params?.userId;
 
   const [projectDetails, setProjectDetails] = useState(null);
   const [expenses, setExpenses] = useState(0);
@@ -40,13 +60,25 @@ const AboutProject = () => {
   const [isTaskModalVisible, setTaskModalVisible] = useState(false);
   const [isMaterialsModalVisible, setMaterialsModalVisible] = useState(false);
 
+  // Fetch token once
+  const getToken = async () => {
+    return await AsyncStorage.getItem("token");
+  };
+
   const fetchProject = async () => {
     try {
-      const response = await axios.get(`${SERVER_URL}/getProject/${userId}/${projectId}`);
+      const token = await getToken();
+
+      const response = await axios.get(`${SERVER_URL}/getProject/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       setProjectDetails(response.data);
       setExpenses(response.data.expenses || 0);
 
-      const receiptsResponse = await axios.get(`${SERVER_URL}/getReceipts/${userId}/${projectId}`);
+      const receiptsResponse = await axios.get(`${SERVER_URL}/getReceipts/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setReceipts(receiptsResponse.data);
     } catch (error) {
       console.error("Error fetching project details:", error);
@@ -67,7 +99,7 @@ const AboutProject = () => {
   }, [shouldRefresh]);
 
   const addReceipts = () => {
-    navigation.navigate("Receipts", { projectId, userId });
+    navigation.navigate("Receipts", { projectId });
   };
 
   const toggleCheck = async (item, index) => {
@@ -78,10 +110,11 @@ const AboutProject = () => {
     setToDoList(updatedList);
 
     try {
-      await axios.post(`${SERVER_URL}/updateTasks/${userId}/${projectId}`, {
+      const token = await getToken();
+      await axios.post(`${SERVER_URL}/updateTasks/${projectId}`, {
         ...item,
         checked: !item.checked,
-      });
+      }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (error) {
       console.error("Error updating task:", error);
     }
@@ -97,42 +130,35 @@ const AboutProject = () => {
     setMaterialsModalVisible(false);
   };
 
-  // const handleReceiptPress = (item) => {
-  //   // console.log("item");
-  //     navigation.navigate("ReceiptPreview", { item });
-    
-  // }
-
   const visibleReceipts = showAll ? receipts : receipts.slice(0, 6);
-  
+
   const handleProjectDelete = async () => {
     Alert.alert(
       "אישור מחיקה",
       "האם אתה בטוח שברצונך למחוק את הפרויקט?",
       [
-        {
-          text: "ביטול",
-          style: "cancel",
-        },
+        { text: "ביטול", style: "cancel" },
         {
           text: "מחק",
-          style: "destructive", 
+          style: "destructive",
           onPress: async () => {
-          try {
-           const res = await axios.delete(`${SERVER_URL}/deleteProject/${userId}/${projectId}`);
-            // Optionally update local state or navigate back
-            Alert.alert(res.data.message);
-            navigation.goBack();
-          } catch (error) {
-            console.error("Failed to delete project:", error);
-            Alert.alert("שגיאה", "לא ניתן היה למחוק את הפרויקט.");
+            try {
+              const token = await getToken();
+              const res = await axios.delete(`${SERVER_URL}/deleteProject/${projectId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              Alert.alert(res.data.message);
+              navigation.goBack();
+            } catch (error) {
+              console.error("Failed to delete project:", error);
+              Alert.alert("שגיאה", "לא ניתן היה למחוק את הפרויקט.");
+            }
           }
         }
-      }
-     ]
-    )
+      ]
+    );
+  };
 
-  }
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       {/* Project Summary */}
@@ -180,15 +206,10 @@ const AboutProject = () => {
             </View>
           )}
         />
-        <TouchableOpacity
-          style={[styles.fabButton]}
-          onPress={() => setTaskModalVisible(true)}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={[styles.fabButton]} onPress={() => setTaskModalVisible(true)} activeOpacity={0.8}>
           <Ionicons name="add" size={28} color="#FFF" />
         </TouchableOpacity>
         <TaskInputModal
-          userId={userId}
           visible={isTaskModalVisible}
           onClose={() => setTaskModalVisible(false)}
           onSubmit={handleAddTask}
@@ -215,15 +236,10 @@ const AboutProject = () => {
             </View>
           )}
         />
-        <TouchableOpacity
-          style={styles.fabButton}
-          onPress={() => setMaterialsModalVisible(true)}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.fabButton} onPress={() => setMaterialsModalVisible(true)} activeOpacity={0.8}>
           <Ionicons name="add" size={28} color="#FFF" />
         </TouchableOpacity>
         <MaterialsInputModal
-          userId={userId}
           visible={isMaterialsModalVisible}
           onClose={() => setMaterialsModalVisible(false)}
           onSubmit={handleAddMaterial}
@@ -233,11 +249,7 @@ const AboutProject = () => {
       </View>
 
       {/* Upload Receipt Button */}
-      <TouchableOpacity
-        style={styles.uploadButton}
-        onPress={addReceipts}
-        activeOpacity={0.8}
-      >
+      <TouchableOpacity style={styles.uploadButton} onPress={addReceipts} activeOpacity={0.8}>
         <Ionicons name="cloud-upload-outline" size={22} color="#FFF" />
         <Text style={styles.uploadButtonText}>העלאת חשבונית</Text>
       </TouchableOpacity>
@@ -245,9 +257,7 @@ const AboutProject = () => {
       {/* Receipts Gallery */}
       <View style={styles.section}>
         <TouchableOpacity onPress={() => setShowAll(!showAll)}>
-          <Text style={styles.toggleText}>
-            {showAll ? "תראה פחות" : "תראה יותר"}
-          </Text>
+          <Text style={styles.toggleText}>{showAll ? "תראה פחות" : "תראה יותר"}</Text>
         </TouchableOpacity>
         <FlatList
           data={visibleReceipts}
@@ -256,18 +266,16 @@ const AboutProject = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item }) => (
-           <TouchableOpacity onPress={() => navigation.navigate("ReceiptPreview", { item })}>
-            <Image
-              source={{ uri: item.data }}
-              style={styles.receiptImage}
-              resizeMode="cover"
-            />
-           </TouchableOpacity>
-            
+            <TouchableOpacity onPress={() => navigation.navigate("ReceiptPreview", { item })}>
+              <Image source={{ uri: item.data }} style={styles.receiptImage} resizeMode="cover" />
+            </TouchableOpacity>
           )}
         />
       </View>
-      <TouchableOpacity style={styles.deleteButton} onPress={handleProjectDelete}><Text style={styles.deleteText}>Delete Project</Text></TouchableOpacity>
+
+      <TouchableOpacity style={styles.deleteButton} onPress={handleProjectDelete}>
+        <Text style={styles.deleteText}>Delete Project</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -290,185 +298,28 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: "#F9F9F9",
     flexGrow: 1,
-    // flexDirection: isRTL ? "row" : "row-reverse",
   },
-  projectCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-  },
-  projectTitle: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 20,
-    textAlign: isRTL ? "left" : "right",
-  },
-  projectStats: {
-    flexDirection: isRTL ? "row" : "row-reverse",
-    justifyContent: "space-around",
-  },
-  statBlock: {
-    flex: 1,
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginHorizontal: 1,
-    alignItems: "center",
-    backgroundColor: "#FAFAFA",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#212121",
-    textAlign: isRTL ? "left" : "right",
-  },
-  statLabel: {
-    fontSize: 14,
-    color: "#616161",
-    marginTop: 4,
-    textAlign: isRTL ? "left" : "right",
-  },
-  section: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#444",
-    marginBottom: 18,
-    textAlign: isRTL ? "left" : "right",
-  },
-  tableHeader: {
-    flexDirection: isRTL ? "row" : "row-reverse",
-    borderBottomWidth: 1,
-    borderColor: "#E0E0E0",
-    paddingBottom: 10,
-    marginBottom: 10,
-  },
-  row: {
-    flexDirection: isRTL ? "row" : "row-reverse",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: "#F0F0F0",
-  },
-  cell: {
-    color: "#424242",
-    fontSize: 16,
-    textAlign: isRTL ? "left" : "right",
-    paddingStart: 12,
-    paddingEnd: 12,
-  },
-  headerText: {
-    fontWeight: "700",
-    color: "#666",
-    fontSize: 17,
-    textAlign: isRTL ? "left" : "right",
-  },
-  taskText: {
-    color: "#222",
-    textAlign: isRTL ? "left" : "right",
-  },
-  checkedText: {
-    textDecorationLine: "line-through",
-    color: "#999",
-    textAlign: isRTL ? "left" : "right",
-  },
-  fabButton: {
-    bottom: 0,
-    marginTop: 10,
-    backgroundColor: "#333",
-    borderRadius: 28,
-    width: 56,
-    height: 56,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 6,
-    flexDirection: isRTL ? "row" : "row-reverse",
-    alignSelf: isRTL ? "flex-end" : "flex-start",
-  },
-  uploadButton: {
-    backgroundColor: "#3b49df",
-    paddingVertical: 14,
-    borderRadius: 28,
-    flexDirection: isRTL ? "row" : "row-reverse",
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "center",
-    marginBottom: 25,
-    paddingStart: 24,
-    paddingEnd: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
-  },
-  uploadButtonText: {
-    color: "#FFF",
-    fontWeight: "700",
-    fontSize: 18,
-    marginStart: 10,
-    marginEnd: 10,
-    textAlign: isRTL ? "left" : "right",
-  },
-  toggleText: {
-    color: "#555",
-    fontWeight: "700",
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 14,
-  },
-  receiptImage: {
-    width: 140,
-    height: 140,
-    marginStart: isRTL ? 16 : 0,
-    marginEnd: isRTL ? 0 : 16,
-    borderRadius: 14,
-    backgroundColor: "#F0F0F0",
-  },
-  deleteButton: {
-    backgroundColor: "#fff0f0",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.10,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  deleteText: {
-    color: "#d32f2f",
-    textAlign: isRTL ? "right" : "left",
-  }
+  projectCard: { backgroundColor: "#FFF", borderRadius: 16, padding: 20, marginBottom: 30 },
+  projectTitle: { fontSize: 26, fontWeight: "700", color: "#333", marginBottom: 20, textAlign: isRTL ? "left" : "right" },
+  projectStats: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-around" },
+  statBlock: { flex: 1, borderRadius: 18, padding: 12, marginHorizontal: 1, alignItems: "center", backgroundColor: "#FAFAFA" },
+  statValue: { fontSize: 20, fontWeight: "700", color: "#212121", textAlign: isRTL ? "left" : "right" },
+  statLabel: { fontSize: 14, color: "#616161", marginTop: 4, textAlign: isRTL ? "left" : "right" },
+  section: { backgroundColor: "#FFF", borderRadius: 16, padding: 18, marginBottom: 30 },
+  sectionTitle: { fontSize: 22, fontWeight: "700", color: "#444", marginBottom: 18, textAlign: isRTL ? "left" : "right" },
+  tableHeader: { flexDirection: isRTL ? "row" : "row-reverse", borderBottomWidth: 1, borderColor: "#E0E0E0", paddingBottom: 10, marginBottom: 10 },
+  row: { flexDirection: isRTL ? "row" : "row-reverse", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: "#F0F0F0" },
+  cell: { color: "#424242", fontSize: 16, textAlign: isRTL ? "left" : "right", paddingStart: 12, paddingEnd: 12 },
+  headerText: { fontWeight: "700", color: "#666", fontSize: 17, textAlign: isRTL ? "left" : "right" },
+  taskText: { color: "#222", textAlign: isRTL ? "left" : "right" },
+  checkedText: { textDecorationLine: "line-through", color: "#999", textAlign: isRTL ? "left" : "right" },
+  fabButton: { bottom: 0, marginTop: 10, backgroundColor: "#333", borderRadius: 28, width: 56, height: 56, justifyContent: "center", alignItems: "center", flexDirection: isRTL ? "row" : "row-reverse", alignSelf: isRTL ? "flex-end" : "flex-start" },
+  uploadButton: { backgroundColor: "#3b49df", paddingVertical: 14, borderRadius: 28, flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 25, paddingStart: 24, paddingEnd: 24 },
+  uploadButtonText: { color: "#FFF", fontWeight: "700", fontSize: 18, marginStart: 10, marginEnd: 10, textAlign: isRTL ? "left" : "right" },
+  toggleText: { color: "#555", fontWeight: "700", fontSize: 16, textAlign: "center", marginBottom: 14 },
+  receiptImage: { width: 140, height: 140, marginStart: isRTL ? 16 : 0, marginEnd: isRTL ? 0 : 16, borderRadius: 14, backgroundColor: "#F0F0F0" },
+  deleteButton: { backgroundColor: "#fff0f0", padding: 14, borderRadius: 12, alignItems: "center" },
+  deleteText: { color: "#d32f2f", textAlign: isRTL ? "right" : "left" },
 });
-
-
-
 
 export default AboutProject;

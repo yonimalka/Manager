@@ -4,9 +4,9 @@ import { View, TouchableOpacity, Text, StyleSheet, Platform } from "react-native
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function BottomNavBar({ userId }) {
+export default function BottomNavBar() {
   const navigation = useNavigation();
-
+  
   const tabs = [
     { name: "CashFlow", icon: "trending-up-outline", label: "תזרים" },
     { name: "NewProject", icon: "add-circle-outline", label: "חדש" },
@@ -20,7 +20,7 @@ export default function BottomNavBar({ userId }) {
         <TouchableOpacity
           key={tab.name}
           style={styles.navButton}
-          onPress={() => navigation.navigate(tab.name, { userId })}
+          onPress={() => navigation.navigate(tab.name)}
         >
           <Ionicons name={tab.icon} size={24} color="#00796b" />
           <Text style={styles.navText}>{tab.label}</Text>
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ffffff",
     paddingVertical: 7,
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     borderTopColor: "#e0e0e0",
     ...Platform.select({
       ios: {

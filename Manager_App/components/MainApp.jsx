@@ -32,6 +32,7 @@ import PdfPreview from "./PdfPreview";
 import CashFlow from "./CashFlow";
 import ProfileDetails from "./ProfileDetails";
 import ReceiptPreview from "./ReceiptPreview";
+import { useAuth } from "./useAuth";
 // React Navigation Setup
 const Stack = createStackNavigator();
 

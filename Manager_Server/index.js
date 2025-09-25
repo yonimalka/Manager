@@ -11,9 +11,12 @@ const { OpenAI } = require('openai');
 require('dotenv').config();
 const { jsonToPdf } = require('./pdf/jsonToPdf');
 const { log } = require('handlebars');
+const jwt = require('jsonwebtoken');
+const authMiddleware = require('./authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT;
+const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
 
 app.use(cors());
 app.use(express.json());
@@ -170,21 +173,38 @@ app.post("/NewUser", async (req, res) => {
 app.post("/SignInDetails", async (req, res) => {
   const { email, password } = req.body;
   
-  const user = await UserModel.findOne({email: email});
-  if(!user) {
-    console.log("no user found");
-    return res.status(401).json({ message: "Invalid email or password"})
+  try {
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      console.log("no user found");
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Create JWT
+    const token = jwt.sign(
+      { userId: user._id }, 
+      JWT_SECRET,
+      { expiresIn: "15s" } 
+    );
+    console.log("token ", token);
     
-    
+    console.log("userId:", user._id);
+
+    // Return both userId and token
+    res.status(200).json({
+      userId: user._id,
+      token,
+      message: "Login successful!"
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server error" });
   }
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  // const isPasswordValid = await user.password;
-  if(!isPasswordValid){
-    return res.status(401).json({ message: "Invalid email or password"})
-  }
-    console.log("userId: ",user._id);
-    res.send({userId: user._id})
-    // res.status(200).json({message: "Login successful!"})
 })
 app.get("/getUserDetails/:userId", async (req, res) => {
    const userId = req.params.userId;
@@ -201,26 +221,22 @@ app.get("/getUserDetails/:userId", async (req, res) => {
    }).catch((err) =>{
     console.log("error occurd on getUserDetails",err);
   } )
-})
-app.get("/getUsers/:userId", async (req, res) => {
-  const userId = req.params.userId;
-  // console.log(userId);
-  
-  // const user = await UserModel.findOne({email: userEmail})
-  // res.json(user);
+});
 
-  await UserModel.findById(userId)
-  .then(function(users){
-    res.json(users)
-    // console.log(users);
-  }).catch((err) =>{
-    console.log(err);
-  } )
-  
-})
+// JWT-protected route
+app.get("/getUser", authMiddleware, async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.userId).populate("projects").select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
-app.post("/updateDetails/:userId", async (req, res) =>{
-    const userId = req.params.userId;
+app.post("/updateDetails/", authMiddleware, async (req, res) =>{
+    const userId = req.userId;
     const {name, payment, days, materialsList, toDoList} = req.body;
     console.log(userId);
     
@@ -241,8 +257,8 @@ app.post("/updateDetails/:userId", async (req, res) =>{
     res.status(200).json({ message: "Success" });
 });
 
-app.post("/updateTasks/:userId/:projectId", async (req, res) => {
-  const userId = req.params.userId;
+app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
+  const userId = req.userId;
   const projectId = req.params.projectId;
   const updatedTask = req.body;
   // console.log(updatedTask);
@@ -265,22 +281,10 @@ app.post("/updateTasks/:userId/:projectId", async (req, res) => {
   })
   
 })
-app.get("/getProject/:userId/:projectId", (req, res) => {
-  const userId = req.params.userId;
-  const Id = req.params.projectId;
-  // console.log(Id);
-  
-  UserModel.findById(userId)
-  .then(function(user){
-    // console.log(user.projects);
-    const project = user.projects.find((p) => p._id.toString() == Id);
-    // console.log(project);
-    res.json(project);
-    
-  }).catch((err) =>{
-    console.log(err);
-  } )
-  });
+app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
+  const project = await ProjectModel.findOne({ _id: req.params.projectId, userId: req.userId });
+  res.json(project);
+});
 
   app.post("/uploadReceipt/:userId", upload.single('image'), async (req, res) =>{
     const userId = req.params.userId;
@@ -353,9 +357,9 @@ await UserModel.findByIdAndUpdate(
     )
 });
 
-app.get('/getReceipts/:userId/:projectId', async (req, res) =>{
+app.get('/getReceipts/:projectId', authMiddleware, async (req, res) =>{
   const projectId = req.params.projectId;
-const userId = req.params.userId;
+  const userId = req.userId;
 
 try {
   // Step 1: Connect to GridFS bucket only if not already
@@ -401,8 +405,8 @@ try {
 
 })
 
-app.get('/getTotalExpenses/:userId', async (req, res) => {
-  const userId = req.params.userId;
+app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
+  const userId = req.userId;
   UserModel.findById(userId)
   .then((user) => {
     const getExpenses = user.totalExpenses;
@@ -411,8 +415,8 @@ app.get('/getTotalExpenses/:userId', async (req, res) => {
   
 })
 
-app.get('/getTotalIncomes/:userId', (req, res) => {
-  const userId = req.params.userId;
+app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
+  const userId = req.userId;
   UserModel.findById(userId)
   .then((user) => {
     const getIncomes = user.totalIncomes;
@@ -463,8 +467,8 @@ app.get('/GetMaterialsList/:projectId', async (req, res) => {
     })
   }
 )
-app.post('/UpdatePayment/:userId/:projectId', async (req, res) =>{
-  const userId = req.params.userId;
+app.post('/UpdatePayment/:projectId', authMiddleware, async (req, res) =>{
+  const userId = req.userId;
   const Id = req.params.projectId;
   const {paidAmount} = req.body;
   // console.log(paidAmount);
@@ -488,9 +492,9 @@ app.post('/UpdatePayment/:userId/:projectId', async (req, res) =>{
 });
 
 // GET /getCashFlowIncomes/:userId?period=month|quarter|year
-app.get("/getCashFlowIncomes/:userId", async (req, res) => {
+app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const raw = req.query.period || "month"; // default month
     const now = new Date();
 
@@ -648,8 +652,8 @@ Do NOT wrap in markdown, do NOT add commentary.
   }
 });
 
-app.delete("/deleteProject/:userId/:projectId", async (req, res) =>{
-  const userId = req.params.userId;
+app.delete("/deleteProject/:projectId", authMiddleware, async (req, res) =>{
+  const userId = req.userId;
   const projectId = req.params.projectId;
 
   try {

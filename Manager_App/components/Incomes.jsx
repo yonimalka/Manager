@@ -3,6 +3,7 @@ import { Text } from "react-native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
 import { useValue } from "./ValueContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Incomes = ({ userId }) => {
   const { value } = useValue();
@@ -14,7 +15,11 @@ const Incomes = ({ userId }) => {
 
   const fetchIncomes = async () => {
     try {
-      const response = await axios.get(`${SERVER_URL}/getTotalIncomes/${userId}`);
+      const token = AsyncStorage.getItem("token");
+
+      const response = await axios.get(`${SERVER_URL}/getTotalIncomes`, {
+        headers: {Authorization: `Bearer ${token}`}
+      });
       setTotalIncomes(response.data);
     } catch (err) {
       console.error("Error fetching incomes: ", err);
