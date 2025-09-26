@@ -43,7 +43,7 @@ const LoginScreen = () => {
       console.log("JWT stored:", token);
 
       setLogin(true);
-      navigation.navigate("Home", { userId });
+      navigation.navigate("Home");
     } else {
       setValidation(response.data?.message || "Login failed");
     }

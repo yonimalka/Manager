@@ -17,9 +17,6 @@ const authMiddleware = require('./authMiddleware');
 const app = express();
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
-console.log("PORT ",PORT);
-
-console.log("token ", process.env.ACCESS_TOKEN_SECRET);
 
 app.use(cors());
 app.use(express.json());
@@ -189,16 +186,16 @@ app.post("/SignInDetails", async (req, res) => {
     }
      console.log("userId: ", user._id);
      console.log("jwt  ",JWT_SECRET);
-     
+     console.log("userId:", user._id);
     // Create JWT
     const token = jwt.sign(
       { userId: user._id }, 
       JWT_SECRET,
-      { expiresIn: "15s" } 
+      // { expiresIn: "15s" } 
     );
     console.log("token ", token);
     
-    console.log("userId:", user._id);
+    
 
     // Return both userId and token
     res.status(200).json({
