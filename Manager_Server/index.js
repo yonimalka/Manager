@@ -184,7 +184,9 @@ app.post("/SignInDetails", async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
-
+     console.log("userId: ", user._id);
+     console.log("jwt  ",JWT_SECRET);
+     
     // Create JWT
     const token = jwt.sign(
       { userId: user._id }, 
