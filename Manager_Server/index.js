@@ -17,6 +17,8 @@ const authMiddleware = require('./authMiddleware');
 const app = express();
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
+console.log("PORT ",PORT);
+
 console.log("token ", process.env.ACCESS_TOKEN_SECRET);
 
 app.use(cors());
