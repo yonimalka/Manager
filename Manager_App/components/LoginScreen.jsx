@@ -33,17 +33,17 @@ const LoginScreen = () => {
       details,
       { headers: { "Content-Type": "application/json" } }
       );
-
+      Alert.alert(response.data);
       if (response.status === 200) {
       const { token, userId } = response.data; // expect server to return { token, userId }
-
+      Alert.alert(token);
       // Save JWT for later
       await AsyncStorage.setItem("token", token);
 
       console.log("JWT stored:", token);
 
       setLogin(true);
-      navigation.navigate("Home");
+      // navigation.navigate("Home");
     } else {
       setValidation(response.data?.message || "Login failed");
     }
