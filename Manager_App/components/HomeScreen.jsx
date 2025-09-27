@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   I18nManager,
+  Alert,
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -36,14 +37,14 @@ const HomeScreen = () => {
   const [loadingProjects, setLoadingProjects] = useState(false);
   
  
-useEffect(() => {
-  if (!authLoading && !isAuthenticated) {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Login" }],
-    });
-  }
-}, [authLoading, isAuthenticated]);
+// useEffect(() => {
+//   if (!authLoading && !isAuthenticated) {
+//     navigation.reset({
+//       index: 0,
+//       routes: [{ name: "Login" }],
+//     });
+//   }
+// }, [authLoading, isAuthenticated]);
 
   useEffect(()=>{
     if (isFocused){
@@ -66,7 +67,8 @@ useEffect(() => {
       const token = await AsyncStorage.getItem("token");
     if (!token) {
       console.log("No token found, redirect to login");
-      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+      Alert.alert("No token found, redirect to login")
+      // navigation.reset({ index: 0, routes: [{ name: "Login" }] });
       return;
     }
       const response = await axios.get(`${SERVER_URL}/getUser`,{
