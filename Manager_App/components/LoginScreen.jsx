@@ -24,10 +24,10 @@ const LoginScreen = () => {
 
 
     const handleSignIn = async () => {
-      
+      Alert.alert("start of function");
      try {
       const details = { email, password };
-
+      Alert.alert("details", details)
       const response = await axios.post(
       `${SERVER_URL}/SignInDetails`,
       details,
