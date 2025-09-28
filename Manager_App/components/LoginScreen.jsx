@@ -41,13 +41,13 @@ const LoginScreen = () => {
       await AsyncStorage.setItem("token", token);
 
       console.log("JWT stored:", token);
-      Alert.alert("after Async");
+      Alert.alert("after Async", "after");
       // Navigate to Home
       navigation.reset({
         index: 0,
         routes: [{ name: "HomeScreen" }],
       });
-      Alert.alert("after navigatoin");
+      Alert.alert("after navigatoin", "after");
     } else {
       setValidation(response.data?.message || "Login failed");
     }
