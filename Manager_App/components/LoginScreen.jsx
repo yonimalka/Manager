@@ -23,27 +23,32 @@ const LoginScreen = () => {
     const [validation, setValidation] = useState(null);
 
 
-    const handleSignIn = async () => {
-      Alert.alert("start of function");
-     try {
-      const details = { email, password };
-      Alert.alert("details", JSON.stringify(details));
-      const response = await axios.post(
+   const handleSignIn = async () => {
+  try {
+    const details = { email, password };
+    Alert.alert("details", JSON.stringify(details));
+
+    const response = await axios.post(
       `${SERVER_URL}/SignInDetails`,
       details,
       { headers: { "Content-Type": "application/json" } }
-      );
-      Alert.alert("Response", JSON.stringify(response.data));
-      if (response.status === 200) {
-      const { token, userId } = response.data; // expect server to return { token, userId }
-      Alert.alert(token);
-      // Save JWT for later
-      await AsyncStorage.setItem("token", token);
+    );
 
+    Alert.alert("Response", JSON.stringify(response.data));
+
+    if (response.status === 200) {
+      const { token, userId } = response.data;
+
+      if (!token) {
+        setValidation("No token returned from server");
+        return;
+      }
+
+      await AsyncStorage.setItem("token", token);
       console.log("JWT stored:", token);
 
       setLogin(true);
-      // navigation.navigate("Home");
+      navigation.navigate("Home");
     } else {
       setValidation(response.data?.message || "Login failed");
     }
@@ -51,7 +56,8 @@ const LoginScreen = () => {
     console.log("Login error:", error.message);
     setValidation("Login failed. Please try again.");
   }
-    }
+};
+
     return (
         <View style={styles.container}>
         <Image source={require("../assets/managoLogoTransparent.png")} style={styles.logo} />
