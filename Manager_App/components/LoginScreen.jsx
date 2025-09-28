@@ -27,13 +27,13 @@ const LoginScreen = () => {
       Alert.alert("start of function");
      try {
       const details = { email, password };
-      Alert.alert("details", details)
+      Alert.alert("details", JSON.stringify(details));
       const response = await axios.post(
       `${SERVER_URL}/SignInDetails`,
       details,
       { headers: { "Content-Type": "application/json" } }
       );
-      Alert.alert(response.data);
+      Alert.alert("Response", JSON.stringify(response.data));
       if (response.status === 200) {
       const { token, userId } = response.data; // expect server to return { token, userId }
       Alert.alert(token);
