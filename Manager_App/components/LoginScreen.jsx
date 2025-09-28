@@ -26,7 +26,7 @@ const LoginScreen = () => {
    const handleSignIn = async () => {
   try {
     const details = { email, password };
-    Alert.alert("details", JSON.stringify(details));
+    // Alert.alert("details", JSON.stringify(details));
 
     const response = await axios.post(
       `${SERVER_URL}/SignInDetails`,
@@ -43,11 +43,12 @@ const LoginScreen = () => {
         setValidation("No token returned from server");
         return;
       }
-
+      Alert.alert("token before Async:", JSON.stringify(token))
       await AsyncStorage.setItem("token", token);
       console.log("JWT stored:", token);
 
       setLogin(true);
+      Alert.alert("token after Async:", JSON.stringify(token))
       navigation.navigate("Home");
     } else {
       setValidation(response.data?.message || "Login failed");
