@@ -172,6 +172,9 @@ app.post("/NewUser", async (req, res) => {
 
 app.post("/SignInDetails", async (req, res) => {
   const { email, password } = req.body;
+  console.log("email:", email);
+  console.log("password:", password);
+  
   
   try {
     const user = await UserModel.findOne({ email });
@@ -185,8 +188,8 @@ app.post("/SignInDetails", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
      console.log("userId: ", user._id);
-     console.log("jwt  ",JWT_SECRET);
-     console.log("userId:", user._id);
+     console.log("jwt  ", JWT_SECRET);
+
     // Create JWT
     const token = jwt.sign(
       { userId: user._id }, 

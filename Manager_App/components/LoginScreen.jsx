@@ -14,7 +14,6 @@ import SignUp from "./SignUp";
 
 const LoginScreen = () => {
   
-
     const navigation = useNavigation();
 
     const [email, setEmail] = useState();
@@ -26,14 +25,14 @@ const LoginScreen = () => {
     const handleSignIn = async () => {
   try {
     const details = { email, password };
-    console.log("Sending login details:", details);
+    // console.log("Sending login details:", details);
 
     const response = await axios.post(
       `${SERVER_URL}/SignInDetails`,
       details,
       { headers: { "Content-Type": "application/json" } }
     );
-
+    Alert.alert("response", JSON.stringify(response.data));
     if (response.status === 200) {
       const { token, userId } = response.data;
 
@@ -41,13 +40,13 @@ const LoginScreen = () => {
       await AsyncStorage.setItem("token", token);
 
       console.log("JWT stored:", token);
-      Alert.alert("after Async", "after");
+      // Alert.alert("after Async", "after");
       // Navigate to Home
       navigation.reset({
         index: 0,
         routes: [{ name: "HomeScreen" }],
       });
-      Alert.alert("after navigatoin", "after");
+      // Alert.alert("after navigatoin", "after");
     } else {
       setValidation(response.data?.message || "Login failed");
     }
