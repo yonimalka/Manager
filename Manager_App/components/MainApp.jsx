@@ -63,7 +63,7 @@ const MainApp = () => {
         <Stack.Screen name="PdfPreview" component={PdfPreview} options={{ headerShown: false }}/>
         <Stack.Screen name="ProfileDetails" component={ProfileDetails} options={{ headerShown: false }}/>
         <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }}/>
-        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }}/>
+        <Stack.Screen name="HomeScreen" component={HomeScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="SignUp" component={SignUp} options={{ headerShown: false }}/>
         <Stack.Screen name="AboutProject" component={AboutProject} options={{ headerShown: false }}/>
         <Stack.Screen name="NewProject" component={NewProject} options={{ headerShown: false }}/>
