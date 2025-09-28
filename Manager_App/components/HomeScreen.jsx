@@ -37,14 +37,14 @@ const HomeScreen = () => {
   const [loadingProjects, setLoadingProjects] = useState(false);
   
  
-// useEffect(() => {
-//   if (!authLoading && !isAuthenticated) {
-//     navigation.reset({
-//       index: 0,
-//       routes: [{ name: "Login" }],
-//     });
-//   }
-// }, [authLoading, isAuthenticated]);
+useEffect(() => {
+  if (!authLoading && !isAuthenticated) {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "LoginScreen" }],
+    });
+  }
+}, [authLoading, isAuthenticated]);
 
   useEffect(()=>{
     if (isFocused){
@@ -74,6 +74,8 @@ const HomeScreen = () => {
       const response = await axios.get(`${SERVER_URL}/getUser`,{
       headers: { Authorization: `Bearer ${token}` },
   });
+  
+  
       setUserName(response.data?.name ?? "משתמש");
       setProjectDetails(response.data?.projects ?? [])
     } catch (err) {

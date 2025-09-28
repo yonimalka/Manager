@@ -32,10 +32,10 @@ const LoginScreen = () => {
       details,
       { headers: { "Content-Type": "application/json" } }
     );
-    Alert.alert("response", JSON.stringify(response.data));
+    
     if (response.status === 200) {
       const { token, userId } = response.data;
-
+    
       // Save JWT
       await AsyncStorage.setItem("token", token);
 

@@ -17,6 +17,7 @@ export const useAuth = () => {
     const loadAuth = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
+        
         if (token) {
           const decoded = jwtDecode(token);
 
@@ -51,7 +52,7 @@ export const useAuth = () => {
     setAuth({ userId: null, role: null, isAuthenticated: false });
     navigation.reset({
       index: 0,
-      routes: [{ name: "Login" }],
+      routes: [{ name: "LoginScreen" }],
     });
   };
 
