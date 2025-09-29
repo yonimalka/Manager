@@ -288,7 +288,11 @@ app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
   
 })
 app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
-  const project = await ProjectModel.findOne({ _id: req.params.projectId, userId: req.userId });
+  const user = UserModel.findById(req.userId);
+  const project = user.projects.find((p) => p._id.toString() == req.params.projectId);
+  if(!project){
+      throw new Error('Project not found');
+    }
   res.json(project);
 });
 
