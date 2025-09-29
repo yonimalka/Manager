@@ -290,14 +290,15 @@ app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
 app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   console.log("project ID", req.params.Id);
   
-  const user = UserModel.findById(req.userId);
-  console.log("user:", user);
-  
-  const project = user.projects.find((p) => p._id.toString() == req.params.Id);
-  if(!project){
+   UserModel.findById(req.userId)
+  .then(user => { 
+    const project = user.projects.find((p) => p._id.toString() == req.params.Id);
+    if(!project){
       throw new Error('Project not found');
     }
-  res.json(project);
+    res.json(project);
+  });
+  
 });
 
   app.post("/uploadReceipt/:userId", upload.single('image'), async (req, res) =>{
