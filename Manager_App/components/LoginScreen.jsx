@@ -39,7 +39,7 @@ const LoginScreen = () => {
       // Save JWT
       await AsyncStorage.setItem("token", token);
 
-      console.log("JWT stored:", token);
+      // console.log("JWT stored:", token);
       // Alert.alert("after Async", "after");
       // Navigate to Home
       navigation.reset({

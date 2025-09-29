@@ -5,14 +5,16 @@ import { SERVER_URL } from "@env";
 import { useValue } from "./ValueContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const Incomes = ({ userId }) => {
+const Incomes = () => {
   const { value } = useValue();
   const [totalIncomes, setTotalIncomes] = useState(null);
 
   
   const fetchIncomes = async () => {
+    
     try {
-      const token = AsyncStorage.getItem("token");
+      const token = await AsyncStorage.getItem("token");
+      
       if (!token) {
             console.log("No token found on incomes");
             // Alert.alert("No token found, redirect to login")
