@@ -36,30 +36,7 @@ const HomeScreen = () => {
   const [projectDetails, setProjectDetails] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   
- 
-useEffect(() => {
-  if (!authLoading && !isAuthenticated) {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "LoginScreen" }],
-    });
-  }
-}, [authLoading, isAuthenticated]);
-
-  useEffect(()=>{
-    if (isFocused){
-      fetchData();
-    }
-  },[isFocused]);
-
-   if (authLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-  const fetchData = async () => {
+ const fetchData = async () => {
     try {
       setLoading(true);
       setLoadingProjects(true);
@@ -74,8 +51,6 @@ useEffect(() => {
       const response = await axios.get(`${SERVER_URL}/getUser`,{
       headers: { Authorization: `Bearer ${token}` },
   });
-  
-  
       setUserName(response.data?.name ?? "משתמש");
       setProjectDetails(response.data?.projects ?? [])
     } catch (err) {
@@ -85,6 +60,29 @@ useEffect(() => {
       setLoadingProjects(false);
     }
   };
+useEffect(() => {
+  if (!authLoading && !isAuthenticated) {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "LoginScreen" }],
+    });
+  }
+}, [authLoading, isAuthenticated]);
+
+  useEffect(() =>{
+    if (isFocused){
+      console.log("--before fetch--");
+      fetchData();
+    }
+  },[isFocused]);
+
+   if (authLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   const renderProjectCard = ({ item }) => (
     <TouchableOpacity
@@ -126,7 +124,7 @@ useEffect(() => {
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
                 <Text style={styles.summaryAmount}>
-                <Incomes userId={userId} refresh={loading} />
+                <Incomes refresh={loading} />
                 </Text>
               )}
               <MaterialIcons

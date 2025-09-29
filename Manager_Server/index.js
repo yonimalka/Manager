@@ -175,7 +175,6 @@ app.post("/SignInDetails", async (req, res) => {
   console.log("email:", email);
   console.log("password:", password);
   
-  
   try {
     const user = await UserModel.findOne({ email });
     if (!user) {
@@ -424,11 +423,9 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
 app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   const userId = req.userId;
-  UserModel.findById(userId)
-  .then((user) => {
-    const getIncomes = user.totalIncomes;
-    res.json(getIncomes);
-  })
+  const user =  UserModel.findById(userId);
+  const getIncomes = user.totalIncomes;
+  res.json(getIncomes);
 })
 app.post('/AddTask/:userId/:projectId', async (req, res) => {
   const userId = req.params.userId;

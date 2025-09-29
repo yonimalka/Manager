@@ -9,22 +9,30 @@ const Incomes = ({ userId }) => {
   const { value } = useValue();
   const [totalIncomes, setTotalIncomes] = useState(null);
 
-  useEffect(() => {
-    fetchIncomes();
-  }, [value]);
-
+  
   const fetchIncomes = async () => {
     try {
       const token = AsyncStorage.getItem("token");
-
+      if (!token) {
+            console.log("No token found on incomes");
+            // Alert.alert("No token found, redirect to login")
+            // navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+            return;
+          }
       const response = await axios.get(`${SERVER_URL}/getTotalIncomes`, {
         headers: {Authorization: `Bearer ${token}`}
       });
+      console.log("incomes response: ",response.data);
+      
       setTotalIncomes(response.data);
     } catch (err) {
       console.error("Error fetching incomes: ", err);
     }
   };
+
+  useEffect(() => {
+    fetchIncomes();
+  }, [value]);
 
   // מחזיר רק את הערך, בלי עיצוב
   return <Text>{value ? `${value}₪` : totalIncomes ? `${totalIncomes}₪` : "0₪"}</Text>;

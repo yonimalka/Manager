@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode"; // ⬅️ FIXED import
 
 export const useAuth = () => {
   const [auth, setAuth] = useState({
@@ -9,7 +9,7 @@ export const useAuth = () => {
     role: null,
     isAuthenticated: false,
   });
-  const [authLoading, setLoading] = useState(true); // 👈 NEW state
+  const [authLoading, setLoading] = useState(true);
 
   const navigation = useNavigation();
 
@@ -17,9 +17,9 @@ export const useAuth = () => {
     const loadAuth = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        
+
         if (token) {
-          const decoded = jwtDecode(token);
+          const decoded = jwtDecode(token); // ⬅️ FIXED usage
 
           const now = Date.now() / 1000;
           if (decoded.exp && decoded.exp < now) {
@@ -40,7 +40,7 @@ export const useAuth = () => {
         console.error("Failed to decode token", err);
         setAuth({ userId: null, role: null, isAuthenticated: false });
       } finally {
-        setLoading(false); // 👈 finish loading no matter what
+        setLoading(false);
       }
     };
 
