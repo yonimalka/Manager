@@ -34,6 +34,7 @@ const Project = ({ projectName, totalAmount, id }) => {
 
   const fetchProjectData = async () => {
     try {
+      
       const token = await getToken();
       const response = await axios.get(`${SERVER_URL}/getProject/${id}`, {
        headers: {Authorization: `Bearer ${token}`},

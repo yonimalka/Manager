@@ -287,7 +287,7 @@ app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
   })
   
 })
-app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
+app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   const user = UserModel.findById(req.userId);
   const project = user.projects.find((p) => p._id.toString() == req.params.projectId);
   if(!project){
