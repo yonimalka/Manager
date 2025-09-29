@@ -288,7 +288,6 @@ app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
   
 })
 app.get("/getProject/:Id", authMiddleware, async (req, res) => {
-  console.log("project ID", req.params.Id);
   
    UserModel.findById(req.userId)
   .then(user => { 
@@ -432,9 +431,11 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
 app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const user =  UserModel.findById(userId);
-  const getIncomes = user.totalIncomes;
-  res.json(getIncomes);
+  UserModel.findById(userId)
+  .then((user) => {
+    const getIncomes = user.totalIncomes;
+    res.send(getIncomes)
+  })
 })
 app.post('/AddTask/:userId/:projectId', async (req, res) => {
   const userId = req.params.userId;
