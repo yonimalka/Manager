@@ -71,7 +71,6 @@ useEffect(() => {
 
   useEffect(() =>{
     if (isFocused){
-      console.log("--before fetch--");
       fetchData();
     }
   },[isFocused]);

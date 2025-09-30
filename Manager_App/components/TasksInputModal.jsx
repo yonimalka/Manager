@@ -3,7 +3,7 @@ import { Modal, View, Text, TextInput, Button, StyleSheet, I18nManager, } from "
 import axios from "axios";
 import { SERVER_URL } from "@env";
 import Constants from 'expo-constants';
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const TasksInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
@@ -20,8 +20,9 @@ const TasksInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
     setItemValue(null);
     setCountValue(null);
     try {
-              await axios.post(`${SERVER_URL}/AddTask/${userId}/${projectId}`, newItem, {
-                headers: { "Content-Type": "application/json" },
+      const token = await AsyncStorage.getItem("token")
+              await axios.post(`${SERVER_URL}/AddTask//${projectId}`, newItem, {
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, 
               });
             } catch (error) {
               console.error("Error adding task:", error);

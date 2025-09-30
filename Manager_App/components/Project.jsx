@@ -62,10 +62,12 @@ const Project = ({ projectName, totalAmount, id }) => {
     try {
       const token = await getToken();
       const response = await axios.post(
-        `${SERVER_URL}/updatePayment/${id}`, {
+        `${SERVER_URL}/updatePayment/${id}`,
+        { paidAmount: amount },
+         {
           headers: {Authorization: `Bearer ${token}`},
         },
-        { paidAmount: amount }
+        
       );
       setValue(response.data);
     } catch (error) {

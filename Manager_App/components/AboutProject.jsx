@@ -161,7 +161,7 @@ const AboutProject = () => {
           keyExtractor={(item, index) => index.toString()}
           scrollEnabled={false}
           renderItem={({ item, index }) => (
-            <View style={styles.row}>
+            <View style={styles.row}  key={index}>
               <TouchableOpacity
                 onPress={() => toggleCheck(item, index)}
                 style={[styles.cell, { flex: 0.5 }]}
@@ -185,7 +185,7 @@ const AboutProject = () => {
         <TouchableOpacity style={[styles.fabButton]} onPress={() => setTaskModalVisible(true)} activeOpacity={0.8}>
           <Ionicons name="add" size={28} color="#FFF" />
         </TouchableOpacity>
-        <TaskInputModal
+        <TasksInputModal
           visible={isTaskModalVisible}
           onClose={() => setTaskModalVisible(false)}
           onSubmit={handleAddTask}

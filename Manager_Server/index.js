@@ -437,8 +437,8 @@ app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
     res.json(getIncomes)
   })
 })
-app.post('/AddTask/:userId/:projectId', async (req, res) => {
-  const userId = req.params.userId;
+app.post('/AddTask/:projectId', authMiddleware, async (req, res) => {
+  const userId = req.userId;
   const Id = req.params.projectId;
   const addTask = req.body;
   await UserModel.findById(userId)
