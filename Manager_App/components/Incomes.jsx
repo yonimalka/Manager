@@ -24,7 +24,6 @@ const Incomes = () => {
       const response = await axios.get(`${SERVER_URL}/getTotalIncomes`, {
         headers: {Authorization: `Bearer ${token}`}
       });
-      console.log("incomes response: ",response.data);
       
       setTotalIncomes(response.data);
     } catch (err) {

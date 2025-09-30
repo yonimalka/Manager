@@ -15,7 +15,7 @@ import { SERVER_URL } from "@env";
 import { MaterialIcons } from "@expo/vector-icons";
 import CashFlowCard from "./CashFlowCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import useAuth from "./useAuth";
+import {useAuth} from "./useAuth";
 const isRTL = I18nManager.isRTL;
 
 export default function CashFlow() {
@@ -57,8 +57,8 @@ export default function CashFlow() {
 
   const fetchData = async (periodLabel) => {
     try {
-      const token = getToken();
-
+      const token = await getToken();
+      
       setLoading(true);
       const periodParam = periodMap[periodLabel] || "month";
 
@@ -79,7 +79,8 @@ export default function CashFlow() {
       );
       setPrevTotals((prev) => ({ ...prev, incomes: prev.incomes ?? totalInc }));
       setTotalIncomes(totalInc);
-
+      console.log("kokok",token);
+      
       // Expenses
       const expensesResponse = await axios.get(
         `${SERVER_URL}/getCashFlowExpenses/?period=${encodeURIComponent(periodParam)}`, {

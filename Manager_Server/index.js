@@ -549,9 +549,9 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
 });
 
 // GET /getCashFlowExpenses/:userId?period=month|quarter|year
-app.get("/getCashFlowExpenses/:userId", async (req, res) => {
+app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const raw = req.query.period || "month";
     const now = new Date();
 
