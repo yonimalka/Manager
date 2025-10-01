@@ -23,7 +23,7 @@ import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
 import { useAuth } from "./useAuth";
-
+import api from "../services/api";
 
 const HomeScreen = () => {
   const route = useRoute();
@@ -48,9 +48,7 @@ const HomeScreen = () => {
       // navigation.reset({ index: 0, routes: [{ name: "Login" }] });
       return;
     }
-      const response = await axios.get(`${SERVER_URL}/getUser`,{
-      headers: { Authorization: `Bearer ${token}` },
-  });
+      const response = await api.get('/getUser');
       setUserName(response.data?.name ?? "משתמש");
       setProjectDetails(response.data?.projects ?? [])
     } catch (err) {

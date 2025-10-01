@@ -17,6 +17,15 @@ const authMiddleware = require('./authMiddleware');
 const app = express();
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
+const JWT_REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
+// issue token
+const generateAccessToken = (user) => {
+  return jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "10s" });
+};
+
+const generateRefreshToken = (user) => {
+  return jwt.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+};
 
 app.use(cors());
 app.use(express.json());
@@ -25,6 +34,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true}));
 
 const path = require('path');
+const { ref } = require('process');
 app.use(express.static(path.join(__dirname, 'public')));
 
 
@@ -186,30 +196,29 @@ app.post("/SignInDetails", async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
-     console.log("userId: ", user._id);
-     console.log("jwt  ", JWT_SECRET);
 
     // Create JWT
-    const token = jwt.sign(
-      { userId: user._id }, 
-      JWT_SECRET,
-      // { expiresIn: "15s" } 
-    );
-    console.log("token ", token);
+    const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
     
-    
-
-    // Return both userId and token
-    res.status(200).json({
-      userId: user._id,
-      token,
-      message: "Login successful!"
-    });
+    res.status(200).json({ token, refreshToken });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ message: "Server error" });
   }
-})
+});
+app.post("/refresh", (req, res) => {
+  const { token } = req.body; // refresh token
+
+  if (!token) return res.status(401).json({ message: "No refresh token provided" });
+
+  jwt.verify(token, process.env.JWT_REFRESH_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: "Invalid refresh token" });
+
+    const newAccessToken = generateAccessToken({ _id: user.userId });
+    res.json({ accessToken: newAccessToken });
+  });
+});
 app.get("/getUserDetails/:userId", async (req, res) => {
    const userId = req.params.userId;
   //  console.log(userId);
@@ -590,8 +599,8 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/quoteGenerator/:userId', upload.none(), async (req,res) =>{
-  const userId = req.params.userId;
+app.post('/quoteGenerator', upload.none(), authMiddleware, async (req,res) =>{
+  const userId = req.userId;
   
   const companyName = await UserModel.findById(userId)
   .then(user => user.name);

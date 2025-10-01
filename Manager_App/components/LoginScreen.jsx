@@ -34,11 +34,11 @@ const LoginScreen = () => {
     );
     
     if (response.status === 200) {
-      const { token, userId } = response.data;
+      const { token } = response.data;
     
       // Save JWT
       await AsyncStorage.setItem("token", token);
-
+      await AsyncStorage.setItem("refreshToken", refreshToken);
       // console.log("JWT stored:", token);
       // Alert.alert("after Async", "after");
       // Navigate to Home

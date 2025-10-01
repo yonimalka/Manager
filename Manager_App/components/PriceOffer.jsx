@@ -21,13 +21,15 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Entypo from "@expo/vector-icons/Entypo";
 import { BlurView } from "expo-blur";
+import { useAuth } from "./useAuth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 global.Buffer = Buffer;
 
 const PriceOffer = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const userId = route.params?.userId;
+  // const userId = route.params?.userId;
 
   const [formData, setFormData] = useState({
     clientName: "",
@@ -90,6 +92,7 @@ const PriceOffer = () => {
     setLoading(true);
     setSharing(false);
     try {
+      const token = AsyncStorage.getItem("token");
       const form = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         if (typeof value === "object") {
@@ -102,10 +105,10 @@ const PriceOffer = () => {
       });
 
       const response = await axios.post(
-        `${SERVER_URL}/quoteGenerator/${userId}`,
+        `${SERVER_URL}/quoteGenerator`,
         form,
         {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
           responseType: "arraybuffer",
         }
       );

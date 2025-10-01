@@ -49,7 +49,7 @@ const TasksInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
                         value={countValue}
                         onChangeText={setCountValue}
                     />
-                    <Button title="Submit" onPress={()=> addItem()} />
+                    <Button title="Submit" onPress={() => addItem()} />
                     <Button title="Cancel" onPress={onClose} />
                 </View>
             </View>

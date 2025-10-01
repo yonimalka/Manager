@@ -79,7 +79,6 @@ export default function CashFlow() {
       );
       setPrevTotals((prev) => ({ ...prev, incomes: prev.incomes ?? totalInc }));
       setTotalIncomes(totalInc);
-      console.log("kokok",token);
       
       // Expenses
       const expensesResponse = await axios.get(
