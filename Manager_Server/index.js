@@ -20,11 +20,11 @@ const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
 const JWT_REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
 // issue token
 const generateAccessToken = (user) => {
-  return jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "10s" });
+  return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "10s" });
 };
 
 const generateRefreshToken = (user) => {
-  return jwt.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ userId: user._id }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
 };
 
 app.use(cors());
