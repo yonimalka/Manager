@@ -42,12 +42,15 @@ const HomeScreen = () => {
       setLoadingProjects(true);
 
       const token = await AsyncStorage.getItem("token");
+      console.log("Home screen token:", token);
+      
     if (!token) {
       console.log("No token found, redirect to login");
       Alert.alert("No token found, redirect to login")
       // navigation.reset({ index: 0, routes: [{ name: "Login" }] });
       return;
     }
+    console.log("before api");
       const response = await api.get('/getUser');
       setUserName(response.data?.name ?? "משתמש");
       setProjectDetails(response.data?.projects ?? [])
