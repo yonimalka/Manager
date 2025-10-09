@@ -16,7 +16,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "@env";
-
+import api from "../services/api"
 import TasksInputModal from "./TasksInputModal";
 import MaterialsInputModal from "./MaterialsInputModal";
 
@@ -45,16 +45,12 @@ const AboutProject = () => {
     try {
       const token = await getToken();
 
-      const response = await axios.get(`${SERVER_URL}/getProject/${projectId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(`/getProject/${projectId}`);
 
       setProjectDetails(response.data);
       setExpenses(response.data.expenses || 0);
 
-      const receiptsResponse = await axios.get(`${SERVER_URL}/getReceipts/${projectId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const receiptsResponse = await api.get(`/getReceipts/${projectId}`);
       setReceipts(receiptsResponse.data);
     } catch (error) {
       console.error("Error fetching project details:", error);
@@ -87,10 +83,10 @@ const AboutProject = () => {
 
     try {
       const token = await getToken();
-      await axios.post(`${SERVER_URL}/updateTasks/${projectId}`, {
+      await api.post(`/updateTasks/${projectId}`, {
         ...item,
         checked: !item.checked,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
     } catch (error) {
       console.error("Error updating task:", error);
     }
@@ -120,9 +116,7 @@ const AboutProject = () => {
           onPress: async () => {
             try {
               const token = await getToken();
-              const res = await axios.delete(`${SERVER_URL}/deleteProject/${projectId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
+              const res = await api.delete(`/deleteProject/${projectId}`);
               Alert.alert(res.data.message);
               navigation.goBack();
             } catch (error) {

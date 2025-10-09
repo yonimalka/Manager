@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   welcome: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 37 },
   summaryRow: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between", marginBottom: 35 },
   gradientCard: { flex: 1, borderRadius: 20, padding: 16, marginHorizontal: 6, overflow: "hidden", position: "relative" },
-  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   iconCircle: { backgroundColor: "rgba(255,255,255,0.2)", padding: 6, borderRadius: 50 },
   summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
   summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff" },

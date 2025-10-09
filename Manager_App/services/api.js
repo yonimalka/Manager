@@ -1,33 +1,50 @@
+// api.js
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "@env";
 
+// Create Axios instance
 const api = axios.create({
   baseURL: SERVER_URL,
+  headers: {
+    Accept: "application/json",
+  },
 });
 
-// Attach token before every request
-api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// REQUEST INTERCEPTOR: attach token to every request
+api.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem("token");
+    if (token) {
+      config.headers = {
+        ...config.headers,
+        Authorization: `Bearer ${token}`,
+      };
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// Handle 401 → refresh token
+// RESPONSE INTERCEPTOR: handle 401 (expired token)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Only attempt refresh once
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url.includes("/refresh")
+    ) {
       originalRequest._retry = true;
 
       try {
         const refreshToken = await AsyncStorage.getItem("refreshToken");
-        if (!refreshToken) throw new Error("No refresh token");
+        if (!refreshToken) throw new Error("No refresh token available");
 
+        // Call backend refresh endpoint
         const res = await axios.post(`${SERVER_URL}/refresh`, {
           token: refreshToken,
         });
@@ -35,12 +52,15 @@ api.interceptors.response.use(
         const newAccessToken = res.data.accessToken;
         await AsyncStorage.setItem("token", newAccessToken);
 
-        // retry with new token
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        // Retry original request with new token
+        originalRequest.headers = {
+          ...originalRequest.headers,
+          Authorization: `Bearer ${newAccessToken}`,
+        };
         return api(originalRequest);
-      } catch (err) {
-        console.error("Refresh token failed:", err);
-        // optional: clear storage + redirect to login
+      } catch (refreshError) {
+        console.error("Refresh token failed:", refreshError);
+        // Optional: clear storage or navigate to login
         await AsyncStorage.removeItem("token");
         await AsyncStorage.removeItem("refreshToken");
       }

@@ -212,7 +212,7 @@ app.post("/refresh", (req, res) => {
 
   if (!token) return res.status(401).json({ message: "No refresh token provided" });
 
-  jwt.verify(token, process.env.JWT_REFRESH_SECRET, (err, user) => {
+  jwt.verify(token, JWT_REFRESH_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: "Invalid refresh token" });
 
     const newAccessToken = generateAccessToken({ _id: user.userId });

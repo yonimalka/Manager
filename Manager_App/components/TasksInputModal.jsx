@@ -4,6 +4,7 @@ import axios from "axios";
 import { SERVER_URL } from "@env";
 import Constants from 'expo-constants';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../services/api"
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const TasksInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
@@ -21,9 +22,7 @@ const TasksInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
     setCountValue(null);
     try {
       const token = await AsyncStorage.getItem("token")
-              await axios.post(`${SERVER_URL}/AddTask//${projectId}`, newItem, {
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, 
-              });
+              await api.post(`/AddTask/${projectId}`, newItem);
             } catch (error) {
               console.error("Error adding task:", error);
             }

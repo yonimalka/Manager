@@ -4,6 +4,7 @@ import axios from "axios";
 import { SERVER_URL } from "@env";
 import Constants from 'expo-constants';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../services/api";
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 // אני צריך עכשיו לקבל מהמשתמש את הנתונים ולהעביר אותם לשרתת בנוסף אני צריך שהטבלה תתעדכן מיד עם קבלת הנתונים ולעשות את התהליך הזה גם ךרשימת המשימות
 const MaterialsInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
@@ -22,9 +23,7 @@ const MaterialsInputModal = ({ userId, visible, onClose, onSubmit, projectId }) 
     setCountValue(null);
     try {
       const token = AsyncStorage.getItem("token");
-              await axios.post(`${SERVER_URL}/AddItem/${projectId}`, newItem, {
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              });
+              await api.post(`/AddItem/${projectId}`, newItem);
             } catch (error) {
               console.error("Error adding product:", error);
             }

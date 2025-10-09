@@ -16,6 +16,7 @@ import axios from "axios";
 import { SERVER_URL } from "@env";
 import { useValue } from "./ValueContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../services/api";
 
 const Project = ({ projectName, totalAmount, id }) => {
   const [paidAmount, setPaidAmount] = useState(0);
@@ -37,9 +38,7 @@ const Project = ({ projectName, totalAmount, id }) => {
       
       const token = await getToken();
       
-      const response = await axios.get(`${SERVER_URL}/getProject/${id}`, {
-       headers: {Authorization: `Bearer ${token}`},
-      });
+      const response = await api.get(`/getProject/${id}`);
 
       setPaidAmount(response.data.paid);
     } catch (error) {
@@ -61,13 +60,9 @@ const Project = ({ projectName, totalAmount, id }) => {
 
     try {
       const token = await getToken();
-      const response = await axios.post(
-        `${SERVER_URL}/updatePayment/${id}`,
+      const response = await api.post(
+        `/updatePayment/${id}`,
         { paidAmount: amount },
-         {
-          headers: {Authorization: `Bearer ${token}`},
-        },
-        
       );
       setValue(response.data);
     } catch (error) {
@@ -181,7 +176,7 @@ const isRTL = I18nManager.isRTL;
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: isRTL ? "row" : "row-reverse",
+    flexDirection: isRTL ? "row-reverse" : "row",
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -204,16 +199,16 @@ const styles = StyleSheet.create({
   menuButton: {
     position: "absolute",
     top: 10,
-    left: !isRTL ? 6 : undefined,
-    right: isRTL ? 6 : undefined,
+    // left: !isRTL ? 6 : undefined,
+    right: !isRTL ? 6 : undefined,
     padding: 6,
     zIndex: 2,
   },
   menuContainer: {
     position: "absolute",
     top: 40,
-    left: !isRTL ? 10 : undefined,
-    right: isRTL ? 10 : undefined,
+    // left: !isRTL ? 10 : undefined,
+    right: !isRTL ? 10 : undefined,
     backgroundColor: "#fff",
     borderRadius: 8,
     paddingVertical: 8,
@@ -256,6 +251,7 @@ const styles = StyleSheet.create({
   },
   details: {
     flex: 1,
+    marginRight: 30,
   },
   projectName: {
     fontSize: 16,

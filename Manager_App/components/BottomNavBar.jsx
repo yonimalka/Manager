@@ -32,13 +32,15 @@ export default function BottomNavBar() {
 
 const styles = StyleSheet.create({
   navContainer: {
-    height: 80,
+    height: 70,
     flexDirection: "row",
-    borderRadius: 16,
+    borderRadius: 30,
     justifyContent: "space-around",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    paddingVertical: 7,
+    paddingVertical: 0,
+    marginBottom: 25,
+    marginHorizontal: 20,
     borderTopWidth: 0,
     borderTopColor: "#e0e0e0",
     ...Platform.select({
