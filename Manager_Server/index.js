@@ -622,7 +622,7 @@ Return ONLY valid JSON that matches exactly:
   "header": {
     "quoteNo": "string",          // e.g. "the year‑0042" 
     "date"   : "YYYY‑MM‑DD",      // ISO date (actuall date)
-    "company": '${companyName}',
+    "company": "${companyName}",
     "phoneNumber": "number",
     "client" : "string"
   },
@@ -671,7 +671,7 @@ Do NOT wrap in markdown, do NOT add commentary.
 
   } catch (error) {
     console.error('OpenAI error:', error);
-    res.status(404).json({ error: 'Error generating quote' });
+    res.status(500).json({ error: 'Server error while generating quote' });
   }
 });
 
