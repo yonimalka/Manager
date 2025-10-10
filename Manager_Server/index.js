@@ -599,34 +599,37 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/quoteGenerator', authMiddleware, upload.none(), async (req, res) =>{
-  const userId = req.userId;
-  
-  const companyName = await UserModel.findById(userId)
-  .then(user => user.name);
-
-  const {
-    clientName,
-    projectTitle,
-    projectType,
-    projectDetails,
-    additionalCosts,
-    paymentTerms,
-    totalPrice,
-    } = req.body;
+app.post('/quoteGenerator', authMiddleware, upload.none(), async (req, res) => {
   try {
+    const userId = req.userId;
+
+    const company = await UserModel.findById(userId).then(user => user?.name || "Unknown Company");
+    
+    const {
+      clientName,
+      projectTitle,
+      projectType,
+      projectDetails,
+      additionalCosts,
+      paymentTerms,
+      totalPrice,
+    } = req.body;
+
+    const parsedCosts = additionalCosts ? JSON.parse(additionalCosts) : {};
+    console.log("Received quote request from:", company, "for client:", clientName);
+
     const schema = `
 Return ONLY valid JSON that matches exactly:
 
 {
   "header": {
-    "quoteNo": "string",          // e.g. "the year‑0042" 
-    "date"   : "YYYY‑MM‑DD",      // ISO date (actuall date)
-    "company": "${companyName}",
+    "quoteNo": "string",
+    "date": "YYYY-MM-DD",
+    "company": "${company}",
     "phoneNumber": "number",
-    "client" : "string"
+    "client": "string"
   },
-  projectTitle: "string"
+  "projectTitle": "string",
   "items": [
     { "desc": "string", "qty": number, "unit": "string", "unitPrice": number }
   ],
@@ -637,43 +640,53 @@ Return ONLY valid JSON that matches exactly:
 
 Do NOT wrap in markdown, do NOT add commentary.
 `;
-    const prompt = `write a profesional quote for client name: ${clientName} with this details: project type: ${projectType},
-     the description of the project: ${projectDetails} explain it with more extended and profesional details about the proccess and the project, additional costs: ${additionalCosts}, total price: ${totalPrice} and the payment terms: ${paymentTerms}. Generate a price according what is common to take on this kind of project. Formal, clear, pleasant. style it like a proffesional quote with styled color shapes and rely on ${schema}`
-    //  console.log("Calling OpenAI with model:", model);
-     const completion = await openai.chat.completions.create({
+
+    const prompt = `write a professional quote for client name: ${clientName}, 
+    project type: ${projectType}, 
+    project details: ${projectDetails}, 
+    additional costs: ${parsedCosts}, 
+    total price: ${totalPrice}, 
+    payment terms: ${paymentTerms}. 
+    Style it like a professional quote with color and formatting, based on this schema: ${schema}`;
+
+    console.log("Sending request to OpenAI...");
+
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       response_format: { type: "json_object" },
       messages: [
-        { role: 'system', content: `אתה יועץ עסקי שמתמחה בתחום ${projectType} שכותב הצעות מחיר יפות, מסודרות וצבעוניות בעברית` },
-        { role: 'user', content: `${prompt}` },
+        { role: 'system', content: `אתה יועץ עסקי שכותב הצעות מחיר יפות ומקצועיות בעברית` },
+        { role: 'user', content: prompt },
       ],
     });
-    const quote = JSON.parse(completion.choices[0].message.content);
-    // console.log(quote);
-    
-    const pdfBuf = await jsonToPdf(quote);
-    
-    console.log('pdfBuf length:', pdfBuf.length);
-    function safeFilename(str) {
-      return String(str)
-        .replace(/[^a-z0-9_\-\.]/gi, '_')   // keep letters, numbers, _ - .
-        .slice(0, 60);                      // optional: max 60 chars
+
+    const content = completion?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("OpenAI returned empty response");
+
+    let quote;
+    try {
+      quote = JSON.parse(content);
+    } catch (err) {
+      console.error("Failed to parse OpenAI response:", content);
+      throw new Error("Invalid JSON from OpenAI");
     }
+
+    const pdfBuf = await jsonToPdf(quote);
+    console.log("PDF buffer created, size:", pdfBuf.length);
+
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename= quote_${safeFilename(quote.header.date)}`,
-      'Content-Length': pdfBuf.length
+      'Content-Disposition': `inline; filename=quote_${quote.header.date}.pdf`,
     });
-    
-                 
-     res.end(pdfBuf);
-    // console.log("Generated message from OpenAI:", message);
+
+    res.send(pdfBuf);
 
   } catch (error) {
-    console.error('OpenAI error:', error);
-    res.status(500).json({ error: 'Server error while generating quote' });
+    console.error("Quote generation error:", error);
+    res.status(500).json({ error: "Server error while generating quote", details: error.message });
   }
 });
+
 
 app.delete("/deleteProject/:projectId", authMiddleware, async (req, res) =>{
   const userId = req.userId;

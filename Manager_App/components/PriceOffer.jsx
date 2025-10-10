@@ -96,21 +96,21 @@ const PriceOffer = () => {
     setSharing(false);
     try {
       const token = AsyncStorage.getItem("token");
-      const form = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (typeof value === "object") {
-          Object.entries(value).forEach(([subKey, subValue]) =>
-            form.append(`additionalCosts[${subKey}]`, subValue)
-          );
-        } else {
-          form.append(key, value);
-        }
-      });
+    const form = new FormData();
 
+Object.entries(formData).forEach(([key, value]) => {
+  if (key === "additionalCosts" && typeof value === "object") {
+    form.append(key, JSON.stringify(value)); 
+  } else {
+    form.append(key, value);
+  }
+});
+      console.log(form)
       const response = await api.post(
         '/quoteGenerator',
         form,
         {
+          headers: { "Content-Type": "multipart/form-data" },
           responseType: "arraybuffer",
         }
       );
