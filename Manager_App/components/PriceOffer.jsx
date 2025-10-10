@@ -10,6 +10,8 @@ import {
   Animated,
   I18nManager,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
@@ -23,6 +25,7 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { BlurView } from "expo-blur";
 import { useAuth } from "./useAuth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../services/api";
 
 global.Buffer = Buffer;
 
@@ -33,7 +36,7 @@ const PriceOffer = () => {
 
   const [formData, setFormData] = useState({
     clientName: "",
-    projectTitle: "",
+    // projectTitle: "",
     projectType: "",
     projectDetails: "",
     additionalCosts: {
@@ -85,7 +88,7 @@ const PriceOffer = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.clientName || !formData.projectTitle || !formData.totalPrice) {
+    if (!formData.clientName || !formData.totalPrice) {
       Alert.alert("שגיאה", "אנא מלא את כל השדות החיוניים");
       return;
     }
@@ -104,11 +107,10 @@ const PriceOffer = () => {
         }
       });
 
-      const response = await axios.post(
-        `${SERVER_URL}/quoteGenerator`,
+      const response = await api.post(
+        '/quoteGenerator',
         form,
         {
-          headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
           responseType: "arraybuffer",
         }
       );
@@ -274,6 +276,10 @@ const PriceOffer = () => {
         </View>
 
         {/* Total Price */}
+        <KeyboardAvoidingView
+                   style={{ flex: 1, backgroundColor: "#f8fafc" }}
+                   behavior={Platform.OS === "ios" ? "padding" : undefined}
+                 >
         <Text style={styles.label}>מחיר כולל (₪)</Text>
         <View style={styles.inputWrapper}>
           <MaterialIcons
@@ -290,6 +296,7 @@ const PriceOffer = () => {
             onChangeText={(v) => handleChange("totalPrice", v)}
           />
         </View>
+        </KeyboardAvoidingView>
       </ScrollView>
 
       {/* Footer */}
@@ -358,7 +365,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#f1f5f9" },
   header: {
     paddingTop: 70,
-    flexDirection: isRTL ? "row" : "row-reverse",
+    flexDirection: !isRTL ? "row" : "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -417,7 +424,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: "#111827",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: !isRTL ? "right" : "left",
+    marginRight: 10,
   },
   cardHeader: {
     flexDirection: isRTL ? "row" : "row-reverse",
@@ -438,6 +446,11 @@ const styles = StyleSheet.create({
   // },
   submitButton: {
     flexDirection: isRTL ? "row" : "row-reverse",
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
+    width: 300,
+    // marginBottom: 20,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 14,

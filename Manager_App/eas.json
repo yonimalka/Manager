@@ -7,18 +7,22 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal"
+      
     },
     "preview": {
       "distribution": "internal"
+      
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "SERVER_URL": "https://manager-asqh.onrender.com"
+        "SERVER_URL": "https://manager-asqh.onrender.com",
+        "GOOGLE_IOS_CLIENT_ID": "YOUR_IOS_CLIENT_ID_HERE"
       },
       "android": {
         "buildType": "app-bundle"
       }
+      
     }
   },
   "submit": {

@@ -32,22 +32,25 @@ export default function BottomNavBar() {
 
 const styles = StyleSheet.create({
   navContainer: {
+    position: 'absolute',
+    bottom: 25,
+    alignSelf: 'center',
     height: 70,
+    width: 380,
     flexDirection: "row",
     borderRadius: 30,
     justifyContent: "space-around",
     alignItems: "center",
     backgroundColor: "#ffffff",
     paddingVertical: 0,
-    marginBottom: 25,
-    marginHorizontal: 20,
-    borderTopWidth: 0,
+    // marginBottom: 25,
+    // marginHorizontal: 20,
     borderTopColor: "#e0e0e0",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 0 },
         shadowRadius: 5,
       },
       android:{

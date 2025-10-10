@@ -39,7 +39,6 @@ const Project = ({ projectName, totalAmount, id }) => {
       const token = await getToken();
       
       const response = await api.get(`/getProject/${id}`);
-
       setPaidAmount(response.data.paid);
     } catch (error) {
       console.error("Error fetching project data:", error);
@@ -336,7 +335,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#4caf50",
     alignItems: "center",
   },
   confirmText: {

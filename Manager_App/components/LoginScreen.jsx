@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager } from "react-native";
+import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager, KeyboardAvoidingView, Platform} from "react-native";
 import {SERVER_URL} from "@env";
 import Constants from 'expo-constants';
 import axios from "axios";
@@ -34,13 +34,12 @@ const LoginScreen = () => {
     );
     
     if (response.status === 200) {
-      const { token, refreshToken } = response.data;
-      
-      
+      const { token, userId } = response.data;
+    
       // Save JWT
       await AsyncStorage.setItem("token", token);
-      await AsyncStorage.setItem("refreshToken", refreshToken);
-      // console.log("JWT stored:", token);
+
+      console.log("JWT stored:", token);
       // Alert.alert("after Async", "after");
       // Navigate to Home
       navigation.reset({
@@ -57,6 +56,10 @@ const LoginScreen = () => {
   }
 };
     return (
+      <KeyboardAvoidingView
+           style={{ flex: 1, backgroundColor: "#f8fafc" }}
+           behavior={Platform.OS === "ios" ? "padding" : undefined}
+         >
         <View style={styles.container}>
         <Image source={require("../assets/managoLogoTransparent.png")} style={styles.logo} />
             <Text style={styles.title}>Welcome</Text>
@@ -83,7 +86,7 @@ const LoginScreen = () => {
             <Text>Don't have account? Sign Up!</Text>
             <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
         </View>
-        
+        </KeyboardAvoidingView>
     )
 }
 const isRTL = I18nManager.isRTL;

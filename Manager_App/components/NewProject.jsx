@@ -19,7 +19,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
 import Constants from 'expo-constants';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import api from "../services/api";
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const NewProject = () => {
@@ -55,11 +55,7 @@ const NewProject = () => {
       const token = AsyncStorage.getItem("token");
 
       const newDetails = { ...details, materialsList, toDoList: taskList };
-      await axios.post(`${SERVER_URL}/updateDetails`, newDetails, {
-        headers: { "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-         },
-      });
+      await api.post(`/updateDetails`);
       
       Alert.alert("Success", "Project added successfully!");
       setTimeout(() => {
@@ -215,10 +211,10 @@ const styles = StyleSheet.create({
     minHeight: 120,
     paddingVertical: 40,
     paddingLeft: 30,
-    marginRight: 20,
+    marginLeft: 20,
     // marginBottom: 40,
     backgroundColor: "#3b49df",
-    borderBottomRightRadius: 40,
+    borderBottomLeftRadius: 40,
     justifyContent: "flex-end",
     alignItems: isRTL ? "flex-start" : "flex-end",
   },
@@ -246,7 +242,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
     color: "#1e293b",
-    textAlign: isRTL ? "right" : "left",
+    textAlign: !isRTL ? "right" : "left",
   },
   row: {
     flexDirection: isRTL ? "row" : "row-reverse",

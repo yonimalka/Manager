@@ -599,7 +599,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/quoteGenerator', upload.none(), authMiddleware, async (req,res) =>{
+app.post('/quoteGenerator', authMiddleware, upload.none(), async (req, res) =>{
   const userId = req.userId;
   
   const companyName = await UserModel.findById(userId)
@@ -622,7 +622,7 @@ Return ONLY valid JSON that matches exactly:
   "header": {
     "quoteNo": "string",          // e.g. "the year‑0042" 
     "date"   : "YYYY‑MM‑DD",      // ISO date (actuall date)
-    "company": ${companyName},
+    "company": '${companyName}',
     "phoneNumber": "number",
     "client" : "string"
   },

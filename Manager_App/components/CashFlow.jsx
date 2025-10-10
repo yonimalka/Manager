@@ -16,6 +16,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import CashFlowCard from "./CashFlowCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {useAuth} from "./useAuth";
+import api from "../services/api";
+
 const isRTL = I18nManager.isRTL;
 
 export default function CashFlow() {
@@ -63,13 +65,8 @@ export default function CashFlow() {
       const periodParam = periodMap[periodLabel] || "month";
 
       // Incomes
-      const incomesResponse = await axios.get(
-        `${SERVER_URL}/getCashFlowIncomes/?period=${encodeURIComponent(periodParam)}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+      const incomesResponse = await api.get(
+        `/getCashFlowIncomes/?period=${encodeURIComponent(periodParam)}`);
       const safeIncomes = Array.isArray(incomesResponse.data) ? incomesResponse.data : [];
       setIncomes(safeIncomes);
 
@@ -81,11 +78,8 @@ export default function CashFlow() {
       setTotalIncomes(totalInc);
       
       // Expenses
-      const expensesResponse = await axios.get(
-        `${SERVER_URL}/getCashFlowExpenses/?period=${encodeURIComponent(periodParam)}`, {
-          headers: {Authorization: `Bearer ${token}`}
-        }
-      );
+      const expensesResponse = await api.get(
+        `/getCashFlowExpenses/?period=${encodeURIComponent(periodParam)}`);
       const safeExpenses = Array.isArray(expensesResponse.data) ? expensesResponse.data : [];
       setExpenses(safeExpenses);
 
@@ -254,21 +248,21 @@ export default function CashFlow() {
 }
 
 const styles = StyleSheet.create({
-  container: { paddingTop: 70, padding: 16, backgroundColor: "#f9f9f9" },
+  container: { paddingTop: 70, padding: 16,paddingBottom: 220, backgroundColor: "#f9f9f9" },
   headTitle: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 16 },
-  periodSelector: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16, backgroundColor: "#f0f2f4", borderRadius: 12, padding: 4 },
+  periodSelector: { flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 16, backgroundColor: "#f0f2f4", borderRadius: 12, padding: 4 },
   periodButton: { flex: 1, marginHorizontal: 4, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
   periodButtonActive: { backgroundColor: "#137fec" },
   periodButtonText: { color: "#617589", fontWeight: "700" },
   periodButtonTextActive: { color: "#fff" },
 
   section: { marginTop: 20 },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  sectionHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#111418" },
   showMore: { color: "#137fec", fontSize: 14, fontWeight: "600" },
 
   itemCard: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     padding: 12,
     borderRadius: 12,
@@ -288,7 +282,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#e6f2ff",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginLeft: 10,
   },
   iconBoxExpense: {
     width: 40,
@@ -297,9 +291,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fee2e2",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginLeft: 10,
   },
   itemTitle: { fontSize: 16, fontWeight: "600", color: "#111418", textAlign: isRTL ? "left" : "right", },
   itemSubtitle: { fontSize: 14, color: "#617589", textAlign: isRTL ? "left" : "right", },
-  itemPercent: { fontSize: 16, fontWeight: "700", color: "#111418", textAlign: isRTL ? "right" : "left", },
+  itemPercent: { fontSize: 16, fontWeight: "700", color: "#111418", textAlign: !isRTL ? "right" : "left", },
 });

@@ -39,13 +39,13 @@ export default function CashFlowCard({ net = 0, percent = 0, incomes = 0, expens
 
 const styles = StyleSheet.create({
   card: { borderRadius: 16, backgroundColor: "#fff", padding: 16, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 3 },
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  row: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
   label: { fontSize: 14, color: "#617589" },
   net: { fontSize: 28, fontWeight: "bold", color: "#111418", marginTop: 4 },
   percentBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#f0fdf4", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   percent: { marginLeft: 4, fontWeight: "600" },
   chartWrapper: { height: 160, marginVertical: 16 },
-  bottomRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#e6e8eb", paddingTop: 12 },
+  bottomRow: { flexDirection: "row-reverse", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#e6e8eb", paddingTop: 12 },
   col: { alignItems: "center" },
   bottomLabel: { fontSize: 12, color: "#617589" },
   bottomValue: { fontSize: 16, fontWeight: "bold" },
