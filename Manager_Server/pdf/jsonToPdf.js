@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
+console.log('Chromium path:', puppeteer.executablePath());
 const handlebars = require('handlebars');
 global.ReadableStream = require('web-streams-polyfill/ponyfill').ReadableStream;
 
