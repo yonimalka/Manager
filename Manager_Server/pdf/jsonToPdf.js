@@ -25,16 +25,17 @@ async function jsonToPdf(quoteObj) {
     fs.writeFileSync(path.join(__dirname, 'Quote.html'), html);
 
     // 2️⃣ Launch Puppeteer (Render-safe flags)
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process',
-        '--no-zygote'
-      ],
-    });
+   const browser = await puppeteer.launch({
+  headless: true,
+  executablePath: puppeteer.executablePath(), // use the installed Chromium
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--single-process',
+    '--no-zygote'
+  ],
+});
 
     const page = await browser.newPage();
 
