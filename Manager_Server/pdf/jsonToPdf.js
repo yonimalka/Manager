@@ -13,6 +13,7 @@ const tplSrc = fs.readFileSync(path.join('templates', 'quote.hbs'), 'utf8');
 const template = handlebars.compile(tplSrc);
 
 async function jsonToPdf(quoteObj) {
+  console.log("testtttttttttttttttttttttttttt")
   try {
     // 1️⃣ Generate HTML
     const html = template({
