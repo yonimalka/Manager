@@ -13,7 +13,11 @@ const { jsonToPdf } = require('./pdf/jsonToPdf');
 const { log } = require('handlebars');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('./authMiddleware');
+const fs = require('fs');
+const puppeteer = require('puppeteer');
 
+console.log('Chromium path:', puppeteer.executablePath());
+console.log('Chromium exists?', fs.existsSync(puppeteer.executablePath()));
 const app = express();
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
