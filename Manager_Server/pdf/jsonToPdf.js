@@ -28,6 +28,7 @@ async function jsonToPdf(quoteObj) {
     // 2️⃣ Launch Puppeteer (Render-safe)
     const browser = await puppeteer.launch({
       headless: true,
+      executablePath: '/opt/render/.cache/puppeteer/chrome/linux-141.0.7390.76/chrome-linux64/chrome',
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
