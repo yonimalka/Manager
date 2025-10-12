@@ -9,7 +9,7 @@ handlebars.registerHelper('json', ctx => JSON.stringify(ctx, null, 2));
 handlebars.registerHelper('calcTotal', i => i.qty * i.unitPrice);
 
 // Load Handlebars template
-const tplSrc = fs.readFileSync(path.join(__dirname, 'templates', 'quote.hbs'), 'utf8');
+const tplSrc = fs.readFileSync(path.join('templates', 'quote.hbs'), 'utf8');
 const template = handlebars.compile(tplSrc);
 
 async function jsonToPdf(quoteObj) {
