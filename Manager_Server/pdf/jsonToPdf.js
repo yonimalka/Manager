@@ -1,68 +1,53 @@
 const fs = require('fs');
 const path = require('path');
-const puppeteer = require('puppeteer'); // must be full puppeteer (not puppeteer-core)
+const puppeteer = require('puppeteer-core'); // if using puppeteer-core
 const handlebars = require('handlebars');
 global.ReadableStream = require('web-streams-polyfill/ponyfill').ReadableStream;
-
-// Log Chromium path (optional for debugging)
-console.log('Chromium path:', puppeteer.executablePath());
 
 // Handlebars helpers
 handlebars.registerHelper('json', ctx => JSON.stringify(ctx, null, 2));
 handlebars.registerHelper('calcTotal', i => i.qty * i.unitPrice);
 
-// Load your Handlebars template
 const tplSrc = fs.readFileSync(path.join('templates', 'quote.hbs'), 'utf8');
 const template = handlebars.compile(tplSrc);
 
 async function jsonToPdf(quoteObj) {
   try {
-    // 1️⃣ Generate HTML
     const html = template({ ...quoteObj });
-
-    // Optional: save HTML for debugging
     fs.writeFileSync(path.join(__dirname, 'Quote.html'), html);
 
-    // 2️⃣ Launch Puppeteer (Render-safe)
+    // 🔑 Pass full path to Chromium installed by Puppeteer
+    const chromiumPath = '/opt/render/.cache/puppeteer/chrome/linux-141.0.7390.76/chrome-linux64/chrome';
+
     const browser = await puppeteer.launch({
       headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process',
-        '--no-zygote',
-      ],
+      executablePath: chromiumPath,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
 
-    // 3️⃣ Load HTML as data URL
     const base64 = Buffer.from(html, 'utf8').toString('base64');
     const dataUrl = 'data:text/html;base64,' + base64;
     await page.goto(dataUrl, { waitUntil: 'networkidle0' });
 
-    // 4️⃣ RTL + Font adjustments
     await page.evaluate(() => {
       document.body.style.direction = 'rtl';
       document.body.style.fontFamily = 'Arial, Helvetica, sans-serif';
     });
 
-    // 5️⃣ Log page size (optional)
     const dim = await page.evaluate(() => ({
       w: document.body.scrollWidth,
-      h: document.body.scrollHeight,
+      h: document.body.scrollHeight
     }));
     console.log('Rendered size (px):', dim);
 
-    // 6️⃣ Generate PDF
     const pdfBuf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: 36, right: 36, bottom: 48, left: 36 },
+      margin: { top: 36, right: 36, bottom: 48, left: 36 }
     });
 
-    // Optional: save PDF locally
     fs.writeFileSync(path.join(__dirname, 'lastQuote.pdf'), pdfBuf);
     console.log('PDF buffer length:', pdfBuf.length);
 
