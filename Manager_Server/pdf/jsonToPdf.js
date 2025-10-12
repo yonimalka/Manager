@@ -1,21 +1,18 @@
 const fs = require('fs');
 const path = require('path');
-const puppeteer = require('puppeteer'); // full puppeteer
-console.log('jsonToPdf Chromium path:', puppeteer.executablePath());
-console.log('jsonToPdf Chromium exists?', fs.existsSync(puppeteer.executablePath()));
+const puppeteer = require('puppeteer'); // make sure it's 'puppeteer', not 'puppeteer-core'
 const handlebars = require('handlebars');
 global.ReadableStream = require('web-streams-polyfill/ponyfill').ReadableStream;
 
-// -------------------- Handlebars helpers --------------------
+// Handlebars helpers
 handlebars.registerHelper('json', ctx => JSON.stringify(ctx, null, 2));
 handlebars.registerHelper('calcTotal', i => i.qty * i.unitPrice);
 
-// -------------------- Load template --------------------
-const tplSrc = fs.readFileSync(path.join('templates', 'quote.hbs'), 'utf8');
+// Load Handlebars template
+const tplSrc = fs.readFileSync(path.join(__dirname, 'templates', 'quote.hbs'), 'utf8');
 const template = handlebars.compile(tplSrc);
 
 async function jsonToPdf(quoteObj) {
-  console.log("testtttttttttttttttttttttttttt")
   try {
     // 1️⃣ Generate HTML
     const html = template({
@@ -29,23 +26,29 @@ async function jsonToPdf(quoteObj) {
     // 2️⃣ Launch Puppeteer (Render-safe)
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process',
+        '--no-zygote'
+      ]
     });
 
     const page = await browser.newPage();
 
-    // 3️⃣ Load HTML as data URL
+    // 3️⃣ Load HTML via data URL
     const base64 = Buffer.from(html, 'utf8').toString('base64');
     const dataUrl = 'data:text/html;base64,' + base64;
     await page.goto(dataUrl, { waitUntil: 'networkidle0' });
 
-    // 4️⃣ Apply RTL / Hebrew styles
+    // 4️⃣ Apply RTL / Hebrew styling
     await page.evaluate(() => {
       document.body.style.direction = 'rtl';
       document.body.style.fontFamily = 'Arial, Helvetica, sans-serif';
     });
 
-    // 5️⃣ Log page size (optional)
+    // 5️⃣ Optional: log page dimensions
     const dim = await page.evaluate(() => ({ w: document.body.scrollWidth, h: document.body.scrollHeight }));
     console.log('Rendered size (px):', dim);
 
@@ -56,7 +59,7 @@ async function jsonToPdf(quoteObj) {
       margin: { top: 36, right: 36, bottom: 48, left: 36 }
     });
 
-    // Optional: save PDF locally for debugging
+    // Optional: save PDF locally
     fs.writeFileSync(path.join(__dirname, 'lastQuote.pdf'), pdfBuf);
     console.log('PDF buffer length:', pdfBuf.length);
 
