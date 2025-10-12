@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer'); // full puppeteer
-console.log('Chromium path exists:', require('fs').existsSync(puppeteer.executablePath()));
+console.log('Chromium path:', puppeteer.executablePath());
+console.log('Chromium exists?', fs.existsSync(puppeteer.executablePath()));
 const handlebars = require('handlebars');
 global.ReadableStream = require('web-streams-polyfill/ponyfill').ReadableStream;
 
