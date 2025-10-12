@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     marginBottom: 6,
-    textAlign: isRTL ? "right" : "left", // Align label text according to RTL
+    textAlign: !isRTL ? "right" : "left", // Align label text according to RTL
   },
   input: {
     backgroundColor: "#fff",
@@ -160,17 +160,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 1,
-    textAlign: isRTL ? "right" : "left", // Align input text accordingly
+    textAlign: !isRTL ? "right" : "left", // Align input text accordingly
   },
   selectButton: {
-    backgroundColor: "#e0e7ff",
+    backgroundColor: "rgb(58, 81, 73)",
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",
     marginBottom: 20,
   },
   selectButtonText: {
-    color: "#3b49df",
+    color: "#fff",
     fontSize: 16,
     fontWeight: "500",
   },
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
   },
   uploadButton: {
-    backgroundColor: "#3b49df",
+    backgroundColor: "#10b981",
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",

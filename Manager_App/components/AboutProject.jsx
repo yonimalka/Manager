@@ -10,8 +10,10 @@ import {
   Alert,
   Dimensions,
   I18nManager,
+  Platform,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -69,6 +71,30 @@ const AboutProject = () => {
       navigation.setParams({ shouldRefresh: false });
     }
   }, [shouldRefresh]);
+
+  const renderStatBlock = (label, value, variant) => {
+  const gradients = {
+    info: ["#E3F2FD", "#BBDEFB"],
+    payment: ["#4ade80", "#10b981"],
+    expenses: ["#f87171", "#ef4444"],
+    default: ["#FAFAFA", "#F0F0F0"],
+  };
+
+  const gradientColors = gradients[variant] || gradients.default;
+
+  return (
+    <LinearGradient
+      key={label}
+      colors={gradientColors}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.statBlock}
+    >
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </LinearGradient>
+  );
+};
 
   const addReceipts = () => {
     navigation.navigate("Receipts", { projectId });
@@ -134,11 +160,11 @@ const AboutProject = () => {
       {/* Project Summary */}
       <View style={styles.projectCard}>
         <Text style={styles.projectTitle}>{project?.name}</Text>
-        <View style={styles.projectStats}>
-          <StatBlock label="ימים" value={project?.days} />
-          <StatBlock label="תשלום כולל" value={`${project?.payment}₪`} />
-          <StatBlock label="הוצאות" value={`${expenses}₪`} />
-        </View>
+         <View style={styles.projectStats}>
+        {/* {renderStatBlock("ימים", project?.days, "info")} */}
+        {renderStatBlock("תשלום כולל", `${project?.payment}₪`, "payment")}
+        {renderStatBlock("הוצאות", `${expenses}₪`, "expenses")}
+      </View>
       </View>
 
       {/* To-Do List */}
@@ -269,13 +295,54 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9F9F9",
     flexGrow: 1,
   },
-  projectCard: { backgroundColor: "#FFF", borderRadius: 16, padding: 20, marginBottom: 30 },
+  projectCard: { borderRadius: 16, paddingVertical: 18, marginBottom: 30 },
   projectTitle: { fontSize: 26, fontWeight: "700", color: "#333", marginBottom: 20, textAlign: isRTL ? "left" : "right" },
-  projectStats: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-around" },
-  statBlock: { flex: 1, borderRadius: 18, padding: 12, marginHorizontal: 1, alignItems: "center", backgroundColor: "#FAFAFA" },
-  statValue: { fontSize: 20, fontWeight: "700", color: "#212121", textAlign: isRTL ? "left" : "right" },
-  statLabel: { fontSize: 14, color: "#616161", marginTop: 4, textAlign: isRTL ? "left" : "right" },
-  section: { backgroundColor: "#FFF", borderRadius: 16, padding: 18, marginBottom: 30 },
+  projectStats: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between",},
+   statBlock: {
+    position: "relative",
+    flex: 1,
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: 6,
+    alignItems: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 4,
+        shadowColor: "#000",
+      },
+    }),
+  },
+  statValue: {
+    fontSize: 25,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: isRTL ? "left" : "right",
+  },
+  statLabel: {
+    fontSize: 15,
+    color: "#fff",
+    marginTop: 4,
+    textAlign: isRTL ? "left" : "right",
+  },
+
+  section: { backgroundColor: "#FFF", borderRadius: 16, padding: 18, marginBottom: 30, ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 4,
+        shadowColor: "#000",
+      },
+    }),},
   sectionTitle: { fontSize: 22, fontWeight: "700", color: "#444", marginBottom: 18, textAlign: isRTL ? "left" : "right" },
   tableHeader: { flexDirection: isRTL ? "row" : "row-reverse", borderBottomWidth: 1, borderColor: "#E0E0E0", paddingBottom: 10, marginBottom: 10 },
   row: { flexDirection: isRTL ? "row" : "row-reverse", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: "#F0F0F0" },
@@ -284,11 +351,22 @@ const styles = StyleSheet.create({
   taskText: { color: "#222", textAlign: isRTL ? "left" : "right" },
   checkedText: { textDecorationLine: "line-through", color: "#999", textAlign: isRTL ? "left" : "right" },
   fabButton: { bottom: 0, marginTop: 10, backgroundColor: "#333", borderRadius: 28, width: 56, height: 56, justifyContent: "center", alignItems: "center", flexDirection: isRTL ? "row" : "row-reverse", alignSelf: isRTL ? "flex-end" : "flex-start" },
-  uploadButton: { backgroundColor: "#3b49df", paddingVertical: 14, borderRadius: 28, flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 25, paddingStart: 24, paddingEnd: 24 },
+  uploadButton: { backgroundColor: "#10b981", paddingVertical: 14, borderRadius: 28, flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 25, paddingStart: 24, paddingEnd: 24 },
   uploadButtonText: { color: "#FFF", fontWeight: "700", fontSize: 18, marginStart: 10, marginEnd: 10, textAlign: isRTL ? "left" : "right" },
   toggleText: { color: "#555", fontWeight: "700", fontSize: 16, textAlign: "center", marginBottom: 14 },
   receiptImage: { width: 140, height: 140, marginStart: isRTL ? 16 : 0, marginEnd: isRTL ? 0 : 16, borderRadius: 14, backgroundColor: "#F0F0F0" },
-  deleteButton: { backgroundColor: "#fff0f0", padding: 14, borderRadius: 12, alignItems: "center" },
+  deleteButton: { backgroundColor: "#fff0f0", padding: 14, borderRadius: 12, alignItems: "center", ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 4,
+        shadowColor: "#000",
+      },
+    }), },
   deleteText: { color: "#d32f2f", textAlign: isRTL ? "right" : "left" },
 });
 
