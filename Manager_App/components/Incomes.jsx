@@ -4,6 +4,7 @@ import axios from "axios";
 import { SERVER_URL } from "@env";
 import { useValue } from "./ValueContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../services/api";
 
 const Incomes = () => {
   const { value } = useValue();
@@ -21,9 +22,7 @@ const Incomes = () => {
             // navigation.reset({ index: 0, routes: [{ name: "Login" }] });
             return;
           }
-      const response = await axios.get(`${SERVER_URL}/getTotalIncomes`, {
-        headers: {Authorization: `Bearer ${token}`}
-      });
+      const response = await api.get(`/getTotalIncomes`);
       
       setTotalIncomes(response.data);
     } catch (err) {

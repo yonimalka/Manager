@@ -55,7 +55,7 @@ const NewProject = () => {
       const token = AsyncStorage.getItem("token");
 
       const newDetails = { ...details, materialsList, toDoList: taskList };
-      await api.post(`/updateDetails`);
+      await api.post(`/updateDetails`, newDetails);
       
       Alert.alert("Success", "Project added successfully!");
       setTimeout(() => {

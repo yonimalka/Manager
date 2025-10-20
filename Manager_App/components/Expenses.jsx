@@ -3,6 +3,7 @@ import { Text } from "react-native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../services/api";
 
 const Expenses = ({ userId, refresh }) => {
   const [totalExpenses, setTotalExpenses] = useState(null);
@@ -16,9 +17,7 @@ const Expenses = ({ userId, refresh }) => {
     try {
       const token = await AsyncStorage.getItem("token");
        
-      const response = await axios.get(`${SERVER_URL}/getTotalExpenses`, {
-        headers: {Authorization: `Bearer ${token}`}
-      });
+      const response = await api.get(`/getTotalExpenses`);
       setTotalExpenses(response.data);
     } catch (err) {
       console.error("Error fetching expenses: ", err);

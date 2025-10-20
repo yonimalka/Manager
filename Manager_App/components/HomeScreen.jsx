@@ -16,6 +16,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { SERVER_URL } from "@env";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 
 import Incomes from "./Incomes";
 import Expenses from "./Expenses";
@@ -24,6 +25,7 @@ import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
 import { useAuth } from "./useAuth";
 import api from "../services/api";
+import Menu from "../components/Menu";
 
 const HomeScreen = () => {
   const route = useRoute();
@@ -32,6 +34,7 @@ const HomeScreen = () => {
   const isFocused = useIsFocused();
 
   const [loading, setLoading] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const [userName, setUserName] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -47,7 +50,7 @@ const HomeScreen = () => {
     if (!token) {
       console.log("No token found, redirect to login");
       Alert.alert("No token found, redirect to login")
-      // navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+      navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
       return;
     }
     console.log("before api");
@@ -102,8 +105,16 @@ useEffect(() => {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
+      <Menu visible={menuVisible} onClose={() => setMenuVisible(false)} />
+        <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => setMenuVisible(!menuVisible)}
+          style={styles.hamburger}
+        >
+          <Ionicons name="menu" size={40} color="#333" />
+        </TouchableOpacity>
+      </View>
         <Text style={styles.welcome}>ברוך השב,{"\n"}{userName}</Text>
-
         <ValueProvider>
           {/* Summary Row */}
           <View style={styles.summaryRow}>
@@ -163,7 +174,7 @@ useEffect(() => {
               />
             </LinearGradient>
           </View>
-
+          
           {/* Projects Section */}
           <Text style={styles.sectionTitle}>הפרויקטים שלך</Text>
 
@@ -191,6 +202,22 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f2f4f7" },
   container: { paddingTop: 70, paddingStart: 16, paddingEnd: 16, paddingBottom: 90 },
   welcome: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 37 },
+  header: {
+    // position: "absolute",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    marginBottom: 20,
+    // marginHorizontal: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  hamburger: {
+    
+    padding: 1,
+  },
   summaryRow: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between", marginBottom: 35 },
   gradientCard: { flex: 1, borderRadius: 20, padding: 16, marginHorizontal: 6, overflow: "hidden", position: "relative" },
   summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
