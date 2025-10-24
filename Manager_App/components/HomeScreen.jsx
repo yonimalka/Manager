@@ -104,8 +104,7 @@ useEffect(() => {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container}>
-      <Menu visible={menuVisible} onClose={() => setMenuVisible(false)} />
+    <Menu visible={menuVisible} onClose={() => setMenuVisible(false)} />
         <View style={styles.header}>
         <TouchableOpacity
           onPress={() => setMenuVisible(!menuVisible)}
@@ -114,6 +113,7 @@ useEffect(() => {
           <Ionicons name="menu" size={40} color="#333" />
         </TouchableOpacity>
       </View>
+      <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.welcome}>ברוך השב,{"\n"}{userName}</Text>
         <ValueProvider>
           {/* Summary Row */}
@@ -200,14 +200,15 @@ const isRTL = I18nManager.isRTL;
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f2f4f7" },
-  container: { paddingTop: 70, paddingStart: 16, paddingEnd: 16, paddingBottom: 90 },
+  container: { paddingTop: 30, paddingStart: 16, paddingEnd: 16, paddingBottom: 90 },
   welcome: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 37 },
   header: {
     // position: "absolute",
     flexDirection: "row-reverse",
     alignItems: "center",
-    marginBottom: 20,
-    // marginHorizontal: 20,
+    // marginBottom: 20,
+    marginTop: 70,
+    marginHorizontal: 10,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },

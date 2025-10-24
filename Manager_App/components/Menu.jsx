@@ -52,7 +52,8 @@ export default function Menu({ visible, onClose }) {
           <Ionicons name="briefcase-outline" size={22} color="#000" />
           <Text style={styles.menuText}>פרויקטים</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem}
+                  onPress={()=> navigation.navigate("Employees")}>
                   <Ionicons name="people-outline" size={22} color="##000" />
                     <Text style={styles.menuText}>עובדים</Text>
                   </TouchableOpacity>

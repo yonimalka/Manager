@@ -4,12 +4,15 @@ import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
 import { ScrollView } from "react-native-gesture-handler";
-
+import Ionicons from "@expo/vector-icons/Ionicons";
 const Employees = () =>{
-
-
+   const navigation = useNavigation();
+    
     return (
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <TouchableOpacity style= {styles.fabButton} onPress={()=> navigation.navigate("AddEmployee")}>
+            <Ionicons name="add" size={28} color="#FFF" />
+        </TouchableOpacity>
          <View style={styles.card}>
            <Text style={styles.name}>ידידיה אלפי</Text>
            <Text style={styles.wage}>שכר:</Text>
@@ -48,7 +51,19 @@ container: {
     fontSize: 15,
     color: "#333",
    marginVertical: 7,
-  }
+  },
+  fabButton: {
+    bottom: 0,
+    marginTop: 10,
+    backgroundColor: "#333",
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    justifyContent: "center", 
+    alignItems: "center",
+    flexDirection: isRTL ? "row" : "row-reverse",
+    alignSelf: isRTL ? "flex-end" : "flex-start"
+    },
 })
 
 export default Employees;

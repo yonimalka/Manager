@@ -93,6 +93,57 @@ async function init() {
 
 init();
 
+const EmployeeSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  role: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  phone: {
+    type: String,
+  },
+  email: {
+    type: String,
+  },
+  startDate: {
+    type: Date,
+    default: Date.now,
+  },
+  // 👇 Salary Info
+  salaryType: {
+    type: String,
+    enum: ["hourly", "daily"],
+    required: true,
+  },
+  salaryRate: {
+    type: Number,
+    required: true, // e.g. 50 (₪50 per hour or day)
+  },
+  // track work hours or days
+  totalHoursWorked: {
+    type: Number,
+    default: 0,
+  },
+  totalDaysWorked: {
+    type: Number,
+    default: 0,
+  },
+  // auto-calc or store total pay
+  totalPay: {
+    type: Number,
+    default: 0,
+  },
+  status: {
+    type: String,
+    enum: ["active", "inactive", "on_leave"],
+    default: "active",
+  },
+});
 
 const ReceiptSchema = new mongoose.Schema({
   filename: String,
@@ -136,7 +187,8 @@ const UserSchema = new mongoose.Schema({
   password: String,
   projects: [ProjectSchema],
   totalExpenses: Number,
-  totalIncomes: {type: Number},  
+  totalIncomes: {type: Number},
+  employees: [EmployeeSchema],  
 })
 
 const UserModel = mongoose.model("users", UserSchema);
@@ -257,7 +309,6 @@ app.get("/getUser", authMiddleware, async (req, res) => {
 app.post("/updateDetails/", authMiddleware, async (req, res) =>{
     const userId = req.userId;
     const {name, payment, days, materialsList, toDoList} = req.body;
-    console.log(userId);
     
     const user = await UserModel.findById(userId);
     
@@ -690,6 +741,26 @@ Do NOT wrap in markdown, do NOT add commentary.
     res.status(500).json({ error: "Server error while generating quote", details: error.message });
   }
 });
+
+app.post("/addEmployee", authMiddleware, async (req, res) =>{
+  const userId = req.userId;
+  const { name, role, phone, email, salaryType, salaryRate } = req.body;
+
+  const user = await UserModel.findById(userId);
+
+  const newEmployee = {
+        name,
+        role,
+        phone,
+        email,
+        salaryType,
+        salaryRate,
+  }
+  user.employees.push(newEmployee);
+  const result = await user.save();
+  console.log("Updated user with new employee:", result);
+  res.status(200).json({ message: "Success" });
+})
 
 
 app.delete("/deleteProject/:projectId", authMiddleware, async (req, res) =>{
