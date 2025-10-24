@@ -1,69 +1,181 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, Keyboard, Dimensions, I18nManager } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, Keyboard, Dimensions, I18nManager, ActivityIndicator } from "react-native";
 import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
 import { ScrollView } from "react-native-gesture-handler";
 import Ionicons from "@expo/vector-icons/Ionicons";
-const Employees = () =>{
-   const navigation = useNavigation();
-    
-    return (
-        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity style= {styles.fabButton} onPress={()=> navigation.navigate("AddEmployee")}>
-            <Ionicons name="add" size={28} color="#FFF" />
-        </TouchableOpacity>
-         <View style={styles.card}>
-           <Text style={styles.name}>ידידיה אלפי</Text>
-           <Text style={styles.wage}>שכר:</Text>
-         </View>
-        </ScrollView>
-        
-    )
-}
+import api from "../services/api";
 
-const { width } = Dimensions.get("window");
 const isRTL = I18nManager.isRTL;
 
+const Employees = () =>{
+    const navigation = useNavigation();
+    const [employees, setEmployees] = useState();
+    const [loading, setLoading] = useState(true);
+    const fetchEmployees = async () => {
+    try {
+      const res = await api.get("/employees");
+      setEmployees(res.data);
+    } catch (err) {
+      console.error("Error fetching employees:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+  const renderEmployee = ({ item }) => (
+    <View style={styles.card}>
+      <View style={styles.headerRow}>
+        <Text style={styles.name}>{item.name}</Text>
+        <Ionicons name="person-outline" size={22} color="#007AFF" />
+      </View>
+      <Text style={styles.role}>{item.role}</Text>
+
+      <View style={styles.salaryContainer}>
+        <Ionicons name="cash-outline" size={18} color="#007AFF" />
+        <Text style={styles.salaryText}>
+          {item.salaryType === "hourly" ? "שכר לשעה" : "שכר יומי"}: ₪{item.salaryRate}
+        </Text>
+      </View>
+
+      {item.salaryType === "hourly" && item.totalHoursWorked > 0 && (
+        <Text style={styles.infoText}>סה״כ שעות: {item.totalHoursWorked}</Text>
+      )}
+      {item.salaryType === "daily" && item.totalDaysWorked > 0 && (
+        <Text style={styles.infoText}>סה״כ ימים: {item.totalDaysWorked}</Text>
+      )}
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={{ marginTop: 10, color: "#555" }}>טוען עובדים...</Text>
+      </View>
+    );
+  }
+
+    return (
+    <View style={styles.container}>
+      <Text style={styles.title}>עובדים</Text>
+
+      {employees.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>אין עובדים להצגה</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={employees}
+          keyExtractor={(item) => item._id}
+          renderItem={renderEmployee}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => navigation.navigate("AddEmployee")}
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-container: {
-    paddingTop: 70,
-    paddingStart: width * 0.05,
-    paddingEnd: width * 0.05,
-    paddingBottom: 40,
+  container: {
+    flex: 1,
     backgroundColor: "#F9F9F9",
-    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    direction: isRTL ? "rtl" : "ltr",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 20,
+    textAlign: isRTL ? "right" : "left",
+  },
+  listContainer: {
+    paddingBottom: 100,
   },
   card: {
-    // flexDirection: isRTL ? "row" : "row-reverse",
-    alignItems: isRTL ? "flex-start" : "flex-end", 
-    padding: 30,
     backgroundColor: "#fff",
-    borderRadius: 15,
-    // flex: 1
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  headerRow: {
+    flexDirection: isRTL ? "row" : "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   name: {
-    fontSize: 20,
-    color: "#333",
-    
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#222",
   },
-  wage: {
+  role: {
     fontSize: 15,
-    color: "#333",
-   marginVertical: 7,
+    color: "#666",
+    marginTop: 4,
   },
-  fabButton: {
-    bottom: 0,
-    marginTop: 10,
-    backgroundColor: "#333",
-    borderRadius: 28,
-    width: 56,
-    height: 56,
-    justifyContent: "center", 
-    alignItems: "center",
+  salaryContainer: {
     flexDirection: isRTL ? "row" : "row-reverse",
-    alignSelf: isRTL ? "flex-end" : "flex-start"
-    },
-})
+    alignItems: "center",
+    marginTop: 10,
+  },
+  salaryText: {
+    fontSize: 15,
+    color: "#007AFF",
+    marginStart: 5,
+  },
+  infoText: {
+    fontSize: 14,
+    color: "#555",
+    marginTop: 6,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F9F9F9",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#777",
+  },
+  addButton: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    backgroundColor: "#007AFF",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+});
 
 export default Employees;

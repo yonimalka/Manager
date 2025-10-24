@@ -39,6 +39,7 @@ app.use(bodyParser.urlencoded({ extended: true}));
 
 const path = require('path');
 const { ref } = require('process');
+const { auth } = require('google-auth-library');
 app.use(express.static(path.join(__dirname, 'public')));
 
 
@@ -741,7 +742,14 @@ Do NOT wrap in markdown, do NOT add commentary.
     res.status(500).json({ error: "Server error while generating quote", details: error.message });
   }
 });
-
+ app.get("/employees", authMiddleware, async (req, res) =>{
+    const userId = req.userId;
+    await UserModel.findById(userId)
+    .then((user) =>{
+      const employees = user.employees;
+      res.json(employees);
+    })
+ })
 app.post("/addEmployee", authMiddleware, async (req, res) =>{
   const userId = req.userId;
   const { name, role, phone, email, salaryType, salaryRate } = req.body;

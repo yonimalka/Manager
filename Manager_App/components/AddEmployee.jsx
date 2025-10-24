@@ -3,9 +3,13 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, I18nManager
 import DropDownPicker from "react-native-dropdown-picker"
 import axios from "axios";
 import api from "../services/api";
+import { useNavigation, useRoute } from "@react-navigation/native";
+
 const isRTL = I18nManager.isRTL;
 
 const AddEmployee = () => {
+   const navigation = useNavigate();
+
   const [formData, setFormData] = useState({
     name: "",
     role: "",
@@ -47,6 +51,7 @@ const AddEmployee = () => {
       console.error(error);
       Alert.alert("שגיאה", "לא ניתן להוסיף את העובד");
     }
+    navigation.navigate(-1);
   };
 
   return (
