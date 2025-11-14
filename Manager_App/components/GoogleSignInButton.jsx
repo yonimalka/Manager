@@ -1,11 +1,15 @@
 import React, { useEffect } from 'react';
 import { Button, Alert } from 'react-native';
+import { useNavigation, useRoute } from "@react-navigation/native";
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-
+import axios from "axios";
+import {SERVER_URL} from "@env";
 WebBrowser.maybeCompleteAuthSession();
 
 export default function GoogleSignInButton() {
+
+ const navigation = useNavigation();
   // Create the Google Sign-In request
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: '717125560385-pg4scnvjueo0d674ha1epbal1v8f2ihv.apps.googleusercontent.com',
@@ -19,15 +23,15 @@ export default function GoogleSignInButton() {
     if (response?.type === "success") {
       const accessToken = response.authentication.accessToken;
 
-      const userInfoResponse = await fetch(
-        "https://www.googleapis.com/userinfo/v2/me",
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
+    //   const userInfoResponse = await fetch(
+    //     "https://www.googleapis.com/userinfo/v2/me",
+    //     { headers: { Authorization: `Bearer ${accessToken}` } }
+    //   );
 
-      const user = await userInfoResponse.json();
-      Alert.alert('Logged in!', JSON.stringify(user, null, 2));
+    //   const user = await userInfoResponse.json();
+    //   Alert.alert('Logged in!', JSON.stringify(user, null, 2));
       // Now send this to your server
-      handleLoginWithServer(user);
+      await handleGoogleLogin(accessToken);
     }
   };
 
@@ -35,9 +39,9 @@ export default function GoogleSignInButton() {
       // You can now use authentication.accessToken to fetch user info
   }, [response]);
 
-   const handleGoogleLogin = async (response) => {
+   const handleGoogleLogin = async (accessToken) => {
     try {
-      const accessToken = response.authentication.accessToken;
+    //   const accessToken = response.authentication.accessToken;
 
       // 1. Get google profile
       const userInfo = await fetch(
@@ -45,9 +49,9 @@ export default function GoogleSignInButton() {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       const googleUser = await userInfo.json();
-
-      // 2. Send user to backend
-      const res = await axios.post(`${process.env.SERVER_URL}/GoogleSignIn`, {
+   Alert.alert('Logged in0000!', JSON.stringify(googleUser, null, 2));
+      // Send user to backend
+      const res = await axios.post(`${SERVER_URL}/GoogleSignIn`, {
         googleId: googleUser.id,
         email: googleUser.email,
         name: googleUser.name,
@@ -55,12 +59,15 @@ export default function GoogleSignInButton() {
       });
 
       const { token } = res.data;
-
-      // 3. Save login token locally
+      
+      // Save login token locally
       await AsyncStorage.setItem("token", token);
-
-      // 4. Navigate to home
-      navigation.replace("Home");
+      
+      // Navigate to home
+       navigation.reset({
+        index: 0,
+        routes: [{ name: "HomeScreen" }],
+      });
 
     } catch (error) {
       console.log("Google login error:", error);

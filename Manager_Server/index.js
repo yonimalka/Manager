@@ -178,7 +178,7 @@ const UserSchema = new mongoose.Schema({
   name: String,
   surname: String,
   email: String,
-  password: String,
+  password: { type: String, default: null },
   projects: [ProjectSchema],
   totalExpenses: Number,
   totalIncomes: {type: Number},
@@ -264,6 +264,7 @@ app.post("/SignInDetails", async (req, res) => {
 });
 
 app.post("/GoogleSignIn", async (req, res)=>{
+
   const { googleId, email, name, avatar } = req.body;
   try {
     const user = UserModel.findOne({ email });
@@ -271,6 +272,7 @@ app.post("/GoogleSignIn", async (req, res)=>{
       const NewUser = new UserModel({
         name: name,
         email: email,
+        password: null,
         totalExpenses: 0,
         totalIncomes: 0,
       });
