@@ -271,14 +271,14 @@ console.log("GoogleSignIn");
   try {
     const user = UserModel.findOne({ email });
     if (!user) {
-      const NewUser = new UserModel({
+      const NewUser = UserModel.create({
         name: name,
         email: email,
         password: null,
         totalExpenses: 0,
         totalIncomes: 0,
       });
-      await NewUser.save();
+      // await NewUser.save();
       console.log(NewUser);
     }
     
