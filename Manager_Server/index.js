@@ -268,7 +268,7 @@ console.log("GoogleSignIn");
   console.log(googleId, email, name);
   
   try {
-    let user = UserModel.findOne({ email });
+    let user = await UserModel.findOne({ email })
     if (!user) {
        user = new UserModel({
         name: name,
