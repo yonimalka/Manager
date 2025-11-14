@@ -176,7 +176,6 @@ const ProjectSchema = new mongoose.Schema({
 
 const UserSchema = new mongoose.Schema({
   name: String,
-  surname: String,
   email: String,
   password: { type: String, default: null },
   projects: [ProjectSchema],
@@ -271,16 +270,15 @@ console.log("GoogleSignIn");
   try {
     let user = UserModel.findOne({ email });
     if (!user) {
-      const NewUser = await UserModel.create({
+       user = new UserModel({
         name: name,
         email: email,
         password: null,
         totalExpenses: 0,
         totalIncomes: 0,
       });
-      // await NewUser.save();
-      console.log("User Created:", NewUser);
-      user = NewUser;
+      await user.save();
+      console.log("User Created:", user);
     }
     
     
