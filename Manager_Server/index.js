@@ -278,9 +278,10 @@ console.log("GoogleSignIn");
         totalExpenses: 0,
         totalIncomes: 0,
       });
-      NewUser.save()
+      await NewUser.save();
+      console.log(NewUser);
     }
-    console.log(NewUser);
+    
     
     // Create JWT
     const token = generateAccessToken(user);
