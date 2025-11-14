@@ -16,7 +16,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { SERVER_URL } from "@env";
-import Constants from 'expo-constants';
+// import Constants from 'expo-constants';
 
 
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager, } from "react-native";
 import {SERVER_URL} from "@env";
-import Constants from 'expo-constants';
+// import Constants from 'expo-constants';
 import axios from "axios";
 import { TextInput } from "react-native-gesture-handler";
 import { useNavigation, NavigationContainer, useFocusEffect } from "@react-navigation/native";

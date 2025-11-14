@@ -23,13 +23,6 @@ const PORT = process.env.PORT;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
 const JWT_REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
 // issue token
-const generateAccessToken = (user) => {
-  return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "7d" });
-};
-
-const generateRefreshToken = (user) => {
-  return jwt.sign({ userId: user._id }, JWT_REFRESH_SECRET, { expiresIn: "15d" });
-};
 
 app.use(cors());
 app.use(express.json());
@@ -216,6 +209,13 @@ const createNewUser = async () =>{
 }
 createNewUser();
 
+const generateAccessToken = (user) => {
+  return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "7d" });
+};
+
+const generateRefreshToken = (user) => {
+  return jwt.sign({ userId: user._id }, JWT_REFRESH_SECRET, { expiresIn: "15d" });
+};
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -239,8 +239,6 @@ app.post("/NewUser", async (req, res) => {
 
 app.post("/SignInDetails", async (req, res) => {
   const { email, password } = req.body;
-  console.log("email:", email);
-  console.log("password:", password);
   
   try {
     const user = await UserModel.findOne({ email });
@@ -264,6 +262,32 @@ app.post("/SignInDetails", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+app.post("/GoogleSignIn", async (req, res)=>{
+  const { googleId, email, name, avatar } = req.body;
+  try {
+    const user = UserModel.findOne({ email });
+    if (!user) {
+      const NewUser = new UserModel({
+        name: name,
+        email: email,
+        totalExpenses: 0,
+        totalIncomes: 0,
+      });
+      NewUser.save()
+    }
+    // Create JWT
+    const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+    
+    res.status(200).json({ token, refreshToken });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server error" });
+  
+  }
+});
+
 app.post("/refresh", (req, res) => {
   const { token } = req.body; // refresh token
 

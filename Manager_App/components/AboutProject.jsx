@@ -18,7 +18,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "@env";
-import api from "../services/api"
+import api from "../services/api";
 import TasksInputModal from "./TasksInputModal";
 import MaterialsInputModal from "./MaterialsInputModal";
 
@@ -45,7 +45,6 @@ const AboutProject = () => {
 
   const fetchProject = async () => {
     try {
-      const token = await getToken();
 
       const response = await api.get(`/getProject/${projectId}`);
 

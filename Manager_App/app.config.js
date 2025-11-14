@@ -44,9 +44,20 @@ export default {
       },
       projectId: "a0b72a58-39e1-4ed6-8402-837f500c13e3"
     },
+    plugins: [
+      "expo-web-browser",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.717125560385-pg4scnvjueo0d674ha1epbal1v8f2ihv.apps.googleusercontent.com"
+        }
+      ]
+    ],
+    
     runtimeVersion: version,
     updates: {
       url: "https://u.expo.dev/a0b72a58-39e1-4ed6-8402-837f500c13e3"
-    }
+    },
+    
   }
 };

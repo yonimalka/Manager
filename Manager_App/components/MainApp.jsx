@@ -35,6 +35,7 @@ import ReceiptPreview from "./ReceiptPreview";
 import { useAuth } from "./useAuth";
 import Employees from "./Employees";
 import AddEmployee from "./AddEmployee";
+import testing from "./testing";
 // React Navigation Setup
 const Stack = createStackNavigator();
 
@@ -75,6 +76,7 @@ const MainApp = () => {
         <Stack.Screen name="CashFlow" component={CashFlow} options={{ headerShown: false }}/>
         <Stack.Screen name="Employees" component={Employees} options={{ headerShown: false }}/>
         <Stack.Screen name="AddEmployee" component={AddEmployee} options={{ headerShown: false }}/>
+        <Stack.Screen name="testing" component={testing} options={{ headerShown: false }}/>
       </Stack.Navigator>
     </NavigationContainer>
   );

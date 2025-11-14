@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Modal, View, Text, TextInput, Button, StyleSheet, I18nManager, } from "react-native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
-import Constants from 'expo-constants';
+// import Constants from 'expo-constants';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api"
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;

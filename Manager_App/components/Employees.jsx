@@ -10,7 +10,9 @@ import api from "../services/api";
 const isRTL = I18nManager.isRTL;
 
 const Employees = () =>{
+    
     const navigation = useNavigation();
+
     const [employees, setEmployees] = useState();
     const [loading, setLoading] = useState(true);
     const fetchEmployees = async () => {
@@ -27,14 +29,15 @@ const Employees = () =>{
   useEffect(() => {
     fetchEmployees();
   }, []);
+
   const renderEmployee = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.headerRow}>
+      <Ionicons name="person-outline" size={22} color="#007AFF" />
         <Text style={styles.name}>{item.name}</Text>
-        <Ionicons name="person-outline" size={22} color="#007AFF" />
       </View>
-      <Text style={styles.role}>{item.role}</Text>
-
+      <Text style={styles.role}>תפקיד: {item.role}</Text>
+      <Text style={styles.phone}>{item.phone}</Text>
       <View style={styles.salaryContainer}>
         <Ionicons name="cash-outline" size={18} color="#007AFF" />
         <Text style={styles.salaryText}>
@@ -94,7 +97,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9F9F9",
     paddingHorizontal: 16,
     paddingTop: 50,
-    direction: isRTL ? "rtl" : "ltr",
+    direction: !isRTL ? "rtl" : "ltr",
   },
   title: {
     fontSize: 24,
@@ -109,7 +112,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 46,
+    paddingHorizontal: 20,
     marginBottom: 12,
     shadowColor: "#000",
     shadowOpacity: 0.1,
@@ -117,11 +121,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerRow: {
-    flexDirection: isRTL ? "row" : "row-reverse",
-    justifyContent: "space-between",
+    position: "absolute",
+    margin: 20,
+    flexDirection: !isRTL ? "row" : "row-reverse",
+    // justifyContent: "space-between",
     alignItems: "center",
   },
   name: {
+    marginRight: 15,
     fontSize: 18,
     fontWeight: "600",
     color: "#222",
@@ -129,10 +136,17 @@ const styles = StyleSheet.create({
   role: {
     fontSize: 15,
     color: "#666",
-    marginTop: 4,
+    marginTop: 8,
+    textAlign: isRTL ? "right" : "left",
+  },
+  phone: {
+    fontSize: 15,
+    color: "#666",
+    marginTop: 18,
+    textAlign: isRTL ? "right" : "left",
   },
   salaryContainer: {
-    flexDirection: isRTL ? "row" : "row-reverse",
+    flexDirection: !isRTL ? "row" : "row-reverse",
     alignItems: "center",
     marginTop: 10,
   },

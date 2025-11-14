@@ -8,7 +8,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 const isRTL = I18nManager.isRTL;
 
 const AddEmployee = () => {
-   const navigation = useNavigate();
+   const navigation = useNavigation();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -47,11 +47,12 @@ const AddEmployee = () => {
         totalDaysWorked: "",
         photoUrl: "",
       });
+      navigation.navigate(-1);
     } catch (error) {
       console.error(error);
       Alert.alert("שגיאה", "לא ניתן להוסיף את העובד");
     }
-    navigation.navigate(-1);
+    
   };
 
   return (
@@ -100,7 +101,7 @@ const AddEmployee = () => {
     setOpen={setOpen}
     setValue={(callback) => handleChange("salaryType", callback(formData.salaryType))}
     placeholder="בחר סוג שכר"
-    style={{ borderColor: "#ddd", backgroundColor: "#fff" }}
+    style={{ borderColor: "#ddd", backgroundColor: "#fff"}}
     dropDownContainerStyle={{ borderColor: "#ddd" }}
   />
 </View>
@@ -125,9 +126,10 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
+    paddingTop: 70,
     backgroundColor: "#F9F9F9",
     alignItems: "center",
-    direction: isRTL ? "rtl" : "ltr",
+    direction: !isRTL ? "rtl" : "ltr",
   },
   title: {
     fontSize: 22,
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginVertical: 8,
     fontSize: 16,
-    textAlign: isRTL ? "right" : "left",
+    textAlign: !isRTL ? "right" : "left",
     borderWidth: 1,
     borderColor: "#ddd",
   },
@@ -155,6 +157,7 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
   },
   label: {
+    textAlign: isRTL ? "right" : "left",
     fontSize: 16,
     marginStart: 10,
     marginTop: 6,

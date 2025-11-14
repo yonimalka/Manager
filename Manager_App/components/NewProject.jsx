@@ -17,7 +17,7 @@ import {
 import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
-import Constants from 'expo-constants';
+// import Constants from 'expo-constants';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;

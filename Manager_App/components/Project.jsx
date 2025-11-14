@@ -23,27 +23,32 @@ const Project = ({ projectName, totalAmount, id }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
+  const [todos, setTodos] = useState([]);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [completedTasks, setCompletedTasks] = useState(0);
+  const [progress, setProgress] = useState(0);
 
   const { setValue } = useValue();
   
-  const getToken = async () => {
-    return await AsyncStorage.getItem("token");
-  };
   useEffect(() => {
     fetchProjectData();
   }, []);
 
   const fetchProjectData = async () => {
     try {
-      
-      const token = await getToken();
-      
       const response = await api.get(`/getProject/${id}`);
       setPaidAmount(response.data.paid);
+      setTodos(response.data.toDoList);
+      setTotalTasks(response.data.toDoList.length);
+      setCompletedTasks(todos.filter(t => t.checked).length);
     } catch (error) {
       console.error("Error fetching project data:", error);
     }
   };
+
+  useEffect(() => {
+    setProgress(((completedTasks / totalTasks) * 100).toFixed(0));
+  }, [todos]);
 
   const handleConfirmPayment = async () => {
     const amount = Number(paymentInput);
@@ -58,7 +63,6 @@ const Project = ({ projectName, totalAmount, id }) => {
     setMenuVisible(false);
 
     try {
-      const token = await getToken();
       const response = await api.post(
         `/updatePayment/${id}`,
         { paidAmount: amount },
@@ -95,7 +99,12 @@ const Project = ({ projectName, totalAmount, id }) => {
           </TouchableOpacity>
         </View>
       )}
-
+       <View style={{ flex: 1, padding: 20, backgroundColor: "#fff" }}>
+      <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 10 }}>
+       Progress: {progress}%
+      </Text>
+    </View>
+  
       {/* עיגול התקדמות */}
       <View style={styles.circleWrapper}>
         <Svg height="80" width="80">

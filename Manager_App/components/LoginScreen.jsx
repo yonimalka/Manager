@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager, KeyboardAvoidingView, Platform} from "react-native";
+import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager } from "react-native";
 import {SERVER_URL} from "@env";
-import Constants from 'expo-constants';
+// import Constants from 'expo-constants';
 import axios from "axios";
 import { TextInput } from "react-native-gesture-handler";
 import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
@@ -9,7 +9,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SignUp from "./SignUp";
-
+import GoogleSignInButton from './GoogleSignInButton';
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const LoginScreen = () => {
@@ -56,14 +56,10 @@ const LoginScreen = () => {
   }
 };
     return (
-      <KeyboardAvoidingView
-           style={{ flex: 1, backgroundColor: "#f8fafc" }}
-           behavior={Platform.OS === "ios" ? "padding" : undefined}
-         >
         <View style={styles.container}>
         <Image source={require("../assets/managoLogoTransparent.png")} style={styles.logo} />
             <Text style={styles.title}>Welcome</Text>
-
+            {validation && <Text>{validation}</Text>} 
             <View style={styles.form}>
                 <TextInput
                     placeholder="Email"
@@ -82,11 +78,13 @@ const LoginScreen = () => {
             <TouchableOpacity style={styles.button} onPress={handleSignIn}>
                 <Text style={styles.buttonText}>Sign In</Text>
             </TouchableOpacity>
-            {validation && <Text>{validation}</Text>}
             <Text>Don't have account? Sign Up!</Text>
             <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
+            <View>
+                  <GoogleSignInButton />
+                </View>
         </View>
-        </KeyboardAvoidingView>
+        
     )
 }
 const isRTL = I18nManager.isRTL;

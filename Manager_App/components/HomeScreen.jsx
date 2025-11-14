@@ -25,7 +25,8 @@ import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
 import { useAuth } from "./useAuth";
 import api from "../services/api";
-import Menu from "../components/Menu";
+import Menu from "./Menu";
+import testing from "./testing";
 
 const HomeScreen = () => {
   const route = useRoute();
@@ -115,6 +116,12 @@ useEffect(() => {
       </View>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.welcome}>ברוך השב,{"\n"}{userName}</Text>
+        <View>
+    <TouchableOpacity
+      onPress={()=> navigation.navigate("testing")}>
+        <Text>test</Text>
+      </TouchableOpacity>
+      </View>
         <ValueProvider>
           {/* Summary Row */}
           <View style={styles.summaryRow}>
