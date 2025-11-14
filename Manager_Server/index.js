@@ -264,8 +264,10 @@ app.post("/SignInDetails", async (req, res) => {
 });
 
 app.post("/GoogleSignIn", async (req, res)=>{
-
+console.log("GoogleSignIn");
   const { googleId, email, name, avatar } = req.body;
+  console.log(googleId, email, name);
+  
   try {
     const user = UserModel.findOne({ email });
     if (!user) {
@@ -278,6 +280,8 @@ app.post("/GoogleSignIn", async (req, res)=>{
       });
       NewUser.save()
     }
+    console.log(NewUser);
+    
     // Create JWT
     const token = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);

@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import { Button, Alert } from 'react-native';
 import { useNavigation, useRoute } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import axios from "axios";
 import {SERVER_URL} from "@env";
+
 WebBrowser.maybeCompleteAuthSession();
 
 export default function GoogleSignInButton() {
@@ -56,7 +58,8 @@ export default function GoogleSignInButton() {
         email: googleUser.email,
         name: googleUser.name,
         avatar: googleUser.picture,
-      });
+      },
+    { headers: { "Content-Type": "application/json" } });
 
       const { token } = res.data;
       
@@ -64,7 +67,7 @@ export default function GoogleSignInButton() {
       await AsyncStorage.setItem("token", token);
       
       // Navigate to home
-       navigation.reset({
+        navigation.reset({
         index: 0,
         routes: [{ name: "HomeScreen" }],
       });
