@@ -269,9 +269,9 @@ console.log("GoogleSignIn");
   console.log(googleId, email, name);
   
   try {
-    const user = UserModel.findOne({ email });
+    let user = UserModel.findOne({ email });
     if (!user) {
-      const NewUser = UserModel.create({
+      const NewUser = await UserModel.create({
         name: name,
         email: email,
         password: null,
@@ -279,7 +279,8 @@ console.log("GoogleSignIn");
         totalIncomes: 0,
       });
       // await NewUser.save();
-      console.log(NewUser);
+      console.log("User Created:", NewUser);
+      user = NewUser;
     }
     
     
