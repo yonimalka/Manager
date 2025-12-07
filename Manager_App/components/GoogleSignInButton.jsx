@@ -52,7 +52,7 @@ export default function GoogleSignInButton() {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       const googleUser = await userInfo.json();
-   Alert.alert('Logged in0000!', JSON.stringify(googleUser, null, 2));
+//    Alert.alert('Logged in0000!', JSON.stringify(googleUser, null, 2));
       // Send user to backend
       const res = await axios.post(`${SERVER_URL}/GoogleSignIn`, {
         googleId: googleUser.id,

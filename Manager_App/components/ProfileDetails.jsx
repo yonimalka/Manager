@@ -12,8 +12,9 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import api from "../services/api";
 // import Constants from 'expo-constants';
-
+import { useAuth } from "./useAuth";
 import MaterialsInputModal from "./MaterialsInputModal";
 import TaskInputModal from "./TasksInputModal";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,19 +24,20 @@ import { Ionicons } from "@expo/vector-icons";
 const ProfileDetails = () => {
    const navigation = useNavigation();
      const route = useRoute();
-     const userId = route.params?.userId;
+    //  const userId = route.params?.userId;
+    const { userId } = useAuth();
     const [userDetails, setUserDetails] = useState([]);
 
     useEffect(() =>{
      fetchData();
-     console.log("user Details:", userDetails);
+    //  console.log("user Details:", userDetails);
     }, [])
 
     const fetchData = async () =>{
       try {
-      const response = await axios.get(`${SERVER_URL}/getUserDetails/${userId}`);
+      const response = await api.get(`/getUserDetails/${userId}`);
       setUserDetails(response.data);
-      console.log("response:", response.data);
+      // console.log("response:", response.data);
       
       } catch (error){
         console.error("Error occurred: " + error);
@@ -43,7 +45,7 @@ const ProfileDetails = () => {
     }
     const handleDelete = async () => {
       navigation.navigate("LoginScreen")
-      const res = await axios.delete(`${SERVER_URL}/deleteUser/${userId}`)
+      const res = await api.delete(`/deleteUser/${userId}`)
       console.log(res.data);
       
     

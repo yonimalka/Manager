@@ -15,6 +15,8 @@ const jwt = require('jsonwebtoken');
 const authMiddleware = require('./authMiddleware');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
+const archiver = require("archiver");
+const { ObjectId } = require("mongodb");
 
 console.log('Chromium path:', puppeteer.executablePath());
 console.log('Chromium exists?', fs.existsSync(puppeteer.executablePath()));
@@ -510,7 +512,6 @@ try {
   console.error(err);
   res.status(500).send('Error fetching images');
 }
-
 })
 
 app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
@@ -520,8 +521,57 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     const getExpenses = user.totalExpenses;
     res.json(getExpenses)
   })
-  
-})
+});
+
+app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // 1️⃣ Make sure GridFS bucket exists
+    if (!gfsBuckets.has(userId)) {
+      await connectToGridFS(userId);
+    }
+    const bucket = gfsBuckets.get(userId);
+
+    // 2️⃣ Fetch all files from GridFS for this user
+    const files = await mongoose.connection.db
+      .collection(`user_${userId}_bucket.files`)
+      .find({})
+      .toArray();
+
+    if (!files.length) {
+      return res.status(404).json({ message: "No receipts found" });
+    }
+
+    // 3️⃣ Set ZIP headers
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=receipts_${Date.now()}.zip`
+    );
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    // 4️⃣ Add each file from GridFS into the ZIP
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      // Stream file from GridFS
+      const downloadStream = bucket.openDownloadStream(file._id);
+
+      archive.append(downloadStream, {
+        name: `receipt_${i + 1}${file.filename ? path.extname(file.filename) : ".jpg"}`,
+      });
+    }
+
+    // 5️⃣ Finalize the ZIP stream
+    archive.finalize();
+  } catch (err) {
+    console.error("ZIP generation error:", err);
+    res.status(500).json({ message: "Server error generating ZIP" });
+  }
+});
 
 app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   const userId = req.userId;
