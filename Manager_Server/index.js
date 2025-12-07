@@ -263,7 +263,6 @@ app.post("/SignInDetails", async (req, res) => {
 });
 
 app.post("/GoogleSignIn", async (req, res)=>{
-console.log("GoogleSignIn");
   const { googleId, email, name, avatar } = req.body;
   console.log(googleId, email, name);
   
@@ -506,7 +505,7 @@ try {
     });
   }));
 
-  res.json(images);
+  res.json(images ? images : null);
 } catch (err) {
   console.error(err);
   res.status(500).send('Error fetching images');

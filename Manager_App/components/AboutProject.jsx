@@ -45,7 +45,6 @@ const AboutProject = () => {
 
   const fetchProject = async () => {
     try {
-
       const response = await api.get(`/getProject/${projectId}`);
 
       setProjectDetails(response.data);
@@ -59,9 +58,11 @@ const AboutProject = () => {
   };
 
   useEffect(() => {
+    fetchProject();
+    // console.log(projectDetails);
     setToDoList(project?.toDoList || []);
     setMaterialsArray(project?.materials[0]?.items || []);
-    fetchProject();
+    
   }, [project]);
 
   useEffect(() => {

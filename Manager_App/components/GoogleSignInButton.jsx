@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Button, Alert } from 'react-native';
+import { Pressable, Text, Image, StyleSheet, Alert, I18nManager } from 'react-native';
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from 'expo-web-browser';
@@ -12,6 +12,7 @@ WebBrowser.maybeCompleteAuthSession();
 export default function GoogleSignInButton() {
 
  const navigation = useNavigation();
+  const isRTL = I18nManager.isRTL;
   // Create the Google Sign-In request
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: '717125560385-pg4scnvjueo0d674ha1epbal1v8f2ihv.apps.googleusercontent.com',
@@ -78,12 +79,50 @@ export default function GoogleSignInButton() {
   };
 
   return (
-    <Button
+    <Pressable
+      style={[styles.button, { flexDirection: !isRTL ? "row-reverse" : "row" }]}
       disabled={!request}
-      title="Sign in with Google"
-      onPress={() => {
-        promptAsync();
-      }}
-    />
+      onPress={() => promptAsync()}
+    >
+      <Text style={styles.text}>Sign in with Google</Text>
+      <Image
+        source={require("../assets/google.png")}
+        style={styles.icon}
+      />
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  button: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 38,
+    borderWidth: 1,
+    borderColor: "#DADCE0",
+    paddingVertical: 9,
+    // width: "100%",
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    // Shadow
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+
+    marginTop: 50,
+  },
+  icon: {
+    width: 30,
+    height: 40,
+    
+  },
+  text: {
+    fontSize: 16,
+    color: "#3C4043",
+    fontWeight: "600",
+    marginLeft: 10,
+  },
+});

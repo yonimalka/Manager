@@ -32,7 +32,7 @@ const Project = ({ projectName, totalAmount, id }) => {
   
   useEffect(() => {
     fetchProjectData();
-  }, []);
+  });
 
   const fetchProjectData = async () => {
     try {
@@ -48,7 +48,7 @@ const Project = ({ projectName, totalAmount, id }) => {
 
   useEffect(() => {
     setProgress(((completedTasks / totalTasks) * 100).toFixed(0));
-  }, [todos]);
+  }, [completedTasks]);
 
   const handleConfirmPayment = async () => {
     const amount = Number(paymentInput);
@@ -99,11 +99,11 @@ const Project = ({ projectName, totalAmount, id }) => {
           </TouchableOpacity>
         </View>
       )}
-       <View style={{ flex: 1, padding: 20, backgroundColor: "#fff" }}>
+       {/* <View style={{ flex: 1, padding: 20, backgroundColor: "#fff" }}>
       <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 10 }}>
        Progress: {progress}%
       </Text>
-    </View>
+    </View> */}
   
       {/* עיגול התקדמות */}
       <View style={styles.circleWrapper}>
@@ -113,21 +113,21 @@ const Project = ({ projectName, totalAmount, id }) => {
             cx="40"
             cy="40"
             r="35"
-            stroke={paymentPercentage >= 100 ? "#3b82f6" : "#4caf50"}
+            stroke={progress >= 100 ? "#3b82f6" : "#4caf50"}
             strokeWidth="8"
             fill="none"
             strokeDasharray={strokeDasharray}
             strokeDashoffset={
-              strokeDasharray - (strokeDasharray * paymentPercentage) / 100
+              strokeDasharray - (strokeDasharray * progress) / 100
             }
             strokeLinecap="round"
           />
         </Svg>
         <View style={styles.circleOverlay}>
-          {paymentPercentage >= 100 ? (
+          {progress >= 100 ? (
             <Text style={styles.check}>✔</Text>
           ) : (
-            <Text style={styles.percent}>{Math.round(paymentPercentage)}%</Text>
+            <Text style={styles.percent}>{Math.round(progress)}%</Text>
           )}
         </View>
       </View>

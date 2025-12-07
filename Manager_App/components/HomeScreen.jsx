@@ -43,10 +43,10 @@ const HomeScreen = () => {
  const fetchData = async () => {
     try {
       setLoading(true);
-      setLoadingProjects(true);
+      // setLoadingProjects(true);
 
       const token = await AsyncStorage.getItem("token");
-      console.log("Home screen token:", token);
+      // console.log("Home screen token:", token);
       
     if (!token) {
       console.log("No token found, redirect to login");
@@ -54,7 +54,7 @@ const HomeScreen = () => {
       navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
       return;
     }
-    console.log("before api");
+    // console.log("before api");
       const response = await api.get('/getUser');
       setUserName(response.data?.name ?? "משתמש");
       setProjectDetails(response.data?.projects ?? [])
@@ -116,12 +116,6 @@ useEffect(() => {
       </View>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.welcome}>ברוך השב,{"\n"}{userName}</Text>
-        <View>
-    <TouchableOpacity
-      onPress={()=> navigation.navigate("testing")}>
-        <Text>test</Text>
-      </TouchableOpacity>
-      </View>
         <ValueProvider>
           {/* Summary Row */}
           <View style={styles.summaryRow}>
