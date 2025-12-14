@@ -11,8 +11,6 @@ import {
   Alert,
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
-import { MaterialIcons } from "@expo/vector-icons";
 import { SERVER_URL } from "@env";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -120,60 +118,15 @@ useEffect(() => {
           {/* Summary Row */}
           <View style={styles.summaryRow}>
             {/* Incomes Card */}
-            <LinearGradient
-              colors={["#4ade80", "#10b981"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.gradientCard}
-            >
-              <View style={styles.summaryHeader}>
-                <View style={styles.iconCircle}>
-                  <MaterialIcons name="trending-up" size={22} color="#fff" />
+            <View style={styles.gradientCard} >
+             <Incomes refresh={loading} />
+            </View>
+                <View style={styles.gradientCard}>
+{/* Expenses Card */}
+                <Expenses userId={userId} />
                 </View>
-                <Text style={styles.summaryTitleWhite}>הכנסות</Text>
-              </View>
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
-              ) : (
-                <Text style={styles.summaryAmount}>
-                <Incomes refresh={loading} />
-                </Text>
-              )}
-              <MaterialIcons
-                name="account-balance-wallet"
-                size={100}
-                color="rgba(255,255,255,0.2)"
-                style={styles.bgIcon}
-              />
-            </LinearGradient>
-
-            {/* Expenses Card */}
-            <LinearGradient
-              colors={["#f87171", "#ef4444"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.gradientCard}
-            >
-              <View style={styles.summaryHeader}>
-                <View style={styles.iconCircle}>
-                  <MaterialIcons name="trending-down" size={22} color="#fff" />
-                </View>
-                <Text style={styles.summaryTitleWhite}>הוצאות</Text>
-              </View>
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
-              ) : (
-                <Text style={styles.summaryAmount}>
-                <Expenses userId={userId} refresh={loading} />
-                </Text>
-              )}
-              <MaterialIcons
-                name="shopping-cart"
-                size={100}
-                color="rgba(255,255,255,0.2)"
-                style={styles.bgIcon}
-              />
-            </LinearGradient>
+            
+                
           </View>
           
           {/* Projects Section */}
@@ -221,12 +174,7 @@ const styles = StyleSheet.create({
     padding: 1,
   },
   summaryRow: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between", marginBottom: 35 },
-  gradientCard: { flex: 1, borderRadius: 20, padding: 16, marginHorizontal: 6, overflow: "hidden", position: "relative" },
-  summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
-  iconCircle: { backgroundColor: "rgba(255,255,255,0.2)", padding: 6, borderRadius: 50 },
-  summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
-  summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff" },
-  bgIcon: { position: "absolute", bottom: -20, right: -20, transform: [{ rotate: "-12deg" }] },
+  gradientCard: { flex: 1, borderRadius: 20, padding: 9, overflow: "hidden", position: "relative" },
   sectionTitle: { fontSize: 20, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 20 },
   projectCard: { marginBottom: 12 },
 });

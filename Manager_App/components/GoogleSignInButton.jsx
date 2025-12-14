@@ -112,7 +112,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
 
-    marginTop: 50,
+    marginTop: 40,
+    marginBottom: 30,
   },
   icon: {
     width: 30,

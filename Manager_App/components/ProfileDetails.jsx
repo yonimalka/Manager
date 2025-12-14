@@ -31,7 +31,7 @@ const ProfileDetails = () => {
     useEffect(() =>{
      fetchData();
     //  console.log("user Details:", userDetails);
-    }, [])
+    }, [userId])
 
     const fetchData = async () =>{
       try {
@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 12,
+    textAlign: isRTL ? "left" : "right",
     padding: 16,
     marginVertical: 8,
     shadowColor: "#000",

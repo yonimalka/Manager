@@ -11,16 +11,22 @@ import {
   Dimensions,
   I18nManager,
   Platform,
+  Share
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import Ionicons from "@expo/vector-icons/Ionicons";
+// import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import Entypo from "@expo/vector-icons/Entypo";
+import { Ionicons } from "@expo/vector-icons";
+import * as Sharing from "expo-sharing";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "@env";
 import api from "../services/api";
 import TasksInputModal from "./TasksInputModal";
 import MaterialsInputModal from "./MaterialsInputModal";
+import { generatePDF } from "./generatePdf";
 
 const AboutProject = () => {
   const navigation = useNavigation();
@@ -159,6 +165,16 @@ const AboutProject = () => {
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       {/* Project Summary */}
       <View style={styles.projectCard}>
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+          <MaterialIcons
+           name="arrow-back-ios" 
+           size={24} 
+           color="#374151" 
+           style={{
+            transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }],
+           }}
+           />
+        </TouchableOpacity>
         <Text style={styles.projectTitle}>{project?.name}</Text>
          <View style={styles.projectStats}>
         {/* {renderStatBlock("ימים", project?.days, "info")} */}
@@ -169,7 +185,20 @@ const AboutProject = () => {
 
       {/* To-Do List */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>משימות</Text>
+      <View style={styles.sectionTop}>
+      <Text style={styles.sectionTitle}>משימות</Text>
+        <TouchableOpacity
+                style={styles.shareButton}
+                onPress={() => generatePDF({
+  type: "tasks",
+  data: {list: toDoList,
+  name: project.name,}
+})}
+              >
+                <Ionicons name="share-outline" size={25} color="#000" />
+                {/* <Text style={[styles.actionText, { color: "#000" }]}>שתף</Text> */}
+              </TouchableOpacity>
+      </View>
         <View style={styles.tableHeader}>
           <Text style={[styles.cell, styles.headerText, { flex: 0.5 }]}>✔</Text>
           <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>קטגוריה</Text>
@@ -216,7 +245,20 @@ const AboutProject = () => {
 
       {/* Materials List */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>כתב כמויות</Text>
+      <View style={styles.sectionTop}>
+      <Text style={styles.sectionTitle}>כתב כמויות</Text>
+        <TouchableOpacity
+                style={styles.shareButton}
+                onPress={() => generatePDF({
+  type: "materials",
+  data: {list: materialsArray,
+  name: project.name}
+})}
+              >
+                <Ionicons name="share-outline" size={25} color="#000" />
+                {/* <Text style={[styles.actionText, { color: "#000" }]}>שתף</Text> */}
+              </TouchableOpacity>
+      </View>
         <View style={styles.tableHeader}>
           <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>כמות</Text>
           <Text style={[styles.cell, styles.headerText, { flex: 2 }]}>פריט</Text>
@@ -259,6 +301,7 @@ const AboutProject = () => {
           data={visibleReceipts}
           horizontal
           keyExtractor={(item) => item._id}
+          key={(item) => item._id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item }) => (
@@ -330,7 +373,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: isRTL ? "left" : "right",
   },
+  sectionTop: {
+    flexDirection: "row-reverse",
+    position: '',
+    justifyContent: "space-between",
+    // backgroundColor: "#999",
+    
+  },
+  shareButton: {
+    // alignSelf: "flex-start",
 
+  },
   section: { backgroundColor: "#FFF", borderRadius: 16, padding: 18, marginBottom: 30, ...Platform.select({
       ios: {
         shadowColor: "#000",

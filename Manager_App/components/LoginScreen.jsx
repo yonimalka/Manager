@@ -78,11 +78,12 @@ const LoginScreen = () => {
             <TouchableOpacity style={styles.button} onPress={handleSignIn}>
                 <Text style={styles.buttonText}>Sign In</Text>
             </TouchableOpacity>
-            <Text>Don't have account? Sign Up!</Text>
-            <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
-            <View>
                   <GoogleSignInButton />
-                </View>
+                  <View style={styles.signUp}>
+                   <Text>Don't have account? Sign Up!</Text>
+                   <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
+                  </View>
+                
         </View>
         
     )
@@ -145,6 +146,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
+    marginBottom: 20,
   },
   buttonText: {
     color: "#fff",
@@ -155,6 +157,13 @@ const styles = StyleSheet.create({
     paddingEnd: 16,
     alignSelf: "stretch",
   },
+  signUp: {
+    position: "absolute",
+    // flexDirection: "column",
+    // justifyContent: "space-around",
+    alignItems: "center",
+    bottom: 30,
+  }
 });
 
 export default LoginScreen;

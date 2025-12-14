@@ -16,6 +16,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import api from "../services/api";
 // import Constants from 'expo-constants';
 
 
@@ -62,7 +63,7 @@ const Receipts = () => {
 
     try {
        console.log("uploading receipt...1");
-      await axios.post(`${SERVER_URL}/uploadReceipt/${userId}`, formData, {
+      await api.post(`/uploadReceipt`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

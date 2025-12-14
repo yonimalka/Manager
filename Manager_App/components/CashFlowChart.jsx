@@ -17,8 +17,8 @@ export default function CashFlowChart({ points = [] }) {
   const width = screenWidth - padding;
   const height = 150;
 
-  const maxY = Math.max(...numericPoints);
-  const minY = Math.min(...numericPoints);
+  const maxY = Math.min(...numericPoints);
+  const minY = Math.max(...numericPoints);
   const rangeY = maxY - minY || 1;
 
   const stepX = width / (numericPoints.length - 1 || 1);

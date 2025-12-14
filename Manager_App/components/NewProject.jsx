@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
   StyleSheet,
   Alert,
   Keyboard,
@@ -14,16 +13,15 @@ import {
   Dimensions,
   I18nManager,
 } from "react-native";
-import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { SERVER_URL } from "@env";
-// import Constants from 'expo-constants';
+import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
-// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
+
+const { width } = Dimensions.get("window");
+const isRTL = I18nManager.isRTL;
 
 const NewProject = () => {
-  
   const navigation = useNavigation();
   const route = useRoute();
   const userId = route.params?.userId;
@@ -45,35 +43,51 @@ const NewProject = () => {
   const [taskList, setTaskList] = useState([]);
 
   const handleSubmit = async () => {
-    
     if (!details.name || !details.days || !details.payment) {
       Alert.alert("Missing Fields", "Please fill in all main project details.");
       return;
     }
-    
-    try {
-      const token = AsyncStorage.getItem("token");
 
-      const newDetails = { ...details, materialsList, toDoList: taskList };
+    if (isNaN(Number(details.days)) || Number(details.days) <= 0) {
+      Alert.alert("Invalid input", "Number of days must be a positive number.");
+      return;
+    }
+
+    if (isNaN(Number(details.payment)) || Number(details.payment) <= 0) {
+      Alert.alert("Invalid input", "Total payment must be a positive number.");
+      return;
+    }
+
+    try {
+      // תיקון קטן: קיבלנו את הטוקן עם await
+      const token = await AsyncStorage.getItem("token");
+
+      const newDetails = { ...details, materialsList, toDoList: taskList, userId };
+      // אם ה־api זקוק לכותרת Authorization, ניתן להוסיף אותה ב־api instance או כאן
       await api.post(`/updateDetails`, newDetails);
-      
+
       Alert.alert("Success", "Project added successfully!");
       setTimeout(() => {
-      navigation.goBack();
-    }, 200);
+        navigation.goBack();
+      }, 200);
     } catch (error) {
       console.error("Submission error:", error);
       Alert.alert("Error", "Failed to add project.");
     }
-    
   };
 
   const handleAddMaterial = () => {
     Keyboard.dismiss();
     if (inputValue && inputCountValue) {
-      setMaterialsList([...materialsList, { item: inputValue.trim(), count: inputCountValue.trim() }]);
+      // שמור איך שהיית רוצה: משמרים פורמט הקודם (item, count)
+      setMaterialsList([
+        ...materialsList,
+        { item: inputValue.trim(), count: inputCountValue.trim() },
+      ]);
       setInputValue("");
       setInputCountValue("");
+    } else {
+      Alert.alert("Missing fields", "Please provide material name and quantity.");
     }
   };
 
@@ -84,9 +98,14 @@ const NewProject = () => {
   const handleAddTask = () => {
     Keyboard.dismiss();
     if (taskNameInput) {
-      setTaskList([...taskList, { task: taskNameInput.trim(), details: taskDetailsInput.trim() || "N/A" }]);
+      setTaskList([
+        ...taskList,
+        { task: taskNameInput.trim(), details: taskDetailsInput.trim() || "N/A" },
+      ]);
       setTaskNameInput("");
       setTaskDetailsInput("");
+    } else {
+      Alert.alert("Missing field", "Please provide a task name.");
     }
   };
 
@@ -96,217 +115,345 @@ const NewProject = () => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#f8fafc" }}
+      style={{ flex: 1, backgroundColor: "#f0fdf4" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-    <View style={styles.heading}>
-        <Text style={styles.title}>פרוייקט חדש</Text>
+    <LinearGradient
+    colors={["#6ee7b7", "#10b981", "#059669"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={styles.header}
+    >
+      <View >
+        <View style={styles.headerInner}>
+          <Text style={styles.headerTitle}>פרוייקט חדש</Text>
+          <Text style={styles.headerSubtitle}>מלא את פרטי הפרוייקט למטה</Text>
+        </View>
       </View>
+</LinearGradient>
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Project Details Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>פרטי הפרוייקט</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="שם הפרוייקט"
-          value={details.name}
-          onChangeText={(text) => setDetails({ ...details, name: text })}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="מספר ימים"
-          keyboardType="numeric"
-          value={details.days}
-          onChangeText={(text) => setDetails({ ...details, days: text })}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="תשלום כולל"
-          keyboardType="numeric"
-          value={details.payment}
-          onChangeText={(text) => setDetails({ ...details, payment: text })}
-        />
-
-        {/* Materials Section */}
-        <Text style={styles.sectionTitle}>כתב כמויות</Text>
-        <View style={styles.row}>
+          <Text style={styles.label}>שם הפרוייקט</Text>
           <TextInput
-            style={[styles.input, { flex: 2 }]}
-            placeholder="פריט"
-            value={inputValue}
-            onChangeText={setInputValue}
+            style={styles.input}
+            placeholder="שם הפרוייקט"
+            placeholderTextColor="#94a3b8"
+            value={details.name}
+            onChangeText={(text) => setDetails({ ...details, name: text })}
           />
+
+          <Text style={styles.label}>מספר ימים</Text>
           <TextInput
-            style={[styles.input, { flex: 1, marginLeft: 8 }]}
-            placeholder="כמות"
+            style={styles.input}
+            placeholder="מספר ימים"
+            placeholderTextColor="#94a3b8"
             keyboardType="numeric"
-            value={inputCountValue}
-            onChangeText={setInputCountValue}
+            value={details.days}
+            onChangeText={(text) => setDetails({ ...details, days: text })}
           />
-          <TouchableOpacity style={styles.addButton} onPress={handleAddMaterial}>
-            <Text style={styles.addButtonText}>＋</Text>
-          </TouchableOpacity>
+
+          <Text style={styles.label}>תשלום כולל</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="תשלום כולל"
+            placeholderTextColor="#94a3b8"
+            keyboardType="numeric"
+            value={details.payment}
+            onChangeText={(text) => setDetails({ ...details, payment: text })}
+          />
         </View>
-        {materialsList.map((mat, index) => (
-          <View style={styles.itemRow} key={index}>
-            <Text style={styles.itemText}>{mat.item} (x{mat.count})</Text>
-            <TouchableOpacity onPress={() => handleRemoveMaterial(index)}>
-              <Text style={styles.removeButton}>✕</Text>
+
+        {/* Materials Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>כתב כמויות</Text>
+          </View>
+
+          <View style={styles.row}>
+          
+            <TextInput
+              style={[styles.input, { flex: 2 } ]}
+              placeholder="פריט"
+              placeholderTextColor="#94a3b8"
+              value={inputValue}
+              onChangeText={setInputValue}
+            />
+            
+            <TextInput
+              style={[styles.input, { flex: 1, marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }]}
+              placeholder="כמות"
+              placeholderTextColor="#94a3b8"
+              keyboardType="numeric"
+              value={inputCountValue}
+              onChangeText={setInputCountValue}
+            />
+            <TouchableOpacity style={styles.fabAdd} onPress={handleAddMaterial}>
+              <Text style={styles.fabAddText}>+</Text>
             </TouchableOpacity>
           </View>
-        ))}
 
-        {/* Tasks Section */}
-        <Text style={styles.sectionTitle}>משימות</Text>
-        <View style={styles.row}>
-          <TextInput
-            style={[styles.input, { flex: 2 }]}
-            placeholder="משימה"
-            value={taskNameInput}
-            onChangeText={setTaskNameInput}
-          />
-          <TextInput
-            style={[styles.input, { flex: 2, marginLeft: 8 }]}
-            placeholder="תיאור המשימה"
-            value={taskDetailsInput}
-            onChangeText={setTaskDetailsInput}
-          />
-          <TouchableOpacity style={styles.addButton} onPress={handleAddTask}>
-            <Text style={styles.addButtonText}>＋</Text>
-          </TouchableOpacity>
+          {materialsList.map((mat, index) => (
+            <View style={styles.itemRow} key={index}>
+              <Text style={styles.itemText}>{mat.item} (x{mat.count})</Text>
+              <TouchableOpacity onPress={() => handleRemoveMaterial(index)}>
+                <Text style={styles.removeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {materialsList.length === 0 && (
+            <Text style={styles.hintText}>אין חומרי גלם — הוסף אחד באמצעות השדות למעלה</Text>
+          )}
         </View>
-        {taskList.map((task, index) => (
-          <View style={styles.itemRow} key={index}>
-            <Text style={styles.itemText}>{task.task} - {task.details}</Text>
-            <TouchableOpacity onPress={() => handleRemoveTask(index)}>
-              <Text style={styles.removeButton}>✕</Text>
+
+        {/* Tasks Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>משימות</Text>
+          </View>
+
+          <View style={styles.row}>
+            <TextInput
+              style={[styles.input, { flex: 2 }]}
+              placeholder="משימה"
+              placeholderTextColor="#94a3b8"
+              value={taskNameInput}
+              onChangeText={setTaskNameInput}
+            />
+            <TextInput
+              style={[styles.input, { flex: 2, marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }]}
+              placeholder="תיאור המשימה"
+              placeholderTextColor="#94a3b8"
+              value={taskDetailsInput}
+              onChangeText={setTaskDetailsInput}
+            />
+            <TouchableOpacity style={styles.fabAdd} onPress={handleAddTask}>
+              {/* <Text style={styles.smallAddButtonText}>+</Text> */}
+              <Text style={styles.fabAddText}>＋</Text>
             </TouchableOpacity>
           </View>
-        ))}
 
+          {taskList.map((task, index) => (
+            <View style={styles.itemRow} key={index}>
+              <Text style={styles.itemText}>{task.task} - {task.details}</Text>
+              <TouchableOpacity onPress={() => handleRemoveTask(index)}>
+                <Text style={styles.removeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {taskList.length === 0 && (
+            <Text style={styles.hintText}>אין משימות — הוסף משימה חדשה</Text>
+          )}
+        </View>
+
+        {/* Spacer to allow for scrolling above submit */}
+        <View style={{ height: 24 }} />
       </ScrollView>
+
       {/* Submit */}
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitText}>צור פרוייקט</Text>
-        </TouchableOpacity>
+      <LinearGradient
+      colors={["#6ee7b7", "#10b981", "#059669"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.submitButton}
+      >
+        <TouchableOpacity onPress={handleSubmit}>
+        <Text style={styles.submitText}>צור פרוייקט</Text>
+      </TouchableOpacity>
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 };
 
-const { width } = Dimensions.get("window");
-const isRTL = I18nManager.isRTL;
-
-  
 const styles = StyleSheet.create({
+  header: {
+    flex: 1,
+    position: "relative",
+    alignSelf: "center",
+    minHeight: 100,
+    alignItems: "center",
+    width: 420,
+    // backgroundColor: "#065f46", 
+    justifyContent: "flex-end",
+    paddingBottom: 28,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    // marginBottom: 10,
+    // ...Platform.select({
+    //   ios: {
+    //     shadowColor: "#000",
+    //     shadowOpacity: 0.18,
+    //     shadowRadius: 8,
+    //     shadowOffset: { width: 0, height: 2 },
+    //   },
+    //   android: {
+    //     elevation: 4,
+    //     shadowColor: "#000",
+    //   },
+    // }),
+  },
+  headerInner: {
+    marginTop: 10,
+  },
+  headerTitle: {
+    color: "#ecfccb",
+    fontSize: 26,
+    fontWeight: "700",
+    textAlign: isRTL ? "left" : "right",
+  },
+  headerSubtitle: {
+    color: "#bbf7d0",
+    fontSize: 13,
+    marginTop: 6,
+    textAlign: isRTL ? "left" : "right",
+  },
   container: {
-    // paddingTop: 70,
-    marginTop: 40,
+    paddingTop: 18,
     paddingStart: width * 0.05,
     paddingEnd: width * 0.05,
     paddingBottom: 40,
     flexGrow: 1,
-    backgroundColor: "#f8fafc",
-    
+    backgroundColor: "#f0fdf4",
   },
-  heading: {
-    // paddingTop: 70,
-    minHeight: 120,
-    paddingVertical: 40,
-    paddingLeft: 30,
-    marginLeft: 20,
-    // marginBottom: 40,
-    backgroundColor: "#3b49df",
-    borderBottomLeftRadius: 40,
-    justifyContent: "flex-end",
-    alignItems: isRTL ? "flex-start" : "flex-end",
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    shadowColor: "#00000010",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 4,
+        shadowColor: "#000",
+      },
+    }),
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#f1f5f9",
+  cardHeaderRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#000",
     textAlign: isRTL ? "left" : "right",
-    marginTop: 33,
   },
-  sectionTitle: {
-    fontSize: 20,
+  label: {
+    color: "#666",
+    marginTop: 10,
+    marginBottom: 6,
     fontWeight: "600",
-    color: "#1e293b",
-    marginVertical: 16,
     textAlign: isRTL ? "left" : "right",
   },
   input: {
-    backgroundColor: "#ffffff",
-    borderColor: "#cbd5e1",
+    backgroundColor: "#fff",
+    borderColor: "#999",
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 15,
-    fontSize: 16,
-    marginBottom: 12,
-    color: "#1e293b",
-    textAlign: !isRTL ? "right" : "left",
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "ios" ? 12 : 10,
+    fontSize: 15,
+    // marginBottom: ,
+    color: "#0f172a",
+    textAlign: isRTL ? "left" : "right",
   },
   row: {
     flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  addButton: {
-    backgroundColor: "#333",
-    paddingVertical: 10,
-    marginBottom: 13,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addButtonText: {
-    color: "#e0f2fe",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  removeButton: {
-    color: "#fb923c",
-    fontSize: 20,
-    fontWeight: "bold",
-    paddingLeft: 10,
-  },
-  submitButton: {
-    backgroundColor: "#3b49df",
-    paddingVertical: 16,
-    borderRadius: 12,
     // justifyContent: "center",
-    alignItems: "center",
-    // marginTop: 32,
-    // marginEnd: 45,
-    marginBottom: 30,
-    marginHorizontal: 20,
+    gap: 8,
+    marginBottom: 8,
   },
-  submitText: {
-    color: "#f1f5f9",
+  fabAdd: {
+    // alignSelf: "center",
+    backgroundColor: "#10b981",
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    
+  },
+  fabAddText: {
+    color: "white",
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
+  },
+  smallAddButton: {
+    backgroundColor: "#065f46",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  smallAddButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "700",
   },
   itemRow: {
     flexDirection: isRTL ? "row" : "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: "#00000010",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 1,
+    marginBottom: 8,
+    borderColor: "#ecfdf5",
+    borderWidth: 1,
   },
   itemText: {
     textAlign: isRTL ? "left" : "right",
-    fontSize: 16,
-    color: "#1e293b",
+    fontSize: 15,
+    color: "#0f172a",
     fontWeight: "500",
     flex: 1,
+  },
+  removeButton: {
+    color: "#ef4444",
+    fontSize: 20,
+    fontWeight: "700",
+    paddingLeft: 10,
+  },
+  submitButton: {
+    position: "absolute",
+    alignSelf: "center",
+    backgroundColor: "#065f46",
+    paddingVertical: 16,
+    borderRadius: 12,
+    width: 300,
+    alignItems: "center",
+    justifyContent: "center",
+    // marginHorizontal: 20,
+    bottom: 30,
+    
+  },
+  submitText: {
+    color: "#ecfccb",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  hintText: {
+    color: "#64748b",
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: isRTL ? "left" : "right",
   },
 });
 

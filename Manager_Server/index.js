@@ -178,6 +178,8 @@ const ProjectSchema = new mongoose.Schema({
 
 const UserSchema = new mongoose.Schema({
   name: String,
+  businessName: String,
+  id: Number,
   email: String,
   password: { type: String, default: null },
   projects: [ProjectSchema],
@@ -396,8 +398,8 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   
 });
 
-  app.post("/uploadReceipt/:userId", upload.single('image'), async (req, res) =>{
-    const userId = req.params.userId;
+  app.post("/uploadReceipt", authMiddleware, upload.single('image'), async (req, res) =>{
+    const userId = req.userId;
     const {sumOfReceipt, category, projectId} = req.body;
     const { file } = req;
     // console.log(file);

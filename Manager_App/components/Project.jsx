@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,14 +9,14 @@ import {
   Modal,
   TextInput,
   Alert,
+  Animated,
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import axios from "axios";
-import { SERVER_URL } from "@env";
-import { useValue } from "./ValueContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import api from "../services/api";
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const Project = ({ projectName, totalAmount, id }) => {
   const [paidAmount, setPaidAmount] = useState(0);
@@ -28,28 +28,64 @@ const Project = ({ projectName, totalAmount, id }) => {
   const [completedTasks, setCompletedTasks] = useState(0);
   const [progress, setProgress] = useState(0);
 
-  const { setValue } = useValue();
-  
-  useEffect(() => {
-    fetchProjectData();
+  const isFocused = useIsFocused();
+
+  /** -----------------------------
+   *  Smooth Animated Progress Circle
+   * ----------------------------- */
+  const animatedProgress = useRef(new Animated.Value(0)).current;
+  const strokeRadius = 35;
+  const strokeDasharray = 2 * Math.PI * strokeRadius;
+
+  const animatedStrokeOffset = animatedProgress.interpolate({
+    inputRange: [0, 100],
+    outputRange: [strokeDasharray, 0],
   });
 
+  useEffect(() => {
+    Animated.timing(animatedProgress, {
+      toValue: progress,
+      duration: 600,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  /** -----------------------------
+   *  Fetch project data
+   * ----------------------------- */
   const fetchProjectData = async () => {
     try {
       const response = await api.get(`/getProject/${id}`);
+
+      const list = response.data.toDoList;
+      const completed = list.filter((t) => t.checked).length;
+
       setPaidAmount(response.data.paid);
-      setTodos(response.data.toDoList);
-      setTotalTasks(response.data.toDoList.length);
-      setCompletedTasks(todos.filter(t => t.checked).length);
+      setTodos(list);
+      setTotalTasks(list.length);
+      setCompletedTasks(completed);
     } catch (error) {
       console.error("Error fetching project data:", error);
     }
   };
 
+  /** Re-fetch AFTER returning from task screen */
   useEffect(() => {
-    setProgress(((completedTasks / totalTasks) * 100).toFixed(0));
-  }, [completedTasks]);
+    if (isFocused) fetchProjectData();
+  }, [isFocused]);
 
+  /** Calculate progress after tasks update */
+  useEffect(() => {
+    if (totalTasks === 0) {
+      setProgress(0);
+      return;
+    }
+    setProgress(((completedTasks / totalTasks) * 100).toFixed(0));
+  }, [completedTasks, totalTasks]);
+
+  /** -----------------------------
+   *  Confirm payment update
+   * ----------------------------- */
   const handleConfirmPayment = async () => {
     const amount = Number(paymentInput);
     if (isNaN(amount) || amount <= 0) {
@@ -63,22 +99,18 @@ const Project = ({ projectName, totalAmount, id }) => {
     setMenuVisible(false);
 
     try {
-      const response = await api.post(
-        `/updatePayment/${id}`,
-        { paidAmount: amount },
-      );
-      setValue(response.data);
+      await api.post(`/updatePayment/${id}`, { paidAmount: amount });
+      fetchProjectData();
     } catch (error) {
       console.error("Error updating payment:", error);
     }
   };
 
   const paymentPercentage = (paidAmount / totalAmount) * 100;
-  const strokeDasharray = 2 * Math.PI * 40;
 
   return (
     <View style={styles.card}>
-      {/* שלוש נקודות תפריט */}
+      {/* Menu Button */}
       <TouchableOpacity
         style={styles.menuButton}
         onPress={() => setMenuVisible(!menuVisible)}
@@ -99,54 +131,58 @@ const Project = ({ projectName, totalAmount, id }) => {
           </TouchableOpacity>
         </View>
       )}
-       {/* <View style={{ flex: 1, padding: 20, backgroundColor: "#fff" }}>
-      <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 10 }}>
-       Progress: {progress}%
-      </Text>
-    </View> */}
-  
-      {/* עיגול התקדמות */}
+
+      {/* Smooth Animated Progress Circle */}
       <View style={styles.circleWrapper}>
         <Svg height="80" width="80">
-          <Circle cx="40" cy="40" r="35" stroke="#e0e0e0" strokeWidth="8" fill="none" />
           <Circle
             cx="40"
             cy="40"
-            r="35"
+            r={strokeRadius}
+            stroke="#e0e0e0"
+            strokeWidth="8"
+            fill="none"
+          />
+
+          <AnimatedCircle
+            cx="40"
+            cy="40"
+            r={strokeRadius}
             stroke={progress >= 100 ? "#3b82f6" : "#4caf50"}
             strokeWidth="8"
             fill="none"
             strokeDasharray={strokeDasharray}
-            strokeDashoffset={
-              strokeDasharray - (strokeDasharray * progress) / 100
-            }
+            strokeDashoffset={animatedStrokeOffset}
             strokeLinecap="round"
           />
         </Svg>
+
         <View style={styles.circleOverlay}>
           {progress >= 100 ? (
             <Text style={styles.check}>✔</Text>
           ) : (
-            <Text style={styles.percent}>{Math.round(progress)}%</Text>
+            <Text style={styles.percent}>{progress}%</Text>
           )}
         </View>
       </View>
 
-      {/* טקסטים של פרויקט */}
+      {/* Project Text */}
       <View style={styles.details}>
         <Text style={styles.projectName}>{projectName}</Text>
+
         {paymentPercentage >= 100 ? (
           <Text style={styles.completed}>הושלם</Text>
         ) : (
           <Text style={styles.progressLabel}>התקדמות</Text>
         )}
+
         <View style={styles.amountRow}>
           <Text style={styles.total}>/ ₪{totalAmount.toLocaleString()}</Text>
           <Text style={styles.paid}>₪{paidAmount.toLocaleString()}</Text>
         </View>
       </View>
 
-      {/* Modal לעדכון תשלום */}
+      {/* Payment Modal */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -159,6 +195,7 @@ const Project = ({ projectName, totalAmount, id }) => {
               placeholder="סכום"
               textAlign="right"
             />
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
@@ -166,6 +203,7 @@ const Project = ({ projectName, totalAmount, id }) => {
               >
                 <Text style={styles.cancelText}>ביטול</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 onPress={handleConfirmPayment}
                 style={styles.confirmButton}
@@ -200,22 +238,21 @@ const styles = StyleSheet.create({
       },
       android: {
         elevation: 4,
-        shadowColor: "#000",
       },
     }),
   },
+
   menuButton: {
     position: "absolute",
     top: 10,
-    // left: !isRTL ? 6 : undefined,
     right: !isRTL ? 6 : undefined,
     padding: 6,
     zIndex: 2,
   },
+
   menuContainer: {
     position: "absolute",
     top: 40,
-    // left: !isRTL ? 10 : undefined,
     right: !isRTL ? 10 : undefined,
     backgroundColor: "#fff",
     borderRadius: 8,
@@ -225,9 +262,9 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
     zIndex: 3,
   },
+
   menuItem: {
     paddingVertical: 6,
   },
@@ -235,6 +272,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
+
   circleWrapper: {
     width: 80,
     height: 80,
@@ -247,6 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   percent: {
     fontSize: 16,
     fontWeight: "bold",
@@ -257,6 +296,7 @@ const styles = StyleSheet.create({
     color: "#4caf50",
     fontWeight: "bold",
   },
+
   details: {
     flex: 1,
     marginRight: 30,
@@ -281,6 +321,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: isRTL ? "left" : "right",
   },
+
   amountRow: {
     flexDirection: isRTL ? "row" : "row-reverse",
     alignItems: "center",
@@ -295,6 +336,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#777",
   },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -323,8 +365,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "right",
   },
+
   modalButtons: {
-    flexDirection:  isRTL ? "row-reverse" : "row",
+    flexDirection: isRTL ? "row-reverse" : "row",
     justifyContent: "space-between",
     width: "100%",
   },
