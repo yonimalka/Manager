@@ -141,12 +141,43 @@ const EmployeeSchema = new mongoose.Schema({
   },
 });
 
-const ReceiptSchema = new mongoose.Schema({
-  filename: String,
-  sumOfReceipt: Number,
-  contentType: String,
-  date: { type: Date, default: Date.now },
-});
+const ReceiptSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      required: true,
+      index: true,
+    },
+
+    imageUrl: {
+      type: String,
+      required: true, // Firebase download URL
+    },
+
+    sumOfReceipt: {
+      type: Number,
+      required: true,
+    },
+
+    category: {
+      type: String,
+      default: "General",
+    },
+
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true });
 
 const MaterialsSchema = new mongoose.Schema({
   items: {type: Array, default: []}
@@ -398,75 +429,48 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   
 });
 
-  app.post("/uploadReceipt", authMiddleware, upload.single('image'), async (req, res) =>{
+  app.post("/uploadReceipt", authMiddleware, async (req, res) => {
+  try {
     const userId = req.userId;
-    const {sumOfReceipt, category, projectId} = req.body;
-    const { file } = req;
-    // console.log(file);
-    
-    if (!file){
-      return res.status(400).send('No file uploaded');
+    const { sumOfReceipt, category, projectId, imageUrl } = req.body;
+
+    if (!imageUrl || !sumOfReceipt || !projectId) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
-    
-    // console.log(userId);
-    const gfsBucket = await connectToGridFS(userId);
-      // Upload file to GridFS
-      const stream = gfsBucket.openUploadStream(req.file.originalname, {
-        contentType: req.file.mimetype,
-        metadata: { projectId  }
-      });
 
-    stream.on('finish', () => {
-      if (stream.id) {
-        console.log(`Image uploaded to GridFS with ID: ${stream.id}`);
-      } else {
-        console.error('Stream ID is not defined.');
-      }
-    // Save image metadata in the Image collection
-    const now = new Date();
-    // const date = now.toLocaleDateString();     // e.g., "5/23/2025"
-    const time = now.toLocaleTimeString();     // e.g., "2:35:42 PM"
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    const receiptImage = {
-      filename: category,
-      sumOfReceipt: Number(sumOfReceipt), 
-      contentType: req.file.mimetype,
-      date: now,
+    const project = user.projects.id(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Receipt object (Firebase-based)
+    const receipt = {
+      imageUrl,
+      sumOfReceipt: Number(sumOfReceipt),
+      category: category || "General",
+      createdAt: new Date(),
     };
-    
-    UserModel.findById(userId)
-    .then(user => {
-      const project = user.projects.find((p) => p._id.toString() === projectId)
-      
-      project.receipts.push(receiptImage)
-      project.expenses += Number(sumOfReceipt);
-      // console.log(project.expenses)
-      res.status(200).json({ message: "Success" });
-      return user.save(); 
-    });
-    // const expensesUpdate = mongoose
-    // .connection
-    // .collection('users')
-    
-  // user.projects.filter((p) => p._id == projectId)
-  // .then(function(p){
-  //   const project = p;
-  //   console.log(project);
-    
-  // })
-  // console.log(project);
-  
-})
-stream.on('error', (err) => {
-  console.error('Error in upload stream:', err);
-});
-stream.end(req.file.buffer);
+    console.log(receipt);
+    project.receipts.push(receipt);
 
-await UserModel.findByIdAndUpdate(
-      userId,
-      {$inc: {'totalExpenses': Number(sumOfReceipt)}},
-      // { returnDocument: 'after', upsert: false }
-    )
+    project.expenses += Number(sumOfReceipt);
+    user.totalExpenses += Number(sumOfReceipt);
+
+    await user.save();
+
+    res.status(201).json({
+      message: "Receipt saved successfully",
+      receipt,
+    });
+  } catch (error) {
+    console.error("Upload receipt error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 app.get('/getReceipts/:projectId', authMiddleware, async (req, res) =>{

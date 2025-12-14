@@ -25,6 +25,14 @@ import { useAuth } from "./useAuth";
 import api from "../services/api";
 import Menu from "./Menu";
 import testing from "./testing";
+import { signInAnonymously } from "firebase/auth";
+import { auth } from "./firebase";
+
+export const firebaseLogin = async () => {
+  if (!auth.currentUser) {
+    await signInAnonymously(auth);
+  }
+};
 
 const HomeScreen = () => {
   const route = useRoute();
@@ -71,6 +79,10 @@ useEffect(() => {
     });
   }
 }, [authLoading, isAuthenticated]);
+
+useEffect(() => {
+  firebaseLogin();
+}, []);
 
   useEffect(() =>{
     if (isFocused){
