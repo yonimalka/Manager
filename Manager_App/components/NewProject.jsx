@@ -64,7 +64,7 @@ const NewProject = () => {
 
       const newDetails = { ...details, materialsList, toDoList: taskList, userId };
       // אם ה־api זקוק לכותרת Authorization, ניתן להוסיף אותה ב־api instance או כאן
-      await api.post(`/updateDetails`, newDetails);
+      await api.post(`/newProject`, newDetails);
 
       Alert.alert("Success", "Project added successfully!");
       setTimeout(() => {

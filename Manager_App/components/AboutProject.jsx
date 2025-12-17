@@ -27,6 +27,7 @@ import api from "../services/api";
 import TasksInputModal from "./TasksInputModal";
 import MaterialsInputModal from "./MaterialsInputModal";
 import { generatePDF } from "./generatePdf";
+import { useAuth } from "./useAuth";
 
 const AboutProject = () => {
   const navigation = useNavigation();
@@ -34,6 +35,7 @@ const AboutProject = () => {
   const project = route.params?.project;
   const projectId = project?._id;
   const shouldRefresh = route.params?.shouldRefresh;
+  const { userId } = useAuth();
 
   const [projectDetails, setProjectDetails] = useState(null);
   const [expenses, setExpenses] = useState(0);
@@ -64,8 +66,9 @@ const AboutProject = () => {
   };
 
   useEffect(() => {
-    fetchProject();
+    // fetchProject();
     // console.log(projectDetails);
+    
     setToDoList(project?.toDoList || []);
     setMaterialsArray(project?.materials[0]?.items || []);
     
@@ -103,7 +106,9 @@ const AboutProject = () => {
 };
 
   const addReceipts = () => {
-    navigation.navigate("Receipts", { projectId });
+    console.log("userId ON RECEIPTS:", userId);
+    
+    navigation.navigate("Receipts", { projectId: projectId });
   };
 
   const toggleCheck = async (item, index) => {

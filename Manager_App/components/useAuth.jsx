@@ -22,25 +22,25 @@ export const useAuth = () => {
 
       if (token) {
         const decoded = jwtDecode(token);
-
         const now = Date.now() / 1000; // current time in seconds
+
         if (decoded.exp && decoded.exp < now) {
           console.log("Access token expired");
           await AsyncStorage.removeItem("token");
           await AsyncStorage.removeItem("refreshToken");
-          setAuth({ userId: null, role: null, isAuthenticated: false, loading: false });
+          setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
           navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
           return;
         }
-
+        
         setAuth({
           userId: decoded.userId,
           role: decoded.role || null,
           isAuthenticated: true,
-          loading: false,
+          authLoading: false,
         });
       } else {
-        setAuth({ userId: null, role: null, isAuthenticated: false, loading: false });
+        setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
         navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
       }
     } catch (err) {
@@ -52,6 +52,8 @@ export const useAuth = () => {
 
   useEffect(() => {
     loadAuth();
+    console.log("auth:",auth);
+    
   }, [loadAuth]);
 
   // Logout function

@@ -371,7 +371,7 @@ app.get("/getUser", authMiddleware, async (req, res) => {
   }
 });
 
-app.post("/updateDetails/", authMiddleware, async (req, res) =>{
+app.post("/newProject", authMiddleware, async (req, res) =>{
     const userId = req.userId;
     const {name, payment, days, materialsList, toDoList} = req.body;
     
@@ -445,6 +445,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
 
     const project = user.projects.id(projectId);
     if (!project) {
+      console.log(project)
       return res.status(404).json({ message: "Project not found" });
     }
 

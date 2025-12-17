@@ -62,6 +62,8 @@ const HomeScreen = () => {
     }
     // console.log("before api");
       const response = await api.get('/getUser');
+      // console.log(response.data);
+      console.log("userId:", userId)
       setUserName(response.data?.name ?? "משתמש");
       setProjectDetails(response.data?.projects ?? [])
     } catch (err) {

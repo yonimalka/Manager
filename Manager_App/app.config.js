@@ -21,7 +21,9 @@ export default {
       bundleIdentifier: "com.yonatanmalka.Manager",
       buildNumber: "4",
       infoPlist: {
-        ITSAppUsesNonExemptEncryption: false
+        ITSAppUsesNonExemptEncryption: false,
+         NSCameraUsageDescription: "This app needs access to your camera to take receipts.",
+        NSPhotoLibraryUsageDescription: "This app needs access to your photo library to select receipts."
       }
     },
     android: {
