@@ -53,11 +53,11 @@ const pickImage = async (fromCamera = false) => {
 
     const result = fromCamera
       ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images, // ✅ correct
+          mediaTypes: ImagePicker.MediaTypeOptions.Images, 
           quality: 0.7,
         })
       : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images, // ✅ correct
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
           quality: 0.7,
         });
 
@@ -120,7 +120,6 @@ const pickImage = async (fromCamera = false) => {
           console.log("File uploaded to:", filePath);
           console.log("Download URL:", downloadURL);
 
-          // Optional: save metadata to backend
           await api.post("/uploadReceipt", {
             projectId,
             category,

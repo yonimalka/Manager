@@ -433,7 +433,8 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { sumOfReceipt, category, projectId, imageUrl } = req.body;
-
+    console.log(sumOfReceipt, category, projectId, imageUrl);
+    
     if (!imageUrl || !sumOfReceipt || !projectId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
