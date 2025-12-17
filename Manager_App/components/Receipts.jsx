@@ -123,7 +123,7 @@ const pickImage = async (fromCamera = false) => {
           await api.post("/uploadReceipt", {
             projectId,
             category,
-            sum: Number(sum),
+            sumOfReceipt: Number(sum),
             imageUrl: downloadURL,
           });
 

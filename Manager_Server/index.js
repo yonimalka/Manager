@@ -143,20 +143,7 @@ const EmployeeSchema = new mongoose.Schema({
 
 const ReceiptSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
-
-    projectId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-      required: true,
-      index: true,
-    },
-
+    
     imageUrl: {
       type: String,
       required: true, // Firebase download URL
@@ -436,6 +423,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
     console.log(sumOfReceipt, category, projectId, imageUrl);
     
     if (!imageUrl || !sumOfReceipt || !projectId) {
+      console.log("Missing required fields");
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -446,7 +434,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
 
     const project = user.projects.id(projectId);
     if (!project) {
-      console.log(project)
+      console.log("Project not found")
       return res.status(404).json({ message: "Project not found" });
     }
 
