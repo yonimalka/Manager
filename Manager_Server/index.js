@@ -17,9 +17,8 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 const archiver = require("archiver");
 const { ObjectId } = require("mongodb");
+const fetch = require("node-fetch");
 
-console.log('Chromium path:', puppeteer.executablePath());
-console.log('Chromium exists?', fs.existsSync(puppeteer.executablePath()));
 const app = express();
 const PORT = process.env.PORT;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
@@ -463,8 +462,8 @@ app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
     const { projectId } = req.params;
 
     const receipts = await ReceiptModel.find({
-    userId: req.userId,
-    projectId: req.params.projectId,
+    userId,
+    projectId
   });
 
   res.json(receipts);
@@ -485,26 +484,26 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
 app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
   try {
-  const receipts = await ReceiptModel.find({ userId: req.userId });
-  if (!receipts.length) return res.status(404).json({ message: "No receipts" });
+    const receipts = await ReceiptModel.find({ userId: req.userId });
+    if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
 
-  res.setHeader("Content-Disposition", "attachment; filename=receipts.zip");
-  res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", "attachment; filename=receipts.zip");
+    res.setHeader("Content-Type", "application/zip");
 
-  const archive = archiver("zip", { zlib: { level: 9 } });
-  archive.pipe(res);
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.pipe(res);
 
-  for (const r of receipts) {
-    const response = await axios.get(r.imageUrl, { responseType: "arraybuffer" });
-    const fileName = `${r.projectId}_${r.category}_${Date.now()}.jpg`;
-    archive.append(response.data, { name: fileName });
-  }
+    for (const r of receipts) {
+      const response = await fetch(r.imageUrl);
+      const buffer = await response.buffer();
+      const fileName = `${r.projectId}_${r.category}_${Date.now()}.jpg`;
+      archive.append(buffer, { name: fileName });
+    }
 
-  await archive.finalize();
-
+    await archive.finalize();
   } catch (err) {
     console.error("ZIP generation error:", err);
-    res.status(500).json({ message: "Server error generating ZIP" });
+    res.status(500).json({ message: "Server error while creating ZIP" });
   }
 });
 
