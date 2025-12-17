@@ -29,7 +29,7 @@ const Expenses = ({ userId, refresh }) => {
       const token = await AsyncStorage.getItem("token");
 
       const uri = `${process.env.SERVER_URL}/downloadAllReceiptsZip`;
-      const fileUri = FileSystem.documentDirectory + "receipts.zip";
+      const fileUri = FileSystem.documentDirectory + "הוצאות.zip";
 
   const { uri: downloadedUri } = await FileSystem.downloadAsync(uri, fileUri, {
     headers: {

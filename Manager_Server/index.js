@@ -185,13 +185,14 @@ const UserSchema = new mongoose.Schema({
   businessName: String,
   id: Number,
   email: String,
+  logo: String,
   password: { type: String, default: null },
   projects: [ProjectSchema],
   totalExpenses: Number,
   totalIncomes: {type: Number},
   employees: [EmployeeSchema],  
 })
-
+const ReceiptModel = mongoose.model("receipts", ReceiptSchema);
 const UserModel = mongoose.model("users", UserSchema);
 
 const createNewUser = async () =>{
@@ -490,7 +491,8 @@ app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
     //   return res.status(404).json({ message: "User not found" });
     // }
       const receipts = await ReceiptSchema.find({ userId });
-
+      console.log("receipts:", receipts);
+      
     if (!receipts.length) {
       return res.status(404).json({ message: "No receipts found" });
     }
@@ -498,7 +500,7 @@ app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
     res.setHeader("Content-Type", "application/zip");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=receipts_${projectId}.zip`
+      `attachment; filename=receipts_.zip`
     );
 
     const archive = archiver("zip", { zlib: { level: 9 } });
@@ -510,8 +512,11 @@ app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
       });
 
       const filename = `${receipt.category}_${receipt.sumOfReceipt}.jpg`;
-
+      console.log("filename: ",filename);
+      
       archive.append(response.data, { name: filename });
+      console.log("archive:", archive);
+      
     }
 
     await archive.finalize();
