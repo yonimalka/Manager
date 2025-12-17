@@ -126,9 +126,9 @@ const EmployeeSchema = new mongoose.Schema({
 const ReceiptSchema = new mongoose.Schema(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "User",
-      required: true,
+      // required: true,
     },
     imageUrl: {
       type: String,
