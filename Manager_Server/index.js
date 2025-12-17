@@ -432,7 +432,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const project = user.projects._id(projectId);
+    const project = user.projects.id(projectId);
     if (!project) {
       console.log("Project not found")
       return res.status(404).json({ message: "Project not found" });
