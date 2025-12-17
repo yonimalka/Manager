@@ -143,7 +143,7 @@ const EmployeeSchema = new mongoose.Schema({
 
 const ReceiptSchema = new mongoose.Schema(
   {
-    
+
     imageUrl: {
       type: String,
       required: true, // Firebase download URL
@@ -446,7 +446,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
       createdAt: new Date(),
     };
     console.log(receipt);
-    project.receipts.push(receipt);
+    project.receipts.push({receipt});
 
     project.expenses += Number(sumOfReceipt);
     user.totalExpenses += Number(sumOfReceipt);
