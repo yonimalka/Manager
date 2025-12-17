@@ -106,7 +106,6 @@ const AboutProject = () => {
 };
 
   const addReceipts = () => {
-    console.log("userId ON RECEIPTS:", userId);
     
     navigation.navigate("Receipts", { projectId: projectId });
   };
@@ -311,7 +310,7 @@ const AboutProject = () => {
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => navigation.navigate("ReceiptPreview", { item })}>
-              <Image source={{ uri: item.data }} style={styles.receiptImage} resizeMode="cover" />
+              <Image source={{ uri: item.ImageUrl }} style={styles.receiptImage} resizeMode="cover" />
             </TouchableOpacity>
           )}
         />

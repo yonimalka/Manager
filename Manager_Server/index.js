@@ -60,24 +60,6 @@ app.use((req, res, next) => {
 // openai API setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-let gfsBuckets = new Map(); // Store buckets by userId
-
-async function connectToGridFS(userId) {
-  if (gfsBuckets.has(userId)) return gfsBuckets.get(userId); // ✅ Reuse existing bucket
-
-  const client = new MongoClient(process.env.MONGO_URI);
-  await client.connect();
-
-  const db = client.db('managoDB');
-  const bucket = new GridFSBucket(db, {
-    bucketName: `user_${userId}_bucket`
-  });
-
-  gfsBuckets.set(userId, bucket); // ✅ Store bucket for reuse
-  console.log(`📦 GridFSBucket initialized for user ${userId}`);
-  return bucket;
-}
-
 async function init() {
   try {
     await mongoose.connect(process.env.MONGO_URI, { dbName: 'managoDB' });
@@ -143,7 +125,11 @@ const EmployeeSchema = new mongoose.Schema({
 
 const ReceiptSchema = new mongoose.Schema(
   {
-
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     imageUrl: {
       type: String,
       // required: true, // Firebase download URL
@@ -440,6 +426,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
 
     // Receipt object (Firebase-based)
     const receipt = {
+      userId,
       imageUrl,
       sumOfReceipt: Number(sumOfReceipt),
       category: category || "General",
@@ -463,52 +450,27 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   }
 });
 
-app.get('/getReceipts/:projectId', authMiddleware, async (req, res) =>{
-  const projectId = req.params.projectId;
-  const userId = req.userId;
+app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { projectId } = req.params;
 
-try {
-  // Step 1: Connect to GridFS bucket only if not already
-  if (!gfsBuckets.has(userId)) {
-    await connectToGridFS(userId);
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const project = user.projects.id(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.json(project.receipts);
+  } catch (error) {
+    console.error("Fetch receipts error:", error);
+    res.status(500).json({ message: "Failed to fetch receipts" });
   }
-  const bucket = gfsBuckets.get(userId);
-
-  // Step 2: Query files for the project
-  const files = await mongoose.connection.db
-    .collection(`user_${userId}_bucket.files`)
-    .find({ 'metadata.projectId': projectId })
-    .toArray();
-
-  if (!files || files.length === 0) {
-    return res.status(404).json({ message: 'No files found' });
-  }
-
-  // Step 3: Stream and convert files in parallel
-  const images = await Promise.all(files.map(file => {
-    return new Promise((resolve, reject) => {
-      const chunks = [];
-      const stream = bucket.openDownloadStreamByName(file.filename);
-
-      stream.on('data', chunk => chunks.push(chunk));
-      stream.on('end', () => {
-        const imageBase64 = Buffer.concat(chunks).toString('base64');
-        resolve({
-          filename: file.filename,
-          contentType: file.contentType,
-          data: `data:${file.contentType};base64,${imageBase64}`,
-        });
-      });
-      stream.on('error', reject);
-    });
-  }));
-
-  res.json(images ? images : null);
-} catch (err) {
-  console.error(err);
-  res.status(500).send('Error fetching images');
-}
-})
+});
 
 app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -522,20 +484,15 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
+    // const user = UserModel.findById(userId);
 
-    // 1️⃣ Make sure GridFS bucket exists
-    if (!gfsBuckets.has(userId)) {
-      await connectToGridFS(userId);
-    }
-    const bucket = gfsBuckets.get(userId);
+    // if (!user) {
+    //   return res.status(404).json({ message: "User not found" });
+    // }
+     const receipts = await ReceiptSchema.find({ userId: userId})
+     .sort({ createdAt: -1 });
 
-    // 2️⃣ Fetch all files from GridFS for this user
-    const files = await mongoose.connection.db
-      .collection(`user_${userId}_bucket.files`)
-      .find({})
-      .toArray();
-
-    if (!files.length) {
+    if (!receipts.length) {
       return res.status(404).json({ message: "No receipts found" });
     }
 
@@ -550,8 +507,8 @@ app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
     archive.pipe(res);
 
     // 4️⃣ Add each file from GridFS into the ZIP
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    for (let i = 0; i < receipts.length; i++) {
+      const file = receipts[i];
 
       // Stream file from GridFS
       const downloadStream = bucket.openDownloadStream(file._id);
