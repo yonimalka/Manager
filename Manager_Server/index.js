@@ -130,6 +130,11 @@ const ReceiptSchema = new mongoose.Schema(
       ref: "User",
       // required: true,
     },
+    projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Project",
+    // required: true,
+    },
     imageUrl: {
       type: String,
       // required: true, // Firebase download URL
@@ -175,7 +180,6 @@ const ProjectSchema = new mongoose.Schema({
   paymentDetails: [paymentDetailsSchema],
   days: {type: Number, required: true},
   materials: [MaterialsSchema],
-  receipts: [ReceiptSchema],
   expenses: {type: Number},
   toDoList: [toDoListSchema],
 })
@@ -192,8 +196,9 @@ const UserSchema = new mongoose.Schema({
   totalIncomes: {type: Number},
   employees: [EmployeeSchema],  
 })
-const ReceiptModel = mongoose.model("receipts", ReceiptSchema);
-const UserModel = mongoose.model("users", UserSchema);
+const ReceiptModel = mongoose.model("Receipt", ReceiptSchema);
+const ProjectModel = mongoose.model("Project", ProjectSchema);
+const UserModel = mongoose.model("User", UserSchema);
 
 const createNewUser = async () =>{
   const user = new UserModel({
@@ -421,20 +426,21 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
 
     const project = user.projects.id(projectId);
     if (!project) {
-      console.log("Project not found")
+      console.log("Project not found");
       return res.status(404).json({ message: "Project not found" });
     }
 
     // Receipt object (Firebase-based)
-    const receipt = {
-      userId,
-      imageUrl,
-      sumOfReceipt: Number(sumOfReceipt),
-      category: category || "General",
-      createdAt: new Date(),
-    };
+    const receipt = await ReceiptModel.create({
+    userId: req.userId,
+    projectId,
+    imageUrl,
+    sumOfReceipt,
+    category,
+  });
     console.log(receipt);
-    await project.receipts.push(receipt);
+    // project.receipts.push(receipt);
+
 
     project.expenses += Number(sumOfReceipt);
     user.totalExpenses += Number(sumOfReceipt);
@@ -456,17 +462,11 @@ app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const { projectId } = req.params;
 
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    const receipts = await ReceiptModel.find({
+    userId,
+  }).populate("projectId");
 
-    const project = user.projects.id(projectId);
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    res.json(project.receipts);
+  res.json(receipts);
   } catch (error) {
     console.error("Fetch receipts error:", error);
     res.status(500).json({ message: "Failed to fetch receipts" });

@@ -27,17 +27,13 @@ const Expenses = ({ userId, refresh }) => {
   const downloadAllReceiptsZip = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-
-      const uri = `${process.env.SERVER_URL}/downloadAllReceiptsZip`;
-      const fileUri = FileSystem.documentDirectory + "הוצאות.zip";
-
-  const { uri: downloadedUri } = await FileSystem.downloadAsync(uri, fileUri, {
+       const fileUri = FileSystem.documentDirectory + "receipts.zip";
+    const res = await FileSystem.downloadAsync(`${SERVER_URL}/downloadReceiptsZip`, fileUri,  {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
-
-  await Sharing.shareAsync(downloadedUri);
+    await Sharing.shareAsync(res.uri);
     } catch (err) {
       console.log("ZIP download error:", err);
     }
