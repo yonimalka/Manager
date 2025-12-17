@@ -146,12 +146,12 @@ const ReceiptSchema = new mongoose.Schema(
 
     imageUrl: {
       type: String,
-      required: true, // Firebase download URL
+      // required: true, // Firebase download URL
     },
 
     sumOfReceipt: {
       type: Number,
-      required: true,
+      // required: true,
     },
 
     category: {
@@ -432,7 +432,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const project = user.projects.id(projectId);
+    const project = user.projects._id(projectId);
     if (!project) {
       console.log("Project not found")
       return res.status(404).json({ message: "Project not found" });
@@ -446,7 +446,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
       createdAt: new Date(),
     };
     console.log(receipt);
-    project.receipts.push({receipt});
+    await project.receipts.push(receipt);
 
     project.expenses += Number(sumOfReceipt);
     user.totalExpenses += Number(sumOfReceipt);
