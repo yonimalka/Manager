@@ -490,7 +490,7 @@ app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
     // if (!user) {
     //   return res.status(404).json({ message: "User not found" });
     // }
-      const receipts = await ReceiptSchema.find({ userId });
+      const receipts = await ReceiptModel.find({ userId });
       console.log("receipts:", receipts);
       
     if (!receipts.length) {
