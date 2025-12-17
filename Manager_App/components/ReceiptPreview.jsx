@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StyleSheet } from 'react-native';
 import { WebView } from "react-native-webview";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -6,7 +6,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 const ReceiptPreview = () => {
   const route = useRoute();
   const ReceiptUri  = route.params?.item;
-  return <WebView style={styles.container} source={{ uri: ReceiptUri.data }} useWebKit={true}
+  return <WebView style={styles.container} source={{ uri: ReceiptUri.imageUrl }} useWebKit={true}
         originWhitelist={['*']} />;
 };
 

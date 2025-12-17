@@ -28,22 +28,16 @@ const Expenses = ({ userId, refresh }) => {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      const url = `${process.env.SERVER_URL}/downloadAllReceiptsZip`;
-      const fileUri = FileSystem.documentDirectory + "הוצאות.zip";
+      const uri = `${process.env.SERVER_URL}/downloadAllReceiptsZip`;
+      const fileUri = FileSystem.documentDirectory + "receipts.zip";
 
-      const downloadResumable = FileSystem.createDownloadResumable(
-        url,
-        fileUri,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  const { uri: downloadedUri } = await FileSystem.downloadAsync(uri, fileUri, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-      const { uri } = await downloadResumable.downloadAsync();
-
-      await Sharing.shareAsync(uri);
+  await Sharing.shareAsync(downloadedUri);
     } catch (err) {
       console.log("ZIP download error:", err);
     }
@@ -107,7 +101,7 @@ const styles = StyleSheet.create({
   summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   iconCircle: { backgroundColor: "rgba(255,255,255,0.2)", padding: 6, borderRadius: 50 },
   summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
-  gradientCard: {  borderRadius: 20, padding: 16, overflow: "hidden", position: "static", },
+  gradientCard: {  borderRadius: 20, padding: 16, marginHorizontal: 6, overflow: "hidden", position: "static", },
   summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff" },
   bgIcon: { position: "absolute", bottom: -20, right: -20, transform: [{ rotate: "-12deg" }] },

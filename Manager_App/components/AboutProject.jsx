@@ -64,20 +64,18 @@ const AboutProject = () => {
       console.error("Error fetching project details:", error);
     }
   };
-
   useEffect(() => {
     // fetchProject();
     // console.log(projectDetails);
-    
     setToDoList(project?.toDoList || []);
     setMaterialsArray(project?.materials[0]?.items || []);
     
   }, [project]);
 
   useEffect(() => {
-    if (shouldRefresh) {
+    if (!shouldRefresh) {
       fetchProject();
-      navigation.setParams({ shouldRefresh: false });
+      navigation.setParams({ shouldRefresh: true });
     }
   }, [shouldRefresh]);
 
@@ -310,7 +308,7 @@ const AboutProject = () => {
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => navigation.navigate("ReceiptPreview", { item })}>
-              <Image source={{ uri: item.ImageUrl }} style={styles.receiptImage} resizeMode="cover" />
+              <Image source={{ uri: item.imageUrl }} style={styles.receiptImage} resizeMode="cover" />
             </TouchableOpacity>
           )}
         />

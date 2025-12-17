@@ -489,37 +489,32 @@ app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
     // if (!user) {
     //   return res.status(404).json({ message: "User not found" });
     // }
-     const receipts = await ReceiptSchema.find({ userId: userId})
-     .sort({ createdAt: -1 });
+      const receipts = await ReceiptSchema.find({ userId });
 
     if (!receipts.length) {
       return res.status(404).json({ message: "No receipts found" });
     }
 
-    // 3️⃣ Set ZIP headers
     res.setHeader("Content-Type", "application/zip");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=receipts_${Date.now()}.zip`
+      `attachment; filename=receipts_${projectId}.zip`
     );
 
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.pipe(res);
 
-    // 4️⃣ Add each file from GridFS into the ZIP
-    for (let i = 0; i < receipts.length; i++) {
-      const file = receipts[i];
-
-      // Stream file from GridFS
-      const downloadStream = bucket.openDownloadStream(file._id);
-
-      archive.append(downloadStream, {
-        name: `receipt_${i + 1}${file.filename ? path.extname(file.filename) : ".jpg"}`,
+    for (const receipt of receipts) {
+      const response = await axios.get(receipt.imageUrl, {
+        responseType: "arraybuffer",
       });
+
+      const filename = `${receipt.category}_${receipt.sumOfReceipt}.jpg`;
+
+      archive.append(response.data, { name: filename });
     }
 
-    // 5️⃣ Finalize the ZIP stream
-    archive.finalize();
+    await archive.finalize();
   } catch (err) {
     console.error("ZIP generation error:", err);
     res.status(500).json({ message: "Server error generating ZIP" });
