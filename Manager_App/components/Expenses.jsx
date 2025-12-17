@@ -5,6 +5,7 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
+import {SERVER_URL} from "@env";
 import api from "../services/api";
 
 const Expenses = ({ userId, refresh }) => {

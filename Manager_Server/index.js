@@ -463,8 +463,9 @@ app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
     const { projectId } = req.params;
 
     const receipts = await ReceiptModel.find({
-    userId,
-  }).populate("projectId");
+    userId: req.userId,
+    projectId: req.params.projectId,
+  });
 
   res.json(receipts);
   } catch (error) {
@@ -482,44 +483,25 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
   })
 });
 
-app.get("/downloadAllReceiptsZip", authMiddleware, async (req, res) => {
+app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
   try {
-    const userId = req.userId;
-    // const user = UserModel.findById(userId);
+  const receipts = await ReceiptModel.find({ userId: req.userId });
+  if (!receipts.length) return res.status(404).json({ message: "No receipts" });
 
-    // if (!user) {
-    //   return res.status(404).json({ message: "User not found" });
-    // }
-      const receipts = await ReceiptModel.find({ userId });
-      console.log("receipts:", receipts);
-      
-    if (!receipts.length) {
-      return res.status(404).json({ message: "No receipts found" });
-    }
+  res.setHeader("Content-Disposition", "attachment; filename=receipts.zip");
+  res.setHeader("Content-Type", "application/zip");
 
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=receipts_.zip`
-    );
+  const archive = archiver("zip", { zlib: { level: 9 } });
+  archive.pipe(res);
 
-    const archive = archiver("zip", { zlib: { level: 9 } });
-    archive.pipe(res);
+  for (const r of receipts) {
+    const response = await axios.get(r.imageUrl, { responseType: "arraybuffer" });
+    const fileName = `${r.projectId}_${r.category}_${Date.now()}.jpg`;
+    archive.append(response.data, { name: fileName });
+  }
 
-    for (const receipt of receipts) {
-      const response = await axios.get(receipt.imageUrl, {
-        responseType: "arraybuffer",
-      });
+  await archive.finalize();
 
-      const filename = `${receipt.category}_${receipt.sumOfReceipt}.jpg`;
-      console.log("filename: ",filename);
-      
-      archive.append(response.data, { name: filename });
-      console.log("archive:", archive);
-      
-    }
-
-    await archive.finalize();
   } catch (err) {
     console.error("ZIP generation error:", err);
     res.status(500).json({ message: "Server error generating ZIP" });
