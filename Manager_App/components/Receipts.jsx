@@ -139,9 +139,6 @@ const pickImage = async (fromCamera = false) => {
     }
   };
 
-  // -------------------------------
-  // UI
-  // -------------------------------
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Add Receipt</Text>

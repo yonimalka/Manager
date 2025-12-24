@@ -74,8 +74,10 @@ const AboutProject = () => {
 
   useEffect(() => {
     if (!shouldRefresh) {
+      console.log("refreshing");
+      
       fetchProject();
-      navigation.setParams({ shouldRefresh: true });
+      navigation.setParams({ shouldRefresh: false });
     }
   }, [shouldRefresh]);
 

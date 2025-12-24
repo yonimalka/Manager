@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager } from "react-native";
+import { View, Text, FlatList, Button, TouchableOpacity, Image, Alert, StyleSheet, I18nManager, Video } from "react-native";
 import {SERVER_URL} from "@env";
 // import Constants from 'expo-constants';
 import axios from "axios";
@@ -10,6 +10,8 @@ import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SignUp from "./SignUp";
 import GoogleSignInButton from './GoogleSignInButton';
+import Svg, { Path } from "react-native-svg";
+// import { Video } from "expo-av";
 // const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 const LoginScreen = () => {
@@ -57,7 +59,15 @@ const LoginScreen = () => {
 };
     return (
         <View style={styles.container}>
-        <Image source={require("../assets/managoLogoTransparent.png")} style={styles.logo} />
+         {/* <Video
+  source={require("../assets/mago-logo-transparent.mp4")}
+  style={styles.logo}
+  resizeMode="contain"
+  shouldPlay
+  isLooping={false}
+/> */}
+
+        <Image source={require("../assets/mago-logo-transparent.png")} style={styles.logo} />
             <Text style={styles.title}>Welcome</Text>
             {validation && <Text>{validation}</Text>} 
             <View style={styles.form}>
@@ -100,9 +110,9 @@ const styles = StyleSheet.create({
     direction: isRTL ? "rtl" : "ltr",
   },
   logo: {
-    width: 200,
-    height: 200,
-    marginBottom: 30,
+    width: 250,
+    height: 250,
+    marginBottom: 20,
     resizeMode: "contain",
   },
   title: {

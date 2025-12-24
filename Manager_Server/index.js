@@ -411,7 +411,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { sumOfReceipt, category, projectId, imageUrl } = req.body;
-    console.log(sumOfReceipt, category, projectId, imageUrl);
+    // console.log(sumOfReceipt, category, projectId, imageUrl);
     
     if (!imageUrl || !sumOfReceipt || !projectId) {
       console.log("Missing required fields");
@@ -559,6 +559,15 @@ app.get('/GetMaterialsList/:projectId', async (req, res) => {
     })
   }
 )
+app.post('/uploadLogo', authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const {imageUrl} = req.params;
+  UserModel.findById(userId)
+  .then (user =>{
+    user.logo = imageUrl;
+  })
+  return user.save();
+})
 app.post('/UpdatePayment/:projectId', authMiddleware, async (req, res) =>{
   const userId = req.userId;
   const Id = req.params.projectId;

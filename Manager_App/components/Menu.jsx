@@ -62,7 +62,7 @@ export default function Menu({ visible, onClose }) {
           <Text style={styles.menuText}>הגדרות</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={()=> {navigation.navigate("LoginScreen"); onClose()}}>
           <Ionicons name="log-out-outline" size={22} color="##000" />
           <Text style={styles.menuText}>התנתק</Text>
         </TouchableOpacity>

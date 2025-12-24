@@ -8,11 +8,11 @@ export default {
     slug: "Manager",
     version: version,
     orientation: "portrait",
-    icon: "./assets/icon.png",
+    icon: "./assets/mago-logo-transparent.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
     splash: {
-      image: "./assets/splash-icon.png",
+      image: "./assets/mago-logo-transparent.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
