@@ -284,6 +284,7 @@ app.post("/GoogleSignIn", async (req, res)=>{
     if (!user) {
        user = new UserModel({
         name: name,
+        logo: avatar,
         email: email,
         password: null,
         totalExpenses: 0,
