@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     marginBottom: 24,
-    color: "#333",
+    color: "#1e90ff",
     textAlign: "center",
     alignSelf: "stretch",
   },

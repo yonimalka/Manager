@@ -105,7 +105,7 @@ Object.entries(formData).forEach(([key, value]) => {
     form.append(key, value);
   }
 });
-      console.log(form)
+      // console.log(form)
       const response = await api.post(
         '/quoteGenerator',
         form,

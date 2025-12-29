@@ -1,60 +1,112 @@
 import React from "react";
-import { View, Dimensions } from "react-native";
-import Svg, { Path, Defs, LinearGradient, Stop } from "react-native-svg";
+import { View, Text, StyleSheet, Dimensions } from "react-native";
+import {
+  VictoryChart,
+  VictoryArea,
+  VictoryAxis,
+  VictoryTooltip,
+  VictoryVoronoiContainer,
+} from "victory-native";
 
-export default function CashFlowChart({ points = [] }) {
-  // Ensure numeric points
-  const numericPoints = (points || []).filter(
-    (p) => typeof p === "number" && !isNaN(p)
-  );
-  if (numericPoints.length === 0) {
-    return <View style={{ flex: 1 }} />;
-  }
+const { width } = Dimensions.get("window");
 
-  // Responsive width
-  const screenWidth = Dimensions.get("window").width;
-  const padding = 32; // left+right margin inside chart
-  const width = screenWidth - padding;
-  const height = 150;
+export default function CashFlowChart() {
+  // 🔹 SAMPLE DATA (replace with real data later)
+  const incomeData = [
+    { x: 1, y: 1200 },
+    { x: 2, y: 1800 },
+    { x: 3, y: 1600 },
+    { x: 4, y: 2200 },
+    { x: 5, y: 2000 },
+  ];
 
-  const maxY = Math.min(...numericPoints);
-  const minY = Math.max(...numericPoints);
-  const rangeY = maxY - minY || 1;
-
-  const stepX = width / (numericPoints.length - 1 || 1);
-  const scaleY = (val) =>
-    height - ((val - minY) / rangeY) * height;
-
-  const path = numericPoints
-    .map(
-      (val, idx) =>
-        `${idx === 0 ? "M" : "L"} ${idx * stepX},${scaleY(val)}`
-    )
-    .join(" ");
-
-  const filledPath = `${path} L ${width},${height} L 0,${height} Z`;
+  const expenseData = [
+    { x: 1, y: 900 },
+    { x: 2, y: 1100 },
+    { x: 3, y: 1300 },
+    { x: 4, y: 1500 },
+    { x: 5, y: 1700 },
+  ];
 
   return (
-    <Svg
-      width="100%"
-      height="100%"
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-    >
-      <Defs>
-        <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#137fec" stopOpacity="0.2" />
-          <Stop offset="1" stopColor="#137fec" stopOpacity="0" />
-        </LinearGradient>
-      </Defs>
-      <Path d={filledPath} fill="url(#grad)" />
-      <Path
-        d={path}
-        stroke="#137fec"
-        strokeWidth="2.5"
-        fill="none"
-        strokeLinecap="round"
-      />
-    </Svg>
+    <View style={styles.container}>
+      <Text style={styles.title}>Cash Flow Overview</Text>
+
+      <VictoryChart
+        width={width - 32}
+        height={260}
+        padding={{ top: 20, bottom: 40, left: 50, right: 20 }}
+        containerComponent={
+          <VictoryVoronoiContainer
+            labels={({ datum }) => `₪${datum.y}`}
+            labelComponent={
+              <VictoryTooltip
+                flyoutStyle={{ fill: "#ffffff", stroke: "#e5e7eb" }}
+                style={{ fontSize: 12, fill: "#111827" }}
+              />
+            }
+          />
+        }
+      >
+        <VictoryAxis
+          style={{
+            axis: { stroke: "#e5e7eb" },
+            tickLabels: { fontSize: 11, fill: "#9ca3af" },
+            grid: { stroke: "#f1f5f9" },
+          }}
+        />
+
+        <VictoryAxis
+          dependentAxis
+          tickFormat={(t) => `₪${t}`}
+          style={{
+            axis: { stroke: "#e5e7eb" },
+            tickLabels: { fontSize: 11, fill: "#9ca3af" },
+            grid: { stroke: "#f1f5f9" },
+          }}
+        />
+
+        {/* INCOME */}
+        <VictoryArea
+          data={incomeData}
+          interpolation="monotoneX"
+          style={{
+            data: {
+              stroke: "#34C759",
+              fill: "rgba(52,199,89,0.25)",
+              strokeWidth: 3,
+            },
+          }}
+        />
+
+        {/* EXPENSES */}
+        <VictoryArea
+          data={expenseData}
+          interpolation="monotoneX"
+          style={{
+            data: {
+              stroke: "#FF3B30",
+              fill: "rgba(255,59,48,0.25)",
+              strokeWidth: 3,
+            },
+          }}
+        />
+      </VictoryChart>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: "#ffffff",
+    margin: 16,
+    padding: 16,
+    borderRadius: 16,
+    elevation: 3,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+});

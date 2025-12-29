@@ -8,10 +8,10 @@ export default function BottomNavBar() {
   const navigation = useNavigation();
   
   const tabs = [
-    { name: "CashFlow", icon: "trending-up-outline", label: "תזרים" },
-    { name: "NewProject", icon: "add-circle-outline", label: "חדש" },
-    { name: "PriceOffer", icon: "cash-outline", label: "הצעה" },
-    { name: "ProfileDetails", icon: "person-outline", label: "פרופיל" },
+    { name: "CashFlow", icon: "trending-up-outline", label: "CashFlow" },
+    { name: "NewProject", icon: "add-circle-outline", label: "New" },
+    { name: "PriceOffer", icon: "cash-outline", label: "Quote" },
+    { name: "ProfileDetails", icon: "person-outline", label: "Me" },
   ];
 
   return (

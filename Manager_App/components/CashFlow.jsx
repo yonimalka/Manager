@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,294 +6,394 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  I18nManager,
   Alert,
 } from "react-native";
-import axios from "axios";
-import { useRoute } from "@react-navigation/native";
-import { SERVER_URL } from "@env";
+import {
+  VictoryChart,
+  VictoryArea,
+  VictoryAxis,
+  VictoryTooltip,
+  VictoryVoronoiContainer,
+} from "victory-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import CashFlowCard from "./CashFlowCard";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {useAuth} from "./useAuth";
 import api from "../services/api";
-
-const isRTL = I18nManager.isRTL;
+import { useAuth } from "./useAuth";
 
 export default function CashFlow() {
-  const route = useRoute();
-  const { userId, isAuthenticated } = useAuth();
-
-  const [selectedPeriod, setSelectedPeriod] = useState("חודשי");
-  const periods = ["חודשי", "רבעוני", "שנתי"];
+  const { userId } = useAuth();
 
   const [loading, setLoading] = useState(false);
+  const [period, setPeriod] = useState("month");
+
   const [incomes, setIncomes] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [totalIncomes, setTotalIncomes] = useState(0);
+
+  const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
-  const [prevTotals, setPrevTotals] = useState({ incomes: 0, expenses: 0 });
-  const [chartData, setChartData] = useState([]);
-
-  const getToken = async () => {
-    return await AsyncStorage.getItem("token");
-  }
-
-  const periodMap = {
-    "חודשי": "month",
-    "רבעוני": "quarter",
-    "שנתי": "year",
-    "3 חודשים": "quarter",
-    month: "month",
-    quarter: "quarter",
-    year: "year",
-  };
 
   useEffect(() => {
-    if (!userId) {
-      console.warn("CashFlow: missing userId, skipping fetch");
-      return;
-    }
-    fetchData(selectedPeriod);
-  }, [selectedPeriod, userId]);
+    if (!userId) return;
+    fetchData();
+  }, [userId, period]);
 
-  const fetchData = async (periodLabel) => {
+  const fetchData = async () => {
     try {
-      const token = await getToken();
-      
       setLoading(true);
-      const periodParam = periodMap[periodLabel] || "month";
 
-      // Incomes
-      const incomesResponse = await api.get(
-        `/getCashFlowIncomes/?period=${encodeURIComponent(periodParam)}`);
-      const safeIncomes = Array.isArray(incomesResponse.data) ? incomesResponse.data : [];
-      setIncomes(safeIncomes);
+      const incomeRes = await api.get(`/getCashFlowIncomes?period=${period}`);
+      const expenseRes = await api.get(`/getCashFlowExpenses?period=${period}`);
 
-      const totalInc = safeIncomes.reduce(
-        (sum, i) => sum + (Number(i?.payments?.amount) || 0),
-        0
-      );
-      setPrevTotals((prev) => ({ ...prev, incomes: prev.incomes ?? totalInc }));
-      setTotalIncomes(totalInc);
+      const inc = Array.isArray(incomeRes.data) ? incomeRes.data : [];
+      const exp = Array.isArray(expenseRes.data) ? expenseRes.data : [];
+      console.log("exp: ", expenseRes)
+      // console.log("inc: ", incomeRes);
       
-      // Expenses
-      const expensesResponse = await api.get(
-        `/getCashFlowExpenses/?period=${encodeURIComponent(periodParam)}`);
-      const safeExpenses = Array.isArray(expensesResponse.data) ? expensesResponse.data : [];
-      setExpenses(safeExpenses);
+      setIncomes(inc);
+      setExpenses(exp);
 
-      const totalExp = safeExpenses.reduce(
-        (sum, e) => sum + (Number(e?.payments?.sumOfReceipt) || 0),
+      const incTotal = inc.reduce(
+        (s, i) => s + (Number(i?.payments?.amount) || 0),
         0
       );
-      setPrevTotals((prev) => ({ ...prev, expenses: prev.expenses ?? totalExp }));
-      setTotalExpenses(totalExp);
+      const expTotal = exp.reduce(
+        (s, e) => s + (Number(e?.payments?.sumOfReceipt) || 0),
+        0
+      );
 
-      // Chart data
-      const merged = [];
-      safeIncomes.forEach((i) => {
-        const ts = i?.payments?.date ? new Date(i.payments.date).getTime() : 0;
-        merged.push({ date: ts, value: Number(i?.payments?.amount) || 0, type: "income" });
-      });
-      safeExpenses.forEach((e) => {
-        const ts = e?.payments?.date ? new Date(e.payments.date).getTime() : 0;
-        merged.push({ date: ts, value: -(Number(e?.payments?.sumOfReceipt) || 0), type: "expense" });
-      });
-
-      merged.sort((a, b) => (a.date || 0) - (b.date || 0));
-      setChartData(merged.map((m) => Number(m.value) || 0));
-    } catch (err) {
-      console.error("Error fetching CashFlow data:", err);
-      Alert.alert("שגיאה", "לא ניתן לטעון את תזרים המזומנים כעת.");
+      setTotalIncome(incTotal);
+      setTotalExpenses(expTotal);
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "Failed to load cash flow data");
     } finally {
       setLoading(false);
     }
   };
 
-  const showMore = (type) => {
-    const data = type === "incomes" ? incomes : expenses;
-    const title = type === "incomes" ? "הכנסות" : "הוצאות";
+  const netCashFlow = totalIncome - totalExpenses;
 
-    if (!data || data.length === 0) {
-      Alert.alert(title, "אין נתונים להצגה");
-      return;
-    }
+  /* ---------------- CHART DATA ---------------- */
 
-    const message = data
-      .map((item, idx) => {
-        const amount =
-          type === "incomes"
-            ? Number(item?.payments?.amount) || 0
-            : Number(item?.payments?.sumOfReceipt) || 0;
-        return `${idx + 1}. ${item.projectName || "לא ידוע"} — ₪${amount}`;
-      })
-      .join("\n");
+  const incomeSeries = useMemo(
+    () =>
+      incomes.map((i, idx) => ({
+        x: idx + 1,
+        y: Number(i?.payments?.amount) || 0,
+      })),
+    [incomes]
+  );
 
-    Alert.alert(title, message);
-  };
-
-  const detailedSource = (type, item) =>{
-    const title = item.projectName;
-    const message = () => {
-      const amount = 
-      type === "incomes"
-            ? Number(item?.payments?.amount) || 0
-            : Number(item?.payments?.sumOfReceipt) || 0;
-     return `"תשלום:" ${amount}₪ "\n" "סעיף:" ${item.payments.method || null} "\n" "תאריך:" ${item.payments.date}`;
-    }
-    
-
-    Alert.alert(title, message);
-  }
+  const expenseSeries = useMemo(
+    () =>
+      expenses.map((e, idx) => ({
+        x: idx + 1,
+        y: Number(e?.payments?.sumOfReceipt) || 0,
+      })),
+    [expenses]
+  );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.headTitle}>תזרים מזומנים</Text>
-
-      {/* Period Selector */}
-      <View style={styles.periodSelector}>
-        {periods.map((p) => (
-          <TouchableOpacity
-            key={p}
-            onPress={() => setSelectedPeriod(p)}
-            style={[styles.periodButton, selectedPeriod === p && styles.periodButtonActive]}
-          >
-            <Text style={[styles.periodButtonText, selectedPeriod === p && styles.periodButtonTextActive]}>{p}</Text>
-          </TouchableOpacity>
-        ))}
+    <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 140 }}>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Cash Flow</Text>
+        <Text style={styles.subtitle}>
+          Track your income and expenses over time
+        </Text>
       </View>
 
-      {/* KPI Card + Chart */}
-      {loading ? (
-        <ActivityIndicator size="large" color="#137fec" style={{ marginTop: 24 }} />
-      ) : (
-        <CashFlowCard
-          net={(totalIncomes - totalExpenses) || 0}
-          percent={
-            prevTotals.incomes
-              ? ((totalIncomes - totalExpenses - (prevTotals.incomes - prevTotals.expenses)) /
-                  Math.max(prevTotals.incomes - prevTotals.expenses, 1)) *
-                100
-              : 0
-          }
-          incomes={totalIncomes}
-          expenses={totalExpenses}
-          chartPoints={chartData}
+      {/* SUMMARY CARDS */}
+      <View style={styles.summaryRow}>
+        <SummaryCard
+          title="Total Income"
+          value={totalIncome}
+          icon="trending-up"
+          color="#34C759"
         />
-      )}
-
-      {/* פירוט הכנסות */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>מקורות הכנסה</Text>
-          <TouchableOpacity onPress={() => showMore("incomes")}>
-            <Text style={styles.showMore}>הצג הכל</Text>
-          </TouchableOpacity>
-        </View>
-
-        {incomes.slice(0, 5).map((item, idx) => {
-          const amount = Number(item?.payments?.amount) || 0;
-          const percent = totalIncomes ? Math.round((amount / totalIncomes) * 100) : 0;
-
-          return (
-            <TouchableOpacity onPress={() => detailedSource("incomes", item)}>
-             <View key={idx} style={styles.itemCard}>
-              <View style={styles.iconBoxIncome}>
-                <MaterialIcons name="work" size={20} color="#137fec" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemTitle}>{item.projectName || "לא ידוע"}</Text>
-                <Text style={styles.itemSubtitle}>₪{amount.toLocaleString()}</Text>
-              </View>
-              <Text style={styles.itemPercent}>{percent}%</Text>
-            </View>
-            </TouchableOpacity>
-            
-          );
-        })}
+        <SummaryCard
+          title="Total Expenses"
+          value={totalExpenses}
+          icon="trending-down"
+          color="#FF3B30"
+        />
+        <SummaryCard
+          title="Net Cash Flow"
+          value={netCashFlow}
+          icon="attach-money"
+          color="#0A84FF"
+        />
       </View>
 
-      {/* פירוט הוצאות */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>הוצאות</Text>
-          <TouchableOpacity onPress={() => showMore("expenses")}>
-            <Text style={styles.showMore}>הצג הכל</Text>
-          </TouchableOpacity>
+      {/* CHART */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Cash Flow Overview</Text>
+
+          <View style={styles.periodRow}>
+            {["month", "quarter", "year"].map((p) => (
+              <TouchableOpacity
+                key={p}
+                onPress={() => setPeriod(p)}
+                style={[
+                  styles.periodBtn,
+                  period === p && styles.periodBtnActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.periodText,
+                    period === p && styles.periodTextActive,
+                  ]}
+                >
+                  {p.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        {expenses.slice(0, 5).map((item, idx) => {
-          const amount = Number(item?.payments?.sumOfReceipt) || 0;
-          const percent = totalExpenses ? Math.round((amount / totalExpenses) * 100) : 0;
+        {loading ? (
+          <ActivityIndicator />
+        ) : (
+          <VictoryChart
+            height={260}
+            padding={{ top: 20, bottom: 40, left: 55, right: 20 }}
+            containerComponent={
+              <VictoryVoronoiContainer
+                labels={({ datum }) => `${datum.y.toLocaleString()}`}
+                labelComponent={
+                  <VictoryTooltip
+                    flyoutStyle={{
+                      fill: "#fff",
+                      stroke: "#e5e7eb",
+                    }}
+                    style={{ fontSize: 12, fill: "#111" }}
+                  />
+                }
+              />
+            }
+          >
+            <VictoryAxis
+              style={{
+                axis: { stroke: "#e5e7eb" },
+                tickLabels: { fontSize: 11, fill: "#9ca3af" },
+                grid: { stroke: "#f1f5f9" },
+              }}
+            />
 
-          return (
-            <TouchableOpacity onPress={() => detailedSource("incomes", item)}>
-             <View key={idx} style={styles.itemCard} onPress={() => detailedSource("expenses", item)}>
-              <View style={styles.iconBoxExpense}>
-                <MaterialIcons name="receipt" size={20} color="#ef4444" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemTitle}>{item.projectName || "לא ידוע"}</Text>
-                <Text style={styles.itemSubtitle}>₪{amount.toLocaleString()}</Text>
-              </View>
-              <Text style={styles.itemPercent}>{percent}%</Text>
-            </View>
-            </TouchableOpacity> 
-          );
-        })}
+            <VictoryAxis
+              dependentAxis
+              tickFormat={(t) => `£${t / 1000}k`}
+              style={{
+                axis: { stroke: "#e5e7eb" },
+                tickLabels: { fontSize: 11, fill: "#9ca3af" },
+                grid: { stroke: "#f1f5f9" },
+              }}
+            />
+
+            <VictoryArea
+              data={incomeSeries}
+              interpolation="monotoneX"
+              style={{
+                data: {
+                  fill: "rgba(52,199,89,0.25)",
+                  stroke: "#34C759",
+                  strokeWidth: 3,
+                },
+              }}
+            />
+
+            <VictoryArea
+              data={expenseSeries}
+              interpolation="monotoneX"
+              style={{
+                data: {
+                  fill: "rgba(255,59,48,0.25)",
+                  stroke: "#FF3B30",
+                  strokeWidth: 3,
+                },
+              }}
+            />
+          </VictoryChart>
+        )}
       </View>
+
+      {/* INCOME LIST */}
+      <TransactionSection
+        title="Income Details"
+        data={incomes}
+        amountKey="amount"
+        color="#34C759"
+        icon="trending-up"
+      />
+
+      {/* EXPENSE LIST */}
+      <TransactionSection
+        title="Expense Details"
+        data={expenses}
+        amountKey="sumOfReceipt"
+        color="#FF3B30"
+        icon="trending-down"
+      />
     </ScrollView>
   );
 }
 
+/* ---------------- SUB COMPONENTS ---------------- */
+
+const SummaryCard = ({ title, value, icon, color }) => (
+  <View style={styles.summaryCard}>
+    <View style={styles.summaryTop}>
+      <Text style={styles.summaryTitle}>{title}</Text>
+      <View style={[styles.iconCircle, { backgroundColor: `${color}22` }]}>
+        <MaterialIcons name={icon} size={18} color={color} />
+      </View>
+    </View>
+    <Text style={styles.summaryValue}>£{value.toLocaleString()}</Text>
+  </View>
+);
+
+const TransactionSection = ({ title, data, amountKey, color, icon }) => (
+  <View style={{ marginTop: 28 }}>
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <TouchableOpacity style={[styles.addBtn, { backgroundColor: color }]}>
+        <MaterialIcons name="add" size={18} color="#fff" />
+      </TouchableOpacity>
+    </View>
+
+    <View style={styles.card}>
+      {data.slice(0, 5).map((item, idx) => {
+        const amount = Number(item?.payments?.[amountKey]) || 0;
+        return (
+          <View key={idx} style={styles.transaction}>
+            <View style={[styles.transactionIcon, { backgroundColor: `${color}22` }]}>
+              <MaterialIcons name={icon} size={16} color={color} />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.transactionTitle}>
+                {item.projectName || "Unknown"}
+              </Text>
+              <Text style={styles.transactionDate}>
+                {item?.payments?.date || ""}
+              </Text>
+            </View>
+
+            <Text style={[styles.transactionAmount, { color }]}>
+              ₪{amount.toLocaleString()}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  </View>
+);
+
+/* ---------------- STYLES ---------------- */
+
 const styles = StyleSheet.create({
-  container: { paddingTop: 70, padding: 16,paddingBottom: 220, backgroundColor: "#f9f9f9" },
-  headTitle: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 16 },
-  periodSelector: { flexDirection: "row-reverse", justifyContent: "space-between", marginBottom: 16, backgroundColor: "#f0f2f4", borderRadius: 12, padding: 4 },
-  periodButton: { flex: 1, marginHorizontal: 4, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
-  periodButtonActive: { backgroundColor: "#137fec" },
-  periodButtonText: { color: "#617589", fontWeight: "700" },
-  periodButtonTextActive: { color: "#fff" },
+  screen: {
+    backgroundColor: "#F5F6FA",
+    paddingHorizontal: 16,
+    paddingTop: 64,
+  },
 
-  section: { marginTop: 20 },
-  sectionHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#111418" },
-  showMore: { color: "#137fec", fontSize: 14, fontWeight: "600" },
+  header: { marginBottom: 20 },
+  title: { fontSize: 34, fontWeight: "800", color: "#111" },
+  subtitle: { fontSize: 14, color: "#6B7280", marginTop: 4 },
 
-  itemCard: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
+  summaryRow: {
+    flexDirection: "column",
+    gap: 12,
+    marginBottom: 24,
+  },
+  summaryCard: {
+    flex: 1,
     backgroundColor: "#fff",
-    marginVertical: 6,
+    borderRadius: 18,
+    padding: 16,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: "#f0f2f4",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  iconBoxIncome: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#e6f2ff",
-    justifyContent: "center",
+  summaryTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  summaryTitle: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
+  summaryValue: { fontSize: 26, fontWeight: "800", color: "#111" },
+
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
-    marginLeft: 10,
-  },
-  iconBoxExpense: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#fee2e2",
     justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 10,
   },
-  itemTitle: { fontSize: 16, fontWeight: "600", color: "#111418", textAlign: isRTL ? "left" : "right", },
-  itemSubtitle: { fontSize: 14, color: "#617589", textAlign: isRTL ? "left" : "right", },
-  itemPercent: { fontSize: 16, fontWeight: "700", color: "#111418", textAlign: !isRTL ? "right" : "left", },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  cardTitle: { fontSize: 18, fontWeight: "700" },
+
+  periodRow: { flexDirection: "row", gap: 6 },
+  periodBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
+  },
+  periodBtnActive: { backgroundColor: "#0A84FF" },
+  periodText: { fontSize: 12, color: "#64748B", fontWeight: "600" },
+  periodTextActive: { color: "#fff" },
+
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: { fontSize: 20, fontWeight: "700" },
+
+  addBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  transaction: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: "#F1F5F9",
+  },
+  transactionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  transactionTitle: { fontSize: 14, fontWeight: "600" },
+  transactionDate: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
+  transactionAmount: { fontSize: 15, fontWeight: "700" },
 });

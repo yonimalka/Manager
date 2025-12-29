@@ -32,12 +32,12 @@ export default {
       permissions: ["INTERNET"],
       usesCleartextTraffic: false,
       adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
+        foregroundImage: "./assets/mago-logo-transparent.png",
         backgroundColor: "#ffffff"
       }
     },
     web: {
-      favicon: "./assets/favicon.png"
+      favicon: "./assets/mago-logo-transparent.png"
     },
     extra: {
       SERVER_URL: process.env.SERVER_URL,

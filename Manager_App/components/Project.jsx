@@ -89,7 +89,7 @@ const Project = ({ projectName, totalAmount, id }) => {
   const handleConfirmPayment = async () => {
     const amount = Number(paymentInput);
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert("סכום לא חוקי");
+      Alert.alert("Amount invalid");
       return;
     }
 
@@ -127,7 +127,7 @@ const Project = ({ projectName, totalAmount, id }) => {
               setModalVisible(true);
             }}
           >
-            <Text style={styles.menuText}>עדכון תשלום</Text>
+            <Text style={styles.menuText}>update payment</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -171,14 +171,14 @@ const Project = ({ projectName, totalAmount, id }) => {
         <Text style={styles.projectName}>{projectName}</Text>
 
         {paymentPercentage >= 100 ? (
-          <Text style={styles.completed}>הושלם</Text>
+          <Text style={styles.completed}>completed</Text>
         ) : (
-          <Text style={styles.progressLabel}>התקדמות</Text>
+          <Text style={styles.progressLabel}>progress</Text>
         )}
 
         <View style={styles.amountRow}>
-          <Text style={styles.total}>/ ₪{totalAmount.toLocaleString()}</Text>
-          <Text style={styles.paid}>₪{paidAmount.toLocaleString()}</Text>
+          <Text style={styles.paid}>£{paidAmount.toLocaleString()}</Text>
+          <Text style={styles.total}>/ £{totalAmount.toLocaleString()}</Text>
         </View>
       </View>
 
@@ -186,13 +186,13 @@ const Project = ({ projectName, totalAmount, id }) => {
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>כמה ברצונך להוסיף?</Text>
+            <Text style={styles.modalTitle}>How much?</Text>
             <TextInput
               style={styles.modalInput}
               keyboardType="numeric"
               value={paymentInput}
               onChangeText={setPaymentInput}
-              placeholder="סכום"
+              placeholder="Amount"
               textAlign="right"
             />
 
@@ -201,14 +201,14 @@ const Project = ({ projectName, totalAmount, id }) => {
                 onPress={() => setModalVisible(false)}
                 style={styles.cancelButton}
               >
-                <Text style={styles.cancelText}>ביטול</Text>
+                <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handleConfirmPayment}
                 style={styles.confirmButton}
               >
-                <Text style={styles.confirmText}>אישור</Text>
+                <Text style={styles.confirmText}>Ok</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -222,7 +222,7 @@ const isRTL = I18nManager.isRTL;
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: !isRTL ? "row-reverse" : "row",
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   menuButton: {
     position: "absolute",
     top: 10,
-    right: !isRTL ? 6 : undefined,
+    left: !isRTL ? 6 : undefined,
     padding: 6,
     zIndex: 2,
   },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     position: "absolute",
     top: 40,
-    right: !isRTL ? 10 : undefined,
+    left: !isRTL ? 10 : undefined,
     backgroundColor: "#fff",
     borderRadius: 8,
     paddingVertical: 8,
@@ -299,31 +299,31 @@ const styles = StyleSheet.create({
 
   details: {
     flex: 1,
-    marginRight: 30,
+    marginLeft: 30,
   },
   projectName: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#222",
     marginBottom: 4,
-    textAlign: isRTL ? "left" : "right",
+    textAlign: !isRTL ? "left" : "right",
   },
   progressLabel: {
     fontSize: 13,
     color: "#777",
     marginBottom: 6,
-    textAlign: isRTL ? "left" : "right",
+    textAlign: !isRTL ? "left" : "right",
   },
   completed: {
     fontSize: 13,
     fontWeight: "600",
     color: "#4caf50",
     marginBottom: 6,
-    textAlign: isRTL ? "left" : "right",
+    textAlign: !isRTL ? "left" : "right",
   },
 
   amountRow: {
-    flexDirection: isRTL ? "row" : "row-reverse",
+    flexDirection: !isRTL ? "row" : "row-reverse",
     alignItems: "center",
   },
   paid: {
@@ -363,11 +363,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 16,
-    textAlign: "right",
+    textAlign: 'left',
   },
 
   modalButtons: {
-    flexDirection: isRTL ? "row-reverse" : "row",
+    flexDirection: !isRTL ? "row-reverse" : "row",
     justifyContent: "space-between",
     width: "100%",
   },
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     backgroundColor: "#eee",
-    marginRight: 8,
+    marginLeft: 8,
     alignItems: "center",
   },
   cancelText: {

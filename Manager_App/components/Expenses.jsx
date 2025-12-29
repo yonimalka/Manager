@@ -53,13 +53,13 @@ const Expenses = ({ userId, refresh }) => {
                 <View style={styles.iconCircle}>
                   <MaterialIcons name="trending-down" size={22} color="#fff" />
                 </View>
-                <Text style={styles.summaryTitleWhite}>הוצאות</Text>
+                <Text style={styles.summaryTitleWhite}>Expenses</Text>
               </View>
               {!loading ? (
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
                 <Text style={styles.summaryAmount}> 
-               {totalExpenses ? `${totalExpenses}₪` : "0₪"}
+               {totalExpenses ? `${totalExpenses}£` : "0£"}
                 </Text>
               )}
               <MaterialIcons
@@ -95,12 +95,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
   },
-  summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   iconCircle: { backgroundColor: "rgba(255,255,255,0.2)", padding: 6, borderRadius: 50 },
   summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
   gradientCard: {  borderRadius: 20, padding: 16, marginHorizontal: 6, overflow: "hidden", position: "static", },
-  summaryHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
-  summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff" },
-  bgIcon: { position: "absolute", bottom: -20, right: -20, transform: [{ rotate: "-12deg" }] },
+  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff", alignSelf: "flex-end" },
+  bgIcon: { position: "absolute", bottom: -20, left: -20, transform: [{ rotate: "-12deg" }] },
 });
 

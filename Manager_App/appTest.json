@@ -4,11 +4,11 @@
     "slug": "Manager",
     "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/mago-logo-transparent.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/mago-logo-transparent.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -29,12 +29,12 @@
       ],
       "usesCleartextTraffic": false,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/mago-logo-transparent.png",
         "backgroundColor": "#ffffff"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/mago-logo-transparent.png"
     },
     "extra": {
       "projectId": "a0b72a58-39e1-4ed6-8402-837f500c13e3",

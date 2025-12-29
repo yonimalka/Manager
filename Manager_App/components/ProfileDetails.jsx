@@ -117,7 +117,7 @@ const ProfileDetails = () => {
             imageUrl: downloadURL,
           });
 
-          Alert.alert("Success", "Receipt uploaded successfully!");
+          Alert.alert("Success", "Logo uploaded successfully!");
           navigation.goBack();
         }
       );

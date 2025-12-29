@@ -142,12 +142,12 @@ const AboutProject = () => {
 
   const handleProjectDelete = async () => {
     Alert.alert(
-      "אישור מחיקה",
-      "האם אתה בטוח שברצונך למחוק את הפרויקט?",
+      "Approve",
+      "Are you sure you want to delete this project?",
       [
-        { text: "ביטול", style: "cancel" },
+        { text: "cancel", style: "cancel" },
         {
-          text: "מחק",
+          text: "Delete",
           style: "destructive",
           onPress: async () => {
             try {
@@ -157,7 +157,7 @@ const AboutProject = () => {
               navigation.goBack();
             } catch (error) {
               console.error("Failed to delete project:", error);
-              Alert.alert("שגיאה", "לא ניתן היה למחוק את הפרויקט.");
+              Alert.alert("error", "לא ניתן היה למחוק את הפרויקט.");
             }
           }
         }
@@ -175,22 +175,22 @@ const AboutProject = () => {
            size={24} 
            color="#374151" 
            style={{
-            transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }],
+            transform: [{ scaleX: !I18nManager.isRTL ? -1 : 1 }],
            }}
            />
         </TouchableOpacity>
         <Text style={styles.projectTitle}>{project?.name}</Text>
          <View style={styles.projectStats}>
         {/* {renderStatBlock("ימים", project?.days, "info")} */}
-        {renderStatBlock("תשלום כולל", `${project?.payment}₪`, "payment")}
-        {renderStatBlock("הוצאות", `${expenses}₪`, "expenses")}
+        {renderStatBlock("Total payment", `${project?.payment}₪`, "payment")}
+        {renderStatBlock("Expenses", `${expenses}₪`, "expenses")}
       </View>
       </View>
 
       {/* To-Do List */}
       <View style={styles.section}>
       <View style={styles.sectionTop}>
-      <Text style={styles.sectionTitle}>משימות</Text>
+      <Text style={styles.sectionTitle}>Tasks</Text>
         <TouchableOpacity
                 style={styles.shareButton}
                 onPress={() => generatePDF({
@@ -205,8 +205,8 @@ const AboutProject = () => {
       </View>
         <View style={styles.tableHeader}>
           <Text style={[styles.cell, styles.headerText, { flex: 0.5 }]}>✔</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>קטגוריה</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 1.8 }]}>פרטים</Text>
+          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>Category</Text>
+          <Text style={[styles.cell, styles.headerText, { flex: 1.8 }]}>Items</Text>
         </View>
 
         <FlatList
@@ -250,7 +250,7 @@ const AboutProject = () => {
       {/* Materials List */}
       <View style={styles.section}>
       <View style={styles.sectionTop}>
-      <Text style={styles.sectionTitle}>כתב כמויות</Text>
+      <Text style={styles.sectionTitle}>Material List</Text>
         <TouchableOpacity
                 style={styles.shareButton}
                 onPress={() => generatePDF({
@@ -264,8 +264,8 @@ const AboutProject = () => {
               </TouchableOpacity>
       </View>
         <View style={styles.tableHeader}>
-          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>כמות</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 2 }]}>פריט</Text>
+          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>Qty</Text>
+          <Text style={[styles.cell, styles.headerText, { flex: 2 }]}>Item</Text>
         </View>
         <FlatList
           data={materialsArray}
@@ -293,13 +293,13 @@ const AboutProject = () => {
       {/* Upload Receipt Button */}
       <TouchableOpacity style={styles.uploadButton} onPress={addReceipts} activeOpacity={0.8}>
         <Ionicons name="cloud-upload-outline" size={22} color="#FFF" />
-        <Text style={styles.uploadButtonText}>העלאת חשבונית</Text>
+        <Text style={styles.uploadButtonText}>upload receipt</Text>
       </TouchableOpacity>
 
       {/* Receipts Gallery */}
       <View style={styles.section}>
         <TouchableOpacity onPress={() => setShowAll(!showAll)}>
-          <Text style={styles.toggleText}>{showAll ? "תראה פחות" : "תראה יותר"}</Text>
+          <Text style={styles.toggleText}>{showAll ? "show more" : "show less"}</Text>
         </TouchableOpacity>
         <FlatList
           data={visibleReceipts}
@@ -343,8 +343,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   projectCard: { borderRadius: 16, paddingVertical: 18, marginBottom: 30 },
-  projectTitle: { fontSize: 26, fontWeight: "700", color: "#333", marginBottom: 20, textAlign: isRTL ? "left" : "right" },
-  projectStats: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between",},
+  projectTitle: { fontSize: 26, fontWeight: "700", color: "#333", marginBottom: 20, textAlign: !isRTL ? "left" : "right" },
+  projectStats: { flexDirection: !isRTL ? "row" : "row-reverse", justifyContent: "space-between",},
    statBlock: {
     position: "relative",
     flex: 1,
@@ -369,16 +369,16 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontWeight: "700",
     color: "#fff",
-    textAlign: isRTL ? "left" : "right",
+    textAlign: !isRTL ? "left" : "right",
   },
   statLabel: {
     fontSize: 15,
     color: "#fff",
     marginTop: 4,
-    textAlign: isRTL ? "left" : "right",
+    textAlign: !isRTL ? "left" : "right",
   },
   sectionTop: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     position: '',
     justifyContent: "space-between",
     // backgroundColor: "#999",
@@ -400,18 +400,18 @@ const styles = StyleSheet.create({
         shadowColor: "#000",
       },
     }),},
-  sectionTitle: { fontSize: 22, fontWeight: "700", color: "#444", marginBottom: 18, textAlign: isRTL ? "left" : "right" },
-  tableHeader: { flexDirection: isRTL ? "row" : "row-reverse", borderBottomWidth: 1, borderColor: "#E0E0E0", paddingBottom: 10, marginBottom: 10 },
-  row: { flexDirection: isRTL ? "row" : "row-reverse", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: "#F0F0F0" },
-  cell: { color: "#424242", fontSize: 16, textAlign: isRTL ? "left" : "right", paddingStart: 12, paddingEnd: 12 },
-  headerText: { fontWeight: "700", color: "#666", fontSize: 17, textAlign: isRTL ? "left" : "right" },
-  taskText: { color: "#222", textAlign: isRTL ? "left" : "right" },
-  checkedText: { textDecorationLine: "line-through", color: "#999", textAlign: isRTL ? "left" : "right" },
-  fabButton: { bottom: 0, marginTop: 10, backgroundColor: "#333", borderRadius: 28, width: 56, height: 56, justifyContent: "center", alignItems: "center", flexDirection: isRTL ? "row" : "row-reverse", alignSelf: isRTL ? "flex-end" : "flex-start" },
-  uploadButton: { backgroundColor: "#10b981", paddingVertical: 14, borderRadius: 28, flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 25, paddingStart: 24, paddingEnd: 24 },
-  uploadButtonText: { color: "#FFF", fontWeight: "700", fontSize: 18, marginStart: 10, marginEnd: 10, textAlign: isRTL ? "left" : "right" },
+  sectionTitle: { fontSize: 22, fontWeight: "700", color: "#444", marginBottom: 18, textAlign: !isRTL ? "left" : "right" },
+  tableHeader: { flexDirection: !isRTL ? "row" : "row-reverse", borderBottomWidth: 1, borderColor: "#E0E0E0", paddingBottom: 10, marginBottom: 10 },
+  row: { flexDirection: !isRTL ? "row" : "row-reverse", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: "#F0F0F0" },
+  cell: { color: "#424242", fontSize: 16, textAlign: !isRTL ? "left" : "right", paddingStart: 12, paddingEnd: 12 },
+  headerText: { fontWeight: "700", color: "#666", fontSize: 17, textAlign: !isRTL ? "left" : "right" },
+  taskText: { color: "#222", textAlign: !isRTL ? "left" : "right" },
+  checkedText: { textDecorationLine: "line-through", color: "#999", textAlign: !isRTL ? "left" : "right" },
+  fabButton: { bottom: 0, marginTop: 10, backgroundColor: "#333", borderRadius: 28, width: 56, height: 56, justifyContent: "center", alignItems: "center", flexDirection: !isRTL ? "row" : "row-reverse", alignSelf: !isRTL ? "flex-end" : "flex-start" },
+  uploadButton: { backgroundColor: "#10b981", paddingVertical: 14, borderRadius: 28, flexDirection: !isRTL ? "row" : "row-reverse", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 25, paddingStart: 24, paddingEnd: 24 },
+  uploadButtonText: { color: "#FFF", fontWeight: "700", fontSize: 18, marginStart: 10, marginEnd: 10, textAlign: !isRTL ? "left" : "right" },
   toggleText: { color: "#555", fontWeight: "700", fontSize: 16, textAlign: "center", marginBottom: 14 },
-  receiptImage: { width: 140, height: 140, marginStart: isRTL ? 16 : 0, marginEnd: isRTL ? 0 : 16, borderRadius: 14, backgroundColor: "#F0F0F0" },
+  receiptImage: { width: 140, height: 140, marginStart: !isRTL ? 16 : 0, marginEnd: isRTL ? 0 : 16, borderRadius: 14, backgroundColor: "#F0F0F0" },
   deleteButton: { backgroundColor: "#fff0f0", padding: 14, borderRadius: 12, alignItems: "center", ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
         shadowColor: "#000",
       },
     }), },
-  deleteText: { color: "#d32f2f", textAlign: isRTL ? "right" : "left" },
+  deleteText: { color: "#d32f2f", textAlign: !isRTL ? "right" : "left" },
 });
 
 export default AboutProject;

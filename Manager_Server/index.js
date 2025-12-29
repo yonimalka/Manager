@@ -173,6 +173,7 @@ const paymentDetailsSchema = new mongoose.Schema({
 })
 
 const ProjectSchema = new mongoose.Schema({
+  userId: {type: String, ref: "User",},
   name: {type: String, required: true},
   payment: {type: Number, required: true},
   paid: {type: Number, default: 0},
@@ -284,7 +285,7 @@ app.post("/GoogleSignIn", async (req, res)=>{
     if (!user) {
        user = new UserModel({
         name: name,
-        logo: avatar,
+        logo: avatar, 
         email: email,
         password: null,
         totalExpenses: 0,
@@ -564,7 +565,7 @@ app.post('/uploadLogo', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const {imageUrl} = req.params;
   UserModel.findById(userId)
-  .then (user =>{
+  .then (user => {
     user.logo = imageUrl;
   })
   return user.save();
@@ -636,7 +637,39 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
   }
 });
 
-// GET /getCashFlowExpenses/:userId?period=month|quarter|year
+// const ReceiptSchema = new mongoose.Schema(
+//   {
+//     userId: {
+//       type: String,
+//       ref: "User",
+//       // required: true,
+//     },
+//     projectId: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: "Project",
+//     // required: true,
+//     },
+//     imageUrl: {
+//       type: String,
+//       // required: true, // Firebase download URL
+//     },
+
+//     sumOfReceipt: {
+//       type: Number,
+//       // required: true,
+//     },
+
+//     category: {
+//       type: String,
+//       default: "General",
+//     },
+
+//     createdAt: {
+//       type: Date,
+//       default: Date.now,
+//     },
+//   },
+//   { timestamps: true });
 app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
@@ -654,19 +687,21 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     } else {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
+    
+    const receipts = await ReceiptModel.find({ userId: req.userId });
+    if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
+    // const user = await UserModel.findById(userId);
+    // if (!user) return res.status(404).json({ message: "User not found" });
 
-    const user = await UserModel.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const expenses = (user.projects || []).flatMap((project) =>
-      (project.receipts || [])
+    const expenses = (receipts || []).flatMap((project) =>
+      (project.sumOfReceipt || [])
         .filter((r) => {
           const d = new Date(r.date);
           return !isNaN(d) && d >= startDate && d <= now;
         })
         .map((r) => ({
           payments: r, // keep full object
-          projectName: project.name,
+          projectName: project.projectId.name,
         }))
     );
 

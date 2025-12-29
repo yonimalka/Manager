@@ -53,6 +53,8 @@ export default function GoogleSignInButton() {
       );
       const googleUser = await userInfo.json();
 //    Alert.alert('Logged in0000!', JSON.stringify(googleUser, null, 2));
+console.log( "google user: ,", googleUser);
+
       // Send user to backend
       const res = await axios.post(`${SERVER_URL}/GoogleSignIn`, {
         googleId: googleUser.id,

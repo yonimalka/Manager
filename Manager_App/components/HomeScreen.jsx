@@ -9,6 +9,7 @@ import {
   ScrollView,
   I18nManager,
   Alert,
+  Image,
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
@@ -43,6 +44,7 @@ const HomeScreen = () => {
   const [loading, setLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [userName, setUserName] = useState(null);
+  const [userLogo, setUserLogo] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   
@@ -63,8 +65,9 @@ const HomeScreen = () => {
     // console.log("before api");
       const response = await api.get('/getUser');
       // console.log(response.data);
-      console.log("userId:", userId)
-      setUserName(response.data?.name ?? "משתמש");
+      // console.log("userId:", userId)
+      setUserName(response.data?.name ?? "user");
+      setUserLogo(response.data.logo);
       setProjectDetails(response.data?.projects ?? [])
     } catch (err) {
       console.error("Error fetching user data: ", err);
@@ -117,8 +120,10 @@ useEffect(() => {
 
   return (
     <View style={styles.screen}>
+    
     <Menu visible={menuVisible} onClose={() => setMenuVisible(false)} />
         <View style={styles.header}>
+        <Image source={{ uri: userLogo }} style={styles.logo} />
         <TouchableOpacity
           onPress={() => setMenuVisible(!menuVisible)}
           style={styles.hamburger}
@@ -127,7 +132,7 @@ useEffect(() => {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.welcome}>ברוך השב,{"\n"}{userName}</Text>
+        <Text style={styles.welcome}>welcome</Text>
         <ValueProvider>
           {/* Summary Row */}
           <View style={styles.summaryRow}>
@@ -144,7 +149,7 @@ useEffect(() => {
           </View>
           
           {/* Projects Section */}
-          <Text style={styles.sectionTitle}>הפרויקטים שלך</Text>
+          <Text style={styles.sectionTitle}>Projects</Text>
 
           {loadingProjects ? (
             <ActivityIndicator size="large" color="#00796b" />
@@ -169,27 +174,35 @@ const isRTL = I18nManager.isRTL;
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f2f4f7" },
   container: { paddingTop: 30, paddingStart: 16, paddingEnd: 16, paddingBottom: 90 },
-  welcome: { fontSize: 26, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 37 },
+  welcome: { fontSize: 26, fontWeight: "bold", textAlign: !isRTL ? "left" : "right", marginBottom: 37 },
   header: {
     // position: "absolute",
     flexDirection: "row-reverse",
     alignItems: "center",
+    justifyContent: "space-between",
     // marginBottom: 20,
     marginTop: 70,
     marginHorizontal: 10,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
+    // shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 3,
+  },
+  logo: {
+    alignSelf: "center",
+    width: 70,
+    height: 70,
+    borderRadius: 50,
+    backgroundColor: "#fff",
   },
   hamburger: {
     
     padding: 1,
   },
-  summaryRow: { flexDirection: isRTL ? "row" : "row-reverse", justifyContent: "space-between", marginBottom: 35 },
+  summaryRow: { flexDirection: !isRTL ? "row" : "row-reverse", justifyContent: "space-between", marginBottom: 35 },
   gradientCard: { flex: 1, borderRadius: 20, padding: 9, overflow: "hidden", position: "relative" },
-  sectionTitle: { fontSize: 20, fontWeight: "bold", textAlign: isRTL ? "left" : "right", marginBottom: 20 },
+  sectionTitle: { fontSize: 20, fontWeight: "bold", textAlign: !isRTL ? "left" : "right", marginBottom: 20 },
   projectCard: { marginBottom: 12 },
 });
 
