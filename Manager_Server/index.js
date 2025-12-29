@@ -693,9 +693,29 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     // const user = await UserModel.findById(userId);
     // if (!user) return res.status(404).json({ message: "User not found" });
     console.log("receipts ", receipts)
-    const expenses = (receipts || []).map((project) =>
-      ([{payments: {sumOfReceipt: project.sumOfReceipt, date: project.createdAt, name: ProjectModel.findById(project.projectId?.name)}}]));
-    console.log("expenses: ",expenses);
+// Get all unique projectIds from receipts
+const projectIds = [...new Set((receipts || []).map(r => r.projectId))];
+
+// Fetch all projects at once
+const projects = await ProjectModel.find({ _id: { $in: projectIds } });
+console.log("projects: ",projects);
+
+// Convert projects array into a lookup object for fast access
+const projectMap = projects.reduce((acc, project) => {
+  acc[project._id.toString()] = project.name;
+  return acc;
+}, {});
+
+// Map receipts to expenses using the projectMap
+const expenses = (receipts || []).map((receipt) => ({
+  payments: {
+    sumOfReceipt: receipt.sumOfReceipt,
+    date: receipt.createdAt,
+    name: projectMap[receipt.projectId.toString()] || "Unknown Project",
+  },
+}));
+
+console.log(expenses);
     
     expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     res.json(expenses);
