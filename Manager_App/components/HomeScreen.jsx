@@ -142,10 +142,8 @@ useEffect(() => {
             </View>
                 <View style={styles.gradientCard}>
 {/* Expenses Card */}
-                <Expenses userId={userId} />
+                <Expenses userId={userId} refresh={loading} />
                 </View>
-            
-                
           </View>
           
           {/* Projects Section */}

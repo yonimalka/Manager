@@ -8,7 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import api from "../services/api";
 
-const Incomes = () => {
+const Incomes = (refresh) => {
   const { value } = useValue();
   const [totalIncomes, setTotalIncomes] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ const Incomes = () => {
 
   useEffect(() => {
     fetchIncomes();
-  }, [value]);
+  }, [value, refresh]);
 
   // מחזיר רק את הערך, בלי עיצוב
   return (

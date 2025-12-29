@@ -694,7 +694,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     // if (!user) return res.status(404).json({ message: "User not found" });
     console.log("receipts ", receipts)
 // Get all unique projectIds from receipts
-const projectIds = [...new Set((receipts || []).map(r => r.projectId))];
+const projectIds = [...new Set((receipts || []).map(r => r.projectId.toString()))];
 console.log("projectIds ", projectIds);
 
 // Fetch all projects at once
@@ -712,7 +712,7 @@ const expenses = (receipts || []).map((receipt) => ({
   payments: {
     sumOfReceipt: receipt.sumOfReceipt,
     date: receipt.createdAt,
-    name: projectMap[receipt.projectId.toString()] || "Unknown Project",
+    projectName: projectMap[receipt.projectId.toString()] || "Unknown Project",
   },
 }));
 

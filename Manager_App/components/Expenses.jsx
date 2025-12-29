@@ -13,7 +13,7 @@ const Expenses = ({ userId, refresh }) => {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     fetchExpenses();
-  }, [refresh]);
+  }, [refresh, totalExpenses]);
 
   const fetchExpenses = async () => {
     try {
