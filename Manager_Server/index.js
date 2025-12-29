@@ -694,7 +694,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     // if (!user) return res.status(404).json({ message: "User not found" });
     console.log("receipts ", receipts)
     const expenses = (receipts || []).map((project) =>
-      ([project.name, project.sumOfReceipt || [], project.createdAt]));
+      ([project.sumOfReceipt, project.createdAt]));
     console.log("expenses: ",expenses);
     
     expenses.sort((a, b) => new Date(a.project.createdAt) - new Date(b.project.createdAt));
