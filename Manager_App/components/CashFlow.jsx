@@ -45,8 +45,8 @@ export default function CashFlow() {
 
       const inc = Array.isArray(incomeRes.data) ? incomeRes.data : [];
       const exp = Array.isArray(expenseRes.data) ? expenseRes.data : [];
-      console.log("exp: ", expenseRes)
-      // console.log("inc: ", incomeRes);
+      console.log("exp: ", expenseRes.data)
+      console.log("inc: ", inc);
       
       setIncomes(inc);
       setExpenses(exp);
@@ -289,8 +289,6 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
     </View>
   </View>
 );
-
-/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
   screen: {
