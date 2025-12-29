@@ -695,8 +695,9 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
     const expenses = (receipts || []).flatMap((project) =>
       (project.name, project.sumOfReceipt || [], project.createdAt));
-
-    expenses.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
+    console.log(expenses);
+    
+    expenses.sort((a, b) => new Date(a.project.createdAt) - new Date(b.project.createdAt));
     res.json(expenses);
   } catch (err) {
     console.error("Error fetching cash flow expenses:", err);
