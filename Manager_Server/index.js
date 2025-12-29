@@ -692,7 +692,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
     // const user = await UserModel.findById(userId);
     // if (!user) return res.status(404).json({ message: "User not found" });
-
+    console.log("receipts ", receipts)
     const expenses = (receipts || []).map((project) =>
       ([project.name, project.sumOfReceipt || [], project.createdAt]));
     console.log("expenses: ",expenses);
