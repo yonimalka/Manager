@@ -88,10 +88,9 @@ export default function CashFlow() {
       expenses.map((e, idx) => ({
         x: idx + 1,
         y: Number(e?.payments?.sumOfReceipt) || 0,
-      })),
+      })), 
     [expenses]
   );
-
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 140 }}>
       {/* HEADER */}
@@ -125,9 +124,9 @@ export default function CashFlow() {
       </View>
 
       {/* CHART */}
+      <Text style={styles.cardTitle}>Chart Overview</Text>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Cash Flow Overview</Text>
 
           <View style={styles.periodRow}>
             {["month", "quarter", "year"].map((p) => (
@@ -293,18 +292,18 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
 const styles = StyleSheet.create({
   screen: {
     backgroundColor: "#F5F6FA",
-    paddingHorizontal: 16,
+    paddingHorizontal: 22,
     paddingTop: 64,
   },
 
   header: { marginBottom: 20 },
-  title: { fontSize: 34, fontWeight: "800", color: "#111" },
-  subtitle: { fontSize: 14, color: "#6B7280", marginTop: 4 },
+  title: { fontSize: 38, fontWeight: "700", color: "#111" },
+  subtitle: { fontSize: 14, color: "#6B7280", marginTop: 4, marginBottom: 12, },
 
   summaryRow: {
     flexDirection: "column",
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 29,
   },
   summaryCard: {
     flex: 1,
@@ -319,10 +318,12 @@ const styles = StyleSheet.create({
   summaryTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    // marginBottom: 12,
   },
-  summaryTitle: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
-  summaryValue: { fontSize: 26, fontWeight: "800", color: "#111" },
+  summaryTitle: { fontSize: 15, color: "#6B7280", fontWeight: "500", marginLeft: 15,
+    marginTop: 10 },
+  summaryValue: { fontSize: 29, fontWeight: "700", color: "#111", marginLeft: 10,
+    marginTop: 10},
 
   iconCircle: {
     width: 32,
@@ -334,6 +335,8 @@ const styles = StyleSheet.create({
 
   card: {
     position: "static",
+    // justifyContent: "flex-end",
+    alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 20,
     padding: 16,
@@ -345,12 +348,13 @@ const styles = StyleSheet.create({
 
   cardHeader: {
     flexDirection: "row",
+    // position: "absolute",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  cardTitle: { fontSize: 18, fontWeight: "700" },
+  cardTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16,},
 
-  periodRow: { flexDirection: "row", gap: 6, position: "relative", justifyContent: "center", alignContent: "center"},
+  periodRow: { flexDirection: "row", gap: 6, justifyContent: "flex-end", alignItems: "flex-start"},
   periodBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,

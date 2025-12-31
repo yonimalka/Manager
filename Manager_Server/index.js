@@ -713,6 +713,7 @@ const projectMap = user.projects.reduce((acc, project) => {
 const expenses = (receipts || []).map((receipt) => ({
   payments: {
     sumOfReceipt: receipt.sumOfReceipt,
+    category: receipt.category,
     date: receipt.createdAt,
   },
   projectName: projectMap[receipt.projectId.toString()] || "Unknown Project",
