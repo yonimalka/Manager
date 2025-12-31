@@ -73,7 +73,7 @@ const AboutProject = () => {
   }, [project]);
 
   useEffect(() => {
-    if (!shouldRefresh) {
+    if (shouldRefresh) {
       console.log("refreshing");
       
       fetchProject();
