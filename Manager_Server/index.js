@@ -690,21 +690,21 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     
     const receipts = await ReceiptModel.find({ userId: req.userId });
     if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
-    // const user = await UserModel.findById(userId);
+    const user = await UserModel.findById(userId);
     // if (!user) return res.status(404).json({ message: "User not found" });
     console.log("receipts ", receipts)
 // Get all unique projectIds from receipts
 const projectIds = [...new Set((receipts || []).map(r => r.projectId))];
 console.log("projectIds ", projectIds);
 
-const test = await ProjectModel.findOne();
-console.log(test);
+// const test = await ProjectModel.findOne();
+// console.log(test);
 // Fetch all projects at once
-const projects = await ProjectModel.find({ _id: { $in: projectIds } });
-console.log("projects: ",projects);
+// const projects = await UserModel.find({ projects._id: { $in: projectIds } });
+// console.log("projects: ",projects);
 
 // Convert projects array into a lookup object for fast access
-const projectMap = projects.reduce((acc, project) => {
+const projectMap = user.projects.reduce((acc, project) => {
   acc[project._id.toString()] = project.name;
   return acc;
 }, {});
