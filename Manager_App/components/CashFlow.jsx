@@ -333,6 +333,7 @@ const styles = StyleSheet.create({
   },
 
   card: {
+    position: "static",
     backgroundColor: "#fff",
     borderRadius: 20,
     padding: 16,
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 18, fontWeight: "700" },
 
-  periodRow: { flexDirection: "row", gap: 6 },
+  periodRow: { flexDirection: "row", gap: 6, position: "relative", justifyContent: "center", alignContent: "center"},
   periodBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,

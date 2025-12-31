@@ -697,6 +697,8 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 const projectIds = [...new Set((receipts || []).map(r => r.projectId))];
 console.log("projectIds ", projectIds);
 
+const test = await ProjectModel.findOne();
+console.log(test);
 // Fetch all projects at once
 const projects = await ProjectModel.find({ _id: { $in: projectIds } });
 console.log("projects: ",projects);
