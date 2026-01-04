@@ -680,13 +680,11 @@ const projectMap = user.projects.reduce((acc, project) => {
 //   },
 //   projectName: projectMap[receipt.projectId.toString()] || "Unknown Project",
 // }));
-    const expenses = (receipts || []).flatMap((receipt) => 
-    (receipt || [])
-    .filter((r) => {
-      const d = new Date(r.createdAt);
+    const expenses = (receipts || []).filter((receipt) => {
+       const d = new Date(receipt.createdAt);
       return !isNaN(d) && d >= startDate && d <= now;
     })
-    .map((r) => ({
+    .map((receipt) => ({
       payments: {
     sumOfReceipt: receipt.sumOfReceipt,
     category: receipt.category,
@@ -694,7 +692,7 @@ const projectMap = user.projects.reduce((acc, project) => {
   },
   projectName: projectMap[receipt.projectId.toString()] || "Unknown Project",
     }))
-   ); 
+    
 console.log(expenses);
     
     expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
