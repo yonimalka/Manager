@@ -101,6 +101,7 @@ const Project = ({ projectName, totalAmount, id }) => {
     try {
       await api.post(`/updatePayment/${id}`, { paidAmount: amount });
       fetchProjectData();
+
     } catch (error) {
       console.error("Error updating payment:", error);
     }
@@ -193,7 +194,6 @@ const Project = ({ projectName, totalAmount, id }) => {
               value={paymentInput}
               onChangeText={setPaymentInput}
               placeholder="Amount"
-              textAlign="right"
             />
 
             <View style={styles.modalButtons}>
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 16,
-    textAlign: 'left',
+    textAlign: "left",
   },
 
   modalButtons: {

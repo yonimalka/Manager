@@ -629,6 +629,8 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
         }))
     );
 
+ 
+
     incomes.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
     res.json(incomes);
   } catch (err) {
@@ -637,39 +639,6 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
   }
 });
 
-// const ReceiptSchema = new mongoose.Schema(
-//   {
-//     userId: {
-//       type: String,
-//       ref: "User",
-//       // required: true,
-//     },
-//     projectId: {
-//     type: mongoose.Schema.Types.ObjectId,
-//     ref: "Project",
-//     // required: true,
-//     },
-//     imageUrl: {
-//       type: String,
-//       // required: true, // Firebase download URL
-//     },
-
-//     sumOfReceipt: {
-//       type: Number,
-//       // required: true,
-//     },
-
-//     category: {
-//       type: String,
-//       default: "General",
-//     },
-
-//     createdAt: {
-//       type: Date,
-//       default: Date.now,
-//     },
-//   },
-//   { timestamps: true });
 app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
@@ -697,28 +666,35 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 const projectIds = [...new Set((receipts || []).map(r => r.projectId))];
 console.log("projectIds ", projectIds);
 
-// const test = await ProjectModel.findOne();
-// console.log(test);
-// Fetch all projects at once
-// const projects = await UserModel.find({ projects._id: { $in: projectIds } });
-// console.log("projects: ",projects);
-
-// Convert projects array into a lookup object for fast access
 const projectMap = user.projects.reduce((acc, project) => {
   acc[project._id.toString()] = project.name;
   return acc;
 }, {});
 
 // Map receipts to expenses using the projectMap
-const expenses = (receipts || []).map((receipt) => ({
-  payments: {
+// const expenses = (receipts || []).map((receipt) => ({
+//   payments: {
+//     sumOfReceipt: receipt.sumOfReceipt,
+//     category: receipt.category,
+//     date: receipt.createdAt,
+//   },
+//   projectName: projectMap[receipt.projectId.toString()] || "Unknown Project",
+// }));
+    const expenses = (receipts || []).flatMap((receipt) => 
+    (receipt || [])
+    .filter((r) => {
+      const d = new Date(r.createdAt);
+      return !isNaN(d) && d >= startDate && d <= now;
+    })
+    .map((r) => ({
+      payments: {
     sumOfReceipt: receipt.sumOfReceipt,
     category: receipt.category,
     date: receipt.createdAt,
   },
   projectName: projectMap[receipt.projectId.toString()] || "Unknown Project",
-}));
-
+    }))
+   ); 
 console.log(expenses);
     
     expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));

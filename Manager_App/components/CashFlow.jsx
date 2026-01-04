@@ -15,6 +15,13 @@ import {
   VictoryTooltip,
   VictoryVoronoiContainer,
 } from "victory-native";
+import {
+  Calendar,
+  Tag,
+  ShoppingCart,
+  Home,
+  Briefcase
+} from "lucide-react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import api from "../services/api";
 import { useAuth } from "./useAuth";
@@ -45,8 +52,8 @@ export default function CashFlow() {
 
       const inc = Array.isArray(incomeRes.data) ? incomeRes.data : [];
       const exp = Array.isArray(expenseRes.data) ? expenseRes.data : [];
-      console.log("exp: ", expenseRes.data)
-      console.log("inc: ", inc);
+      // console.log("exp: ", expenseRes.data)
+      // console.log("inc: ", inc);
       
       setIncomes(inc);
       setExpenses(exp);
@@ -156,7 +163,7 @@ export default function CashFlow() {
         ) : (
           <VictoryChart
             height={260}
-            padding={{ top: 20, bottom: 40, left: 55, right: 20 }}
+            padding={{ top: 20, bottom: 40, left: 55, right: 30 }}
             containerComponent={
               <VictoryVoronoiContainer
                 labels={({ datum }) => `${datum.y.toLocaleString()}`}
@@ -274,13 +281,23 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
               <Text style={styles.transactionTitle}>
                 {item.projectName || "Unknown"}
               </Text>
-              <Text style={styles.transactionDate}>
+              <View style={styles.transactionDetails}>
+              <Calendar size={12} color={"#94A3B8"}/>
+              {/* <Text style={styles.transactionDate}>
                 {item?.payments?.date || ""}
-              </Text>
+              </Text> */}
+              <Text style={styles.transactionDate}>{new Date(item.payments.date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })?? ''}</Text>
+              <Tag size={12} color="#94A3B8"/>
+              <Text style={styles.transactionAbout}>{item?.payments?.category || "Project Payment"}</Text>
+              </View>
             </View>
 
             <Text style={[styles.transactionAmount, { color }]}>
-              ₪{amount.toLocaleString()}
+              £{amount.toLocaleString()}
             </Text>
           </View>
         );
@@ -387,6 +404,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: "#F1F5F9",
+    
   },
   transactionIcon: {
     width: 36,
@@ -396,7 +414,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  transactionTitle: { fontSize: 14, fontWeight: "600" },
-  transactionDate: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
+  transactionTitle: { fontSize: 14, fontWeight: "600", marginBottom: 12 },
+  transactionDetails : {
+   flexDirection: "row",
+  //  justifyContent: "space-between"
+  
+  },
+  transactionAbout: {
+    fontSize: 12,
+    color: "grey",
+    marginLeft: 2,
+    
+  },
+  transactionDate: { fontSize: 12, color: "grey", marginLeft: 5, marginRight: 7 },
   transactionAmount: { fontSize: 15, fontWeight: "700" },
 });
