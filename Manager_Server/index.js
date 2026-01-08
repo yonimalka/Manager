@@ -535,7 +535,7 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
     for (const r of receipts) {
       const response = await fetch(r.imageUrl);
       const buffer = await response.buffer();
-      const fileName = `${r.projectId}_${r.category}_${Date.now()}.jpg`;
+      const fileName = `${r.category}.jpg`;
       archive.append(buffer, { name: fileName });
     }
 
