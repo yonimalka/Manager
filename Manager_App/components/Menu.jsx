@@ -39,7 +39,7 @@ export default function Menu({ visible, onClose }) {
           styles.menu,
           {
             transform: [{ translateX: slideAnim }],
-            [isRTL ? "left" : "right"]: 0,
+            [!isRTL ? "right" : "left"  ]: 0,
           },
         ]}
       >

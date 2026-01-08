@@ -10,6 +10,7 @@ import {
   I18nManager,
   Alert,
   Image,
+  Platform
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 import { SERVER_URL } from "@env";
@@ -28,6 +29,7 @@ import Menu from "./Menu";
 import testing from "./testing";
 import { signInAnonymously } from "firebase/auth";
 import { auth } from "./firebase";
+import ProfileDetails from "./ProfileDetails";
 
 export const firebaseLogin = async () => {
   if (!auth.currentUser) {
@@ -90,10 +92,11 @@ useEffect(() => {
 }, []);
 
   useEffect(() =>{
+    
     if (isFocused){
       fetchData();
     }
-  },[isFocused]);
+  },[isFocused, projectDetails]);
 
    if (authLoading) {
     return (

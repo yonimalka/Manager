@@ -52,7 +52,7 @@ export const useAuth = () => {
 
   useEffect(() => {
     loadAuth();
-    console.log("auth:",auth);
+    // console.log("auth:",auth);
     
   }, [loadAuth]);
 

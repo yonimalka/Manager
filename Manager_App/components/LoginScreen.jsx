@@ -90,7 +90,7 @@ const LoginScreen = () => {
             </TouchableOpacity>
                   <GoogleSignInButton />
                   <View style={styles.signUp}>
-                   <Text>Don't have account? Sign Up!</Text>
+                   <Text>Don't have account?</Text>
                    <Button title="Sign Up" onPress={()=> navigation.navigate("SignUp")}/>
                   </View>
                 
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   },
   signUp: {
     position: "absolute",
-    // flexDirection: "column",
+    flexDirection: "row",
     // justifyContent: "space-around",
     alignItems: "center",
     bottom: 30,

@@ -1,5 +1,6 @@
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
 
 export const generatePDF = async (payload) => {
 //   const { materialsList, toDoList } = project;
@@ -9,7 +10,7 @@ export const generatePDF = async (payload) => {
   let hasMaterials;
   if (payload.type === "tasks") {
     hasTasks = payload.data.list;
-    console.log(hasTasks);
+    // console.log(hasTasks);
     
   }
   if (payload.type === "materials") {
@@ -120,10 +121,18 @@ export const generatePDF = async (payload) => {
     </html>
   `;
   
-//   const fileName = `Project_${project}`;
+  
   // Generate PDF
-  const { uri } = await Print.printToFileAsync({ html,  });
+  const { uri } = await Print.printToFileAsync({ html });
 
-  // Share PDF
-  await Sharing.shareAsync(uri);
+ const newUri = `${FileSystem.documentDirectory}Project-${project}.pdf`;
+
+  // 3️⃣ Move (rename) the file
+  await FileSystem.moveAsync({
+    from: uri,
+    to: newUri,
+  });
+
+  // 4️⃣ Share the renamed file
+  await Sharing.shareAsync(newUri);
 };

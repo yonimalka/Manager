@@ -11,7 +11,8 @@ import {
   Dimensions,
   I18nManager,
   Platform,
-  Share
+  Share,
+  TextInput
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -44,8 +45,12 @@ const AboutProject = () => {
   const [toDoList, setToDoList] = useState([]);
   const [materialsArray, setMaterialsArray] = useState([]);
   const [isTaskModalVisible, setTaskModalVisible] = useState(false);
-  const [isMaterialsModalVisible, setMaterialsModalVisible] = useState(false);
-
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+  const [itemValue, setItemValue] = useState("");
+  const [qtyValue, setQtyValue] = useState("");
+  const [taskValue, setTaskValue] = useState("");
+  const [detailsValue, setDetailsValue] = useState("");
   // Fetch token once
   const getToken = async () => {
     return await AsyncStorage.getItem("token");
@@ -73,8 +78,8 @@ const AboutProject = () => {
   }, [project]);
 
   useEffect(() => {
-    if (shouldRefresh) {
-      console.log("refreshing");
+    if (!shouldRefresh) {
+      // console.log("refreshing");
       
       fetchProject();
       navigation.setParams({ shouldRefresh: false });
@@ -90,6 +95,7 @@ const AboutProject = () => {
   };
 
   const gradientColors = gradients[variant] || gradients.default;
+
 
   return (
     <LinearGradient
@@ -126,16 +132,37 @@ const AboutProject = () => {
     } catch (error) {
       console.error("Error updating task:", error);
     }
+    !shouldRefresh;
   };
 
-  const handleAddTask = (newTask) => {
+  const handleAddTask = async (newTask) => {
     setToDoList([...toDoList, { ...newTask, checked: false }]);
-    setTaskModalVisible(false);
+    const newItem = {
+        task: taskValue,
+        details: detailsValue
+    }
+    // console.log(newItem);
+    // onSubmit(newItem);
+    setTaskValue(null);
+    setDetailsValue(null);
+    try {
+      const token = await AsyncStorage.getItem("token")
+              await api.post(`/AddTask/${projectId}`, newItem);
+            } catch (error) {
+              console.error("Error adding task:", error);
+            }
   };
 
-  const handleAddMaterial = (newItem) => {
+  const handleAddMaterial = async (newItem) => {
     setMaterialsArray([...materialsArray, newItem]);
-    setMaterialsModalVisible(false);
+    setItemValue('');
+    setQtyValue('');
+    try {
+      const token = AsyncStorage.getItem("token");
+              await api.post(`/AddItem/${projectId}`, newItem);
+            } catch (error) {
+              console.error("Error adding product:", error);
+            }  
   };
 
   const visibleReceipts = showAll ? receipts : receipts.slice(0, 6);
@@ -175,7 +202,8 @@ const AboutProject = () => {
            size={24} 
            color="#374151" 
            style={{
-            transform: [{ scaleX: !I18nManager.isRTL ? -1 : 1 }],
+            transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }],
+            marginBottom: 40
            }}
            />
         </TouchableOpacity>
@@ -235,16 +263,56 @@ const AboutProject = () => {
             </View>
           )}
         />
-        <TouchableOpacity style={[styles.fabButton]} onPress={() => setTaskModalVisible(true)} activeOpacity={0.8}>
-          <Ionicons name="add" size={28} color="#FFF" />
-        </TouchableOpacity>
-        <TasksInputModal
-          visible={isTaskModalVisible}
-          onClose={() => setTaskModalVisible(false)}
-          onSubmit={handleAddTask}
-          projectId={projectId}
-          TaskList={toDoList}
-        />
+        {isAddingTask && (
+  <View style={styles.expandContainer}>
+    <TextInput
+      placeholder="Task"
+      value={taskValue}
+      onChangeText={setTaskValue}
+      style={styles.input}
+    />
+
+    <TextInput
+      placeholder="Task Details"
+      value={detailsValue}
+      onChangeText={setDetailsValue}
+      // keyboardType="numeric"
+      style={styles.input}
+    />
+
+    <View style={styles.expandActions}>
+      <TouchableOpacity
+        style={styles.addBtn}
+        onPress={() => {
+          if (!taskValue || !detailsValue) return;
+
+          handleAddTask({
+            task: taskValue,
+            details: detailsValue
+          });
+          // addTask();
+          setTaskValue("");
+          setDetailsValue("");
+          // setIsAddingTask(false);
+        }}
+      >
+        <Text style={styles.addText}>Add</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
+
+        <TouchableOpacity
+  style={styles.fabButton}
+  onPress={() => setIsAddingTask(prev => !prev)}
+  activeOpacity={0.8}
+>
+  <Ionicons
+    name={isAddingTask ? "close" : "add"}
+    size={28}
+    color="#FFF"
+  />
+</TouchableOpacity>
       </View>
 
       {/* Materials List */}
@@ -273,21 +341,61 @@ const AboutProject = () => {
           scrollEnabled={false}
           renderItem={({ item }) => (
             <View style={styles.row}>
-              <Text style={[styles.cell, styles.taskText, { flex: 1 }]}>{item.count}</Text>
+              <Text style={[styles.cell, styles.taskText, { flex: 1 }]}>{item.qty}</Text>
               <Text style={[styles.cell, styles.taskText, { flex: 2 }]}>{item.item}</Text>
             </View>
           )}
         />
-        <TouchableOpacity style={styles.fabButton} onPress={() => setMaterialsModalVisible(true)} activeOpacity={0.8}>
-          <Ionicons name="add" size={28} color="#FFF" />
-        </TouchableOpacity>
-        <MaterialsInputModal
-          visible={isMaterialsModalVisible}
-          onClose={() => setMaterialsModalVisible(false)}
-          onSubmit={handleAddMaterial}
-          projectId={projectId}
-          materialsList={materialsArray}
-        />
+        {isAddingMaterial && (
+  <View style={styles.expandContainer}>
+    <TextInput
+      placeholder="Item"
+      value={itemValue}
+      onChangeText={setItemValue}
+      style={styles.input}
+    />
+
+    <TextInput
+      placeholder="Qty"
+      value={qtyValue}
+      onChangeText={setQtyValue}
+      keyboardType="numeric"
+      style={styles.input}
+    />
+
+    <View style={styles.expandActions}>
+      <TouchableOpacity
+        style={styles.addBtn}
+        onPress={() => {
+          if (!itemValue || !qtyValue) return;
+
+          handleAddMaterial({
+            item: itemValue,
+            qty: qtyValue,
+          });
+          setItemValue("");
+          setQtyValue("");
+          // setIsAddingMaterial(false);
+        }}
+      >
+        <Text style={styles.addText}>Add</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
+
+        <TouchableOpacity
+  style={styles.fabButton}
+  onPress={() =>{ setItemValue('')
+    setQtyValue(''), setIsAddingMaterial(prev => !prev)}}
+  activeOpacity={0.8}
+>
+  <Ionicons
+    name={isAddingMaterial ? "close" : "add"}
+    size={28}
+    color="#FFF"
+  />
+</TouchableOpacity>
       </View>
 
       {/* Upload Receipt Button */}
@@ -335,7 +443,7 @@ const isRTL = I18nManager.isRTL;
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 70,
+    paddingTop: 50,
     paddingStart: width * 0.05,
     paddingEnd: width * 0.05,
     paddingBottom: 40,
@@ -424,6 +532,55 @@ const styles = StyleSheet.create({
         shadowColor: "#000",
       },
     }), },
+    expandContainer: {
+  marginTop: 12,
+  backgroundColor: "#F8F8F8",
+  padding: 12,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: "#E0E0E0",
+},
+
+input: {
+  backgroundColor: "#FFF",
+  borderRadius: 8,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  fontSize: 16,
+  borderWidth: 1,
+  borderColor: "#DDD",
+  marginBottom: 8,
+},
+
+expandActions: {
+  flexDirection: "row",
+  justifyContent: "flex-end",
+  gap: 12,
+  marginTop: 4,
+},
+
+cancelBtn: {
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+},
+
+cancelText: {
+  color: "#999",
+  fontSize: 16,
+},
+
+addBtn: {
+  backgroundColor: "#0A7AFF",
+  paddingVertical: 8,
+  paddingHorizontal: 16,
+  borderRadius: 8,
+},
+
+addText: {
+  color: "#FFF",
+  fontSize: 16,
+  fontWeight: "600",
+},
   deleteText: { color: "#d32f2f", textAlign: !isRTL ? "right" : "left" },
 });
 

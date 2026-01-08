@@ -171,6 +171,31 @@ const paymentDetailsSchema = new mongoose.Schema({
   method: String,
   date: { type: Date, default: Date.now },
 })
+const FixedExpenseSchema = new mongoose.Schema({
+
+  title: String,              // "Office Rent"
+  category: String,           // "Rent", "Software", "Car"
+  amount: Number,
+
+  frequency: {
+    type: String,
+    enum: ["monthly", "weekly", "yearly", "custom"],
+    default: "monthly",
+  },
+
+  startDate: Date,
+  endDate: Date,              // optional
+  dayOfMonth: Number,         // for monthly (e.g. 10th)
+  dayOfWeek: Number,          // for weekly (0–6)
+
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "projects",
+    required: false,
+  },
+
+  isActive: { type: Boolean, default: true },
+}, { timestamps: true });
 
 const ProjectSchema = new mongoose.Schema({
   userId: {type: String, ref: "User",},
@@ -193,6 +218,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, default: null },
   projects: [ProjectSchema],
   totalExpenses: Number,
+  FixedExpense: [FixedExpenseSchema],
   totalIncomes: {type: Number},
   employees: [EmployeeSchema],  
 })
@@ -486,8 +512,19 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
 app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
   try {
-    const receipts = await ReceiptModel.find({ userId: req.userId });
-    if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
+    const { from, to } = req.query;
+
+    const fromDate = from ? new Date(from) : null;
+    const toDate = to ? new Date(to) : null;
+
+    // Build query
+    let query = { userId: req.userId };
+    if (fromDate && toDate) {
+      query.createdAt = { $gte: fromDate, $lte: toDate };
+    }
+
+    const receipts = await ReceiptModel.find(query);
+    if (!receipts.length) return res.status(404).json({ message: "No receipts found for this date range" });
 
     res.setHeader("Content-Disposition", "attachment; filename=receipts.zip");
     res.setHeader("Content-Type", "application/zip");

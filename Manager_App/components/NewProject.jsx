@@ -1,3 +1,6 @@
+// React Native version visually matched to Claude's web design (iOS / Tailwind-like)
+// Focus: cards, spacing, colors, rounded corners, subtle shadows, section headers
+
 import React, { useState } from "react";
 import {
   View,
@@ -17,6 +20,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
+import { Folder, Calendar, DollarSign, Package, CheckSquare, Plus, X } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 const isRTL = I18nManager.isRTL;
@@ -30,16 +34,14 @@ const NewProject = () => {
     name: "",
     days: "",
     payment: "",
-    materialsList: [],
-    toDoList: [],
   });
 
-  const [inputValue, setInputValue] = useState("");
-  const [inputCountValue, setInputCountValue] = useState("");
+  const [materialItem, setMaterialItem] = useState("");
+  const [materialQty, setMaterialQty] = useState("");
   const [materialsList, setMaterialsList] = useState([]);
 
-  const [taskNameInput, setTaskNameInput] = useState("");
-  const [taskDetailsInput, setTaskDetailsInput] = useState("");
+  const [taskName, setTaskName] = useState("");
+  const [taskDetails, setTaskDetails] = useState("");
   const [taskList, setTaskList] = useState([]);
 
   const handleSubmit = async () => {
@@ -48,412 +50,288 @@ const NewProject = () => {
       return;
     }
 
-    if (isNaN(Number(details.days)) || Number(details.days) <= 0) {
-      Alert.alert("Invalid input", "Number of days must be a positive number.");
-      return;
-    }
-
-    if (isNaN(Number(details.payment)) || Number(details.payment) <= 0) {
-      Alert.alert("Invalid input", "Total payment must be a positive number.");
-      return;
-    }
-
     try {
-      // תיקון קטן: קיבלנו את הטוקן עם await
       const token = await AsyncStorage.getItem("token");
-
-      const newDetails = { ...details, materialsList, toDoList: taskList, userId };
-      // אם ה־api זקוק לכותרת Authorization, ניתן להוסיף אותה ב־api instance או כאן
-      await api.post(`/newProject`, newDetails);
+      await api.post("/newProject", {
+        ...details,
+        materialsList,
+        toDoList: taskList,
+        userId,
+      });
 
       Alert.alert("Success", "Project added successfully!");
-      setTimeout(() => {
-        navigation.goBack();
-      }, 200);
-    } catch (error) {
-      console.error("Submission error:", error);
-      Alert.alert("Error", "Failed to add project.");
+      navigation.goBack();
+    } catch (err) {
+      Alert.alert("Error", "Failed to add project");
     }
   };
 
-  const handleAddMaterial = () => {
+  const addMaterial = () => {
     Keyboard.dismiss();
-    if (inputValue && inputCountValue) {
-      // שמור איך שהיית רוצה: משמרים פורמט הקודם (item, count)
-      setMaterialsList([
-        ...materialsList,
-        { item: inputValue.trim(), count: inputCountValue.trim() },
-      ]);
-      setInputValue("");
-      setInputCountValue("");
-    } else {
-      Alert.alert("Missing fields", "Please provide material name and quantity.");
-    }
+    if (!materialItem || !materialQty) return;
+    setMaterialsList([
+      ...materialsList,
+      { item: materialItem.trim(), qty: materialQty.trim() },
+    ]);
+    setMaterialItem("");
+    setMaterialQty("");
   };
 
-  const handleRemoveMaterial = (index) => {
-    setMaterialsList(materialsList.filter((_, i) => i !== index));
-  };
-
-  const handleAddTask = () => {
+  const addTask = () => {
     Keyboard.dismiss();
-    if (taskNameInput) {
-      setTaskList([
-        ...taskList,
-        { task: taskNameInput.trim(), details: taskDetailsInput.trim() || "N/A" },
-      ]);
-      setTaskNameInput("");
-      setTaskDetailsInput("");
-    } else {
-      Alert.alert("Missing field", "Please provide a task name.");
-    }
-  };
-
-  const handleRemoveTask = (index) => {
-    setTaskList(taskList.filter((_, i) => i !== index));
+    if (!taskName) return;
+    setTaskList([
+      ...taskList,
+      { task: taskName.trim(), details: taskDetails.trim() },
+    ]);
+    setTaskName("");
+    setTaskDetails("");
   };
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#f0fdf4" }}
+      style={{ flex: 1, backgroundColor: "#F9FAFB" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-    <LinearGradient
-    colors={["#6ee7b7", "#10b981", "#059669"]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 1 }}
-    style={styles.header}
-    >
-      <View >
-        <View style={styles.headerInner}>
-          <Text style={styles.headerTitle}>פרוייקט חדש</Text>
-          <Text style={styles.headerSubtitle}>מלא את פרטי הפרוייקט למטה</Text>
-        </View>
-      </View>
-</LinearGradient>
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Project Details Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>פרטי הפרוייקט</Text>
-
-          <Text style={styles.label}>שם הפרוייקט</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="שם הפרוייקט"
-            placeholderTextColor="#94a3b8"
-            value={details.name}
-            onChangeText={(text) => setDetails({ ...details, name: text })}
-          />
-
-          <Text style={styles.label}>מספר ימים</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="מספר ימים"
-            placeholderTextColor="#94a3b8"
-            keyboardType="numeric"
-            value={details.days}
-            onChangeText={(text) => setDetails({ ...details, days: text })}
-          />
-
-          <Text style={styles.label}>תשלום כולל</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="תשלום כולל"
-            placeholderTextColor="#94a3b8"
-            keyboardType="numeric"
-            value={details.payment}
-            onChangeText={(text) => setDetails({ ...details, payment: text })}
-          />
+        {/* Header */}
+        <View style={styles.headerBlock}>
+          <Text style={styles.headerTitle}>New Project</Text>
+          <Text style={styles.headerSubtitle}>Create and configure your project</Text>
         </View>
 
-        {/* Materials Card */}
+        {/* Project Details */}
         <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>כתב כמויות</Text>
-          </View>
+          <SectionHeader icon={<Folder size={20} color="#2563EB" />} title="Project Details" />
 
-          <View style={styles.row}>
-          
-            <TextInput
-              style={[styles.input, { flex: 2 } ]}
-              placeholder="פריט"
-              placeholderTextColor="#94a3b8"
-              value={inputValue}
-              onChangeText={setInputValue}
-            />
-            
-            <TextInput
-              style={[styles.input, { flex: 1, marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }]}
-              placeholder="כמות"
-              placeholderTextColor="#94a3b8"
-              keyboardType="numeric"
-              value={inputCountValue}
-              onChangeText={setInputCountValue}
-            />
-            <TouchableOpacity style={styles.fabAdd} onPress={handleAddMaterial}>
-              <Text style={styles.fabAddText}>+</Text>
-            </TouchableOpacity>
-          </View>
+          <Label text="Project Name" />
+          <Input value={details.name} onChangeText={(t) => setDetails({ ...details, name: t })} placeholder="Enter project name" />
 
-          {materialsList.map((mat, index) => (
-            <View style={styles.itemRow} key={index}>
-              <Text style={styles.itemText}>{mat.item} (x{mat.count})</Text>
-              <TouchableOpacity onPress={() => handleRemoveMaterial(index)}>
-                <Text style={styles.removeButton}>✕</Text>
-              </TouchableOpacity>
+          <View style={styles.gridRow}>
+            <View style={{ flex: 1 }}>
+              <Label text="Duration (Days)" />
+              <IconInput icon={<Calendar size={18} color="#9CA3AF" />} value={details.days} onChangeText={(t) => setDetails({ ...details, days: t })} placeholder="30" />
             </View>
-          ))}
-
-          {materialsList.length === 0 && (
-            <Text style={styles.hintText}>אין חומרי גלם — הוסף אחד באמצעות השדות למעלה</Text>
-          )}
-        </View>
-
-        {/* Tasks Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>משימות</Text>
-          </View>
-
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, { flex: 2 }]}
-              placeholder="משימה"
-              placeholderTextColor="#94a3b8"
-              value={taskNameInput}
-              onChangeText={setTaskNameInput}
-            />
-            <TextInput
-              style={[styles.input, { flex: 2, marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }]}
-              placeholder="תיאור המשימה"
-              placeholderTextColor="#94a3b8"
-              value={taskDetailsInput}
-              onChangeText={setTaskDetailsInput}
-            />
-            <TouchableOpacity style={styles.fabAdd} onPress={handleAddTask}>
-              {/* <Text style={styles.smallAddButtonText}>+</Text> */}
-              <Text style={styles.fabAddText}>＋</Text>
-            </TouchableOpacity>
-          </View>
-
-          {taskList.map((task, index) => (
-            <View style={styles.itemRow} key={index}>
-              <Text style={styles.itemText}>{task.task} - {task.details}</Text>
-              <TouchableOpacity onPress={() => handleRemoveTask(index)}>
-                <Text style={styles.removeButton}>✕</Text>
-              </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Label text="Total Payment" />
+              <IconInput icon={<DollarSign size={18} color="#9CA3AF" />} value={details.payment} onChangeText={(t) => setDetails({ ...details, payment: t })} placeholder="10000" />
             </View>
-          ))}
-
-          {taskList.length === 0 && (
-            <Text style={styles.hintText}>אין משימות — הוסף משימה חדשה</Text>
-          )}
+          </View>
         </View>
 
-        {/* Spacer to allow for scrolling above submit */}
-        <View style={{ height: 24 }} />
+        {/* Materials */}
+        <View style={styles.card}>
+          <SectionHeader icon={<Package size={20} color="#7C3AED" />} title="Materials" />
+
+          <View style={styles.inlineRow}>
+            <Input style={{ flex: 1 }} value={materialItem} onChangeText={setMaterialItem} placeholder="Material name" />
+            <Input style={{ width: 90 }} value={materialQty} onChangeText={setMaterialQty} placeholder="Qty" keyboardType="numeric" />
+            <AddButton color="#7C3AED" onPress={addMaterial} />
+          </View>
+
+          {materialsList.map((m, i) => (
+            <ListItem key={i} dotColor="#7C3AED" text={`${m.item}  ·  Qty ${m.qty}`} onRemove={() => setMaterialsList(materialsList.filter((_, x) => x !== i))} />
+          ))}
+        </View>
+
+        {/* Tasks */}
+        <View style={styles.card}>
+          <SectionHeader icon={<CheckSquare size={20} color="#16A34A" />} title="Tasks" />
+
+          <Input value={taskName} onChangeText={setTaskName} placeholder="Task name" />
+          <View style={styles.inlineRow}>
+            <Input style={{ flex: 1 }} value={taskDetails} onChangeText={setTaskDetails} placeholder="Task details" />
+            <AddButton color="#16A34A" onPress={addTask} />
+          </View>
+
+          {taskList.map((t, i) => (
+            <ListItem key={i} dotColor="#16A34A" text={`${t.task} — ${t.details}`} onRemove={() => setTaskList(taskList.filter((_, x) => x !== i))} />
+          ))}
+        </View>
+
+        <TouchableOpacity style={[styles.submitButton, !(details.name && details.days && details.payment) && { opacity: 0.4 }]} disabled={!(details.name && details.days && details.payment)} onPress={handleSubmit}>
+          <Text style={styles.submitText}>Create Project</Text>
+        </TouchableOpacity>
       </ScrollView>
-
-      {/* Submit */}
-      <LinearGradient
-      colors={["#6ee7b7", "#10b981", "#059669"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.submitButton}
-      >
-        <TouchableOpacity onPress={handleSubmit}>
-        <Text style={styles.submitText}>צור פרוייקט</Text>
-      </TouchableOpacity>
-      </LinearGradient>
     </KeyboardAvoidingView>
   );
 };
 
+/* ---------- Small UI helpers ---------- */
+
+const SectionHeader = ({ icon, title }) => (
+  <View style={styles.sectionHeader}>
+    <View style={styles.iconBubble}>{icon}</View>
+    <Text style={styles.sectionTitle}>{title}</Text>
+  </View>
+);
+
+const Label = ({ text }) => <Text style={styles.label}>{text}</Text>;
+
+const Input = (props) => <TextInput {...props} style={[styles.input, props.style]} placeholderTextColor="#C7C7CC" />;
+
+const IconInput = ({ icon, ...props }) => (
+  <View style={styles.iconInputWrap}>
+    {icon}
+    <TextInput {...props} style={styles.iconInput} placeholderTextColor="#C7C7CC" />
+  </View>
+);
+
+const AddButton = ({ onPress, color }) => (
+  <TouchableOpacity onPress={onPress} style={[styles.addButton, { backgroundColor: color }]}>
+    <Plus size={20} color="#fff" />
+  </TouchableOpacity>
+);
+
+const ListItem = ({ text, onRemove, dotColor }) => (
+  <View style={styles.listItem}>
+    <View style={styles.listLeft}>
+      <View style={[styles.dot, { backgroundColor: dotColor }]} />
+      <Text style={styles.listText}>{text}</Text>
+    </View>
+    <TouchableOpacity onPress={onRemove}>
+      <X size={18} color="#9CA3AF" />
+    </TouchableOpacity>
+  </View>
+);
+
+/* ---------- Styles ---------- */
+
 const styles = StyleSheet.create({
-  header: {
-    flex: 1,
-    position: "relative",
-    alignSelf: "center",
-    minHeight: 100,
-    alignItems: "center",
-    width: 420,
-    // backgroundColor: "#065f46", 
-    justifyContent: "flex-end",
-    paddingBottom: 28,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    // marginBottom: 10,
-    // ...Platform.select({
-    //   ios: {
-    //     shadowColor: "#000",
-    //     shadowOpacity: 0.18,
-    //     shadowRadius: 8,
-    //     shadowOffset: { width: 0, height: 2 },
-    //   },
-    //   android: {
-    //     elevation: 4,
-    //     shadowColor: "#000",
-    //   },
-    // }),
+  container: {
+    padding: 20,
+    paddingVertical: 45,
   },
-  headerInner: {
-    marginTop: 10,
+  headerBlock: {
+    marginBottom: 24,
   },
   headerTitle: {
-    color: "#ecfccb",
-    fontSize: 26,
-    fontWeight: "700",
-    textAlign: isRTL ? "left" : "right",
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#111827",
   },
   headerSubtitle: {
-    color: "#bbf7d0",
-    fontSize: 13,
-    marginTop: 6,
-    textAlign: isRTL ? "left" : "right",
-  },
-  container: {
-    paddingTop: 18,
-    paddingStart: width * 0.05,
-    paddingEnd: width * 0.05,
-    paddingBottom: 40,
-    flexGrow: 1,
-    backgroundColor: "#f0fdf4",
+    marginTop: 4,
+    color: "#6B7280",
   },
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 16,
     marginBottom: 16,
-    shadowColor: "#00000010",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.18,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 4,
-        shadowColor: "#000",
-      },
-    }),
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 3,
   },
-  cardHeaderRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
+  sectionHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  cardTitle: {
+  iconBubble: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#000",
-    textAlign: isRTL ? "left" : "right",
+    color: "#111827",
   },
   label: {
-    color: "#666",
-    marginTop: 10,
-    marginBottom: 6,
+    fontSize: 13,
     fontWeight: "600",
-    textAlign: isRTL ? "left" : "right",
+    color: "#374151",
+    marginBottom: 6,
+    marginTop: 10,
   },
   input: {
-    backgroundColor: "#fff",
-    borderColor: "#999",
+    backgroundColor: "#F9FAFB",
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === "ios" ? 12 : 10,
-    fontSize: 15,
-    // marginBottom: ,
-    color: "#0f172a",
-    textAlign: isRTL ? "left" : "right",
-  },
-  row: {
-    flexDirection: isRTL ? "row" : "row-reverse",
-    alignItems: "center",
-    // justifyContent: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  fabAdd: {
-    // alignSelf: "center",
-    backgroundColor: "#10b981",
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    
-  },
-  fabAddText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  smallAddButton: {
-    backgroundColor: "#065f46",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  smallAddButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  itemRow: {
-    flexDirection: isRTL ? "row" : "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderColor: "#ecfdf5",
-    borderWidth: 1,
-  },
-  itemText: {
-    textAlign: isRTL ? "left" : "right",
     fontSize: 15,
-    color: "#0f172a",
-    fontWeight: "500",
+    color: "#111827",
+    marginBottom: 10,
+  },
+  iconInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  iconInput: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
   },
-  removeButton: {
-    color: "#ef4444",
-    fontSize: 20,
-    fontWeight: "700",
-    paddingLeft: 10,
+  gridRow: {
+    flexDirection: "row",
+    gap: 12,
   },
-  submitButton: {
-    position: "absolute",
-    alignSelf: "center",
-    backgroundColor: "#065f46",
-    paddingVertical: 16,
-    borderRadius: 12,
-    width: 300,
+  inlineRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    // marginHorizontal: 20,
-    bottom: 30,
-    
+    gap: 8,
+  },
+  addButton: {
+    width: 45,
+    height: 45,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom:10,
+  },
+  listItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 8,
+  },
+  listLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  listText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#111827",
+  },
+  submitButton: {
+    backgroundColor: "#2563EB",
+    paddingVertical: 16,
+    borderRadius: 18,
+    marginTop: 8,
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    alignItems: "center",
   },
   submitText: {
-    color: "#ecfccb",
+    color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "700",
-  },
-  hintText: {
-    color: "#64748b",
-    marginTop: 8,
-    fontSize: 14,
-    textAlign: isRTL ? "left" : "right",
   },
 });
 

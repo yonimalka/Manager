@@ -4,8 +4,8 @@ const version = "1.0.1";
 
 export default {
   expo: {
-    name: "Manager",
-    slug: "Manager",
+    name: "Mago",
+    slug: "Mago",
     version: version,
     orientation: "portrait",
     icon: "./assets/mago-logo-transparent.png",

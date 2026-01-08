@@ -16,6 +16,7 @@ import { storage, auth, signInFirebase } from "./firebase";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import api from "../services/api";
 import { useAuth } from "./useAuth";
+import { Camera, Image as ImageIcon, X, Upload, Check } from "lucide-react-native";
 
 const isRTL = I18nManager.isRTL;
 
@@ -32,28 +33,21 @@ export default function Receipts() {
   const [progress, setProgress] = useState(0);
 
   // -------------------------------
-  // Pick image from gallery or camera
+  // Image Picker
   // -------------------------------
-
-
-const pickImage = async (fromCamera = false) => {
-  try {
-    // Request permission
+  const pickImage = async (fromCamera = false) => {
     const permission = fromCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert(
-        "Permission denied",
-        "You need to allow access to your camera or gallery."
-      );
+      Alert.alert("Permission denied");
       return;
     }
 
     const result = fromCamera
       ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
           quality: 0.7,
         })
       : await ImagePicker.launchImageLibraryAsync({
@@ -64,24 +58,14 @@ const pickImage = async (fromCamera = false) => {
     if (!result.canceled) {
       setImage(result.assets[0].uri);
     }
-  } catch (err) {
-    console.error("ImagePicker error:", err);
-    Alert.alert("Error", "Could not open camera/gallery");
-  }
-};
-
+  };
 
   // -------------------------------
-  // Upload to Firebase
+  // Upload Receipt
   // -------------------------------
   const uploadReceipt = async () => {
     if (!image || !category || !sum) {
-      Alert.alert("Missing fields", "Please fill all fields");
-      return;
-    }
-
-    if (!userId || !projectId) {
-      Alert.alert("Error", "User or project ID missing");
+      Alert.alert("Missing fields");
       return;
     }
 
@@ -89,128 +73,259 @@ const pickImage = async (fromCamera = false) => {
       setLoading(true);
       setProgress(0);
 
-      // Sign in if not authenticated
       if (!auth.currentUser) {
         await signInFirebase();
       }
 
-      // Convert image to blob
-      const response = await fetch(image);
-      const blob = await response.blob();
+      const blob = await (await fetch(image)).blob();
+      const fileRef = ref(
+        storage,
+        `receipts/${userId}/${projectId}/${Date.now()}.jpg`
+      );
 
-      // Create unique storage path
-      const filePath = `receipts/${userId}/${projectId}/${category}.jpg`;
-      const fileRef = ref(storage, filePath);
-
-      // Upload with progress
       const uploadTask = uploadBytesResumable(fileRef, blob);
       uploadTask.on(
         "state_changed",
-        snapshot => {
-          const prog = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setProgress(Math.round(prog));
+        snap => {
+          setProgress(
+            Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
+          );
         },
-        error => {
-          console.error("Firebase Storage upload error:", error);
-          Alert.alert("Upload error", error.message);
+        err => {
+          Alert.alert("Upload failed", err.message);
           setLoading(false);
         },
         async () => {
-          const downloadURL = await getDownloadURL(fileRef);
-          console.log("File uploaded to:", filePath);
-          console.log("Download URL:", downloadURL);
-
+          const url = await getDownloadURL(fileRef);
           await api.post("/uploadReceipt", {
             projectId,
             category,
             sumOfReceipt: Number(sum),
-            imageUrl: downloadURL,
+            imageUrl: url,
           });
-
-          Alert.alert("Success", "Receipt uploaded successfully!");
-          navigation.goBack();
+          // Alert.alert("Success");
         }
       );
-    } catch (err) {
-      console.error("Upload exception:", err);
-      Alert.alert("Error", "Upload failed: " + (err.message || err.code));
     } finally {
+      navigation.goBack();
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Add Receipt</Text>
+    <View style={styles.screen}>
+      <Text style={styles.header}>Upload Receipt</Text>
+      <Text style={styles.subHeader}>
+        Capture or upload your receipt
+      </Text>
 
-      <TouchableOpacity style={styles.imageBox} onPress={() => pickImage(false)}>
-        {image ? (
-          <Image source={{ uri: image }} style={styles.image} />
+      {/* Card */}
+      <View style={styles.card}>
+        {/* Category */}
+        <Text style={styles.label}>Category</Text>
+        <TextInput
+          value={category}
+          onChangeText={setCategory}
+          placeholder="Office, Food, Software..."
+          style={styles.input}
+          textAlign={isRTL ? "right" : "left"}
+        />
+
+        {/* Amount */}
+        <Text style={styles.label}>Amount</Text>
+        <TextInput
+          value={sum}
+          onChangeText={setSum}
+          placeholder="0.00"
+          keyboardType="numeric"
+          style={styles.input}
+          textAlign={isRTL ? "right" : "left"}
+        />
+
+        {/* Image Section */}
+        <Text style={styles.label}>Receipt Image</Text>
+
+        {!image ? (
+          <>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => pickImage(true)}
+            >
+              <Camera color="#fff" size={22} />
+              <Text style={styles.primaryText}>Take Photo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => pickImage(false)}
+            >
+              <ImageIcon size={22} />
+              <Text style={styles.secondaryText}>Choose from Gallery</Text>
+            </TouchableOpacity>
+          </>
         ) : (
-          <Text style={styles.imageText}>Tap to select image</Text>
-        )}
-      </TouchableOpacity>
+          <View style={styles.imagePreview}>
+            <Image source={{ uri: image }} style={styles.previewImage} />
 
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 15 }}>
-        <TouchableOpacity style={styles.smallButton} onPress={() => pickImage(false)}>
-          <Text style={styles.buttonText}>Gallery</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.smallButton} onPress={() => pickImage(true)}>
-          <Text style={styles.buttonText}>Camera</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.removeBtn}
+              onPress={() => setImage(null)}
+            >
+              <X size={18} />
+            </TouchableOpacity>
+
+            <View style={styles.imageOverlay}>
+              <Check size={14} color="#fff" />
+              <Text style={styles.overlayText}>Ready</Text>
+            </View>
+          </View>
+        )}
       </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Category"
-        value={category}
-        onChangeText={setCategory}
-        textAlign={isRTL ? "right" : "left"}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Amount"
-        keyboardType="numeric"
-        value={sum}
-        onChangeText={setSum}
-        textAlign={isRTL ? "right" : "left"}
-      />
-
-      {loading && <Text>Uploading: {progress}%</Text>}
-
+      {/* Upload Button */}
       <TouchableOpacity
-        style={styles.button}
+        style={[
+          styles.uploadButton,
+          (!image || !category || !sum) && { opacity: 0.4 },
+        ]}
         onPress={uploadReceipt}
         disabled={loading}
       >
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Upload Receipt</Text>
+          <>
+            <Upload size={20} color="#fff" />
+            <Text style={styles.uploadText}>
+              Upload Receipt
+            </Text>
+          </>
         )}
       </TouchableOpacity>
+
+      {loading && (
+        <Text style={styles.progressText}>
+          Uploading… {progress}%
+        </Text>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
-  imageBox: {
-    height: 200,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
+  screen: {
+    flex: 1,
+    backgroundColor: "#F5F6F8",
+    padding: 20,
+    paddingTop: 50,
+  },
+  header: {
+    fontSize: 32,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  subHeader: {
+    color: "#6B7280",
+    marginBottom: 20,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 6,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 6,
+    color: "#374151",
+  },
+  input: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+  },
+  primaryButton: {
+    backgroundColor: "#2563EB",
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    gap: 10,
     marginBottom: 10,
-    overflow: "hidden",
   },
-  image: { width: "100%", height: "100%" },
-  imageText: { color: "#777" },
-  input: { borderWidth: 1, borderColor: "#ccc", padding: 12, borderRadius: 8, marginBottom: 15 },
-  button: { backgroundColor: "#2563eb", padding: 15, borderRadius: 10, alignItems: "center" },
-  smallButton: { backgroundColor: "#2563eb", padding: 10, borderRadius: 8, width: "48%", alignItems: "center" },
-  buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  primaryText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  secondaryButton: {
+    backgroundColor: "#E5E7EB",
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+  },
+  secondaryText: {
+    fontWeight: "600",
+  },
+  imagePreview: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginTop: 10,
+  },
+  previewImage: {
+    width: "100%",
+    height: 220,
+  },
+  removeBtn: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 6,
+  },
+  imageOverlay: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    backgroundColor: "#22C55E",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  overlayText: {
+    color: "#fff",
+    fontSize: 12,
+  },
+  uploadButton: {
+    backgroundColor: "#2563EB",
+    marginTop: 20,
+    borderRadius: 20,
+    padding: 18,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+  },
+  uploadText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  progressText: {
+    textAlign: "center",
+    marginTop: 10,
+    color: "#6B7280",
+  },
 });

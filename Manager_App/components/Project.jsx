@@ -101,7 +101,7 @@ const Project = ({ projectName, totalAmount, id }) => {
     try {
       await api.post(`/updatePayment/${id}`, { paidAmount: amount });
       fetchProjectData();
-
+      setPaymentInput("");
     } catch (error) {
       console.error("Error updating payment:", error);
     }

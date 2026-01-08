@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Text, TouchableOpacity, View, StyleSheet, ActivityIndicator } from "react-native";
+import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -8,7 +9,9 @@ import { MaterialIcons } from "@expo/vector-icons";
 import {SERVER_URL} from "@env";
 import api from "../services/api";
 
+
 const Expenses = ({ userId, refresh }) => {
+  const navigation = useNavigation();
   const [totalExpenses, setTotalExpenses] = useState(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -28,7 +31,7 @@ const Expenses = ({ userId, refresh }) => {
   const downloadAllReceiptsZip = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-       const fileUri = FileSystem.documentDirectory + "receipts.zip";
+       const fileUri = FileSystem.documentDirectory + "Receipts.zip";
     const res = await FileSystem.downloadAsync(`${SERVER_URL}/downloadReceiptsZip`, fileUri,  {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -42,7 +45,7 @@ const Expenses = ({ userId, refresh }) => {
 
   return (
    <View>
-      <TouchableOpacity onPress={downloadAllReceiptsZip}>
+      <TouchableOpacity onPress={() => navigation.navigate("Finance")}>
         <LinearGradient
               colors={["#f87171", "#ef4444"]}
               start={{ x: 0, y: 0 }}

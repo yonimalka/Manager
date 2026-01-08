@@ -7,8 +7,10 @@ import {
   ActivityIndicator,
   StyleSheet,
   Alert,
+  Animated,
 } from "react-native";
 import {
+  VictoryPie ,
   VictoryChart,
   VictoryArea,
   VictoryAxis,
@@ -81,25 +83,39 @@ export default function CashFlow() {
 
   /* ---------------- CHART DATA ---------------- */
 
-  const incomeSeries = useMemo(
-    () =>
-      incomes.map((i, idx) => ({
-        x: idx + 1,
-        y: Number(i?.payments?.amount) || 0,
-      })),
-    [incomes]
-  );
+  const donutData = useMemo(() => [
+  { x: "Income", y: totalIncome },
+  { x: "Expenses", y: totalExpenses },
+], [totalIncome, totalExpenses]);
 
-  const expenseSeries = useMemo(
-    () =>
-      expenses.map((e, idx) => ({
-        x: idx + 1,
-        y: Number(e?.payments?.sumOfReceipt) || 0,
-      })), 
-    [expenses]
-  );
+const Skeleton = ({ width, height, radius = 12, style }) => (
+  <View
+    style={[
+      {
+        width,
+        height,
+        borderRadius: radius,
+        backgroundColor: "#E5E7EB",
+      },
+      style,
+    ]}
+  />
+);
+
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 140 }}>
+    <TouchableOpacity onPress={() => navigation.goBack()}>
+              <MaterialIcons
+               name="arrow-back-ios" 
+               size={24} 
+               color="#374151" 
+               style={{
+                transform: [{ scaleX:  1 }],
+                marginBottom: 40
+               }}
+               />
+               </TouchableOpacity>
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.title}>Cash Flow</Text>
@@ -115,6 +131,7 @@ export default function CashFlow() {
           value={totalIncome}
           icon="trending-up"
           color="#34C759"
+          // style={{width: 40, backgroundColor: "#34C759"}}
         />
         <SummaryCard
           title="Total Expenses"
@@ -159,69 +176,52 @@ export default function CashFlow() {
         </View>
 
         {loading ? (
-          <ActivityIndicator />
-        ) : (
-          <VictoryChart
-            height={260}
-            padding={{ top: 20, bottom: 40, left: 55, right: 30 }}
-            containerComponent={
-              <VictoryVoronoiContainer
-                labels={({ datum }) => `${datum.y.toLocaleString()}`}
-                labelComponent={
-                  <VictoryTooltip
-                    flyoutStyle={{
-                      fill: "#fff",
-                      stroke: "#e5e7eb",
-                    }}
-                    style={{ fontSize: 12, fill: "#111" }}
-                  />
-                }
-              />
-            }
-          >
-            <VictoryAxis
-              style={{
-                axis: { stroke: "#e5e7eb" },
-                tickLabels: { fontSize: 11, fill: "#9ca3af" },
-                grid: { stroke: "#f1f5f9" },
-              }}
-            />
+  <View style={{ alignItems: "center", paddingVertical: 20 }}>
+    <Skeleton width={220} height={220} radius={110} />
 
-            <VictoryAxis
-              dependentAxis
-              tickFormat={(t) => `£${t / 1000}k`}
-              style={{
-                axis: { stroke: "#e5e7eb" },
-                tickLabels: { fontSize: 11, fill: "#9ca3af" },
-                grid: { stroke: "#f1f5f9" },
-              }}
-            />
+    <View style={{ marginTop: 18 }}>
+      <Skeleton width={120} height={14} />
+      <Skeleton width={90} height={18} style={{ marginTop: 8 }} />
+    </View>
+    <Text style={{ marginTop: 16, color: "#6B7280", fontWeight: "500" }}>
+      Calculating cash flow…
+    </Text>
+  </View>
+) : (
+  <View style={{ alignItems: "center", justifyContent: "center" }}>
+    <VictoryPie
+      data={donutData}
+      innerRadius={75}
+      radius={110}
+      padAngle={3}
+      labels={({ datum }) =>
+        `£${datum.y.toLocaleString()}`
+      }
+      colorScale={["#34C759", "#FF3B30"]}
+      style={{
+        labels: {
+          fontSize: 12,
+          fill: "#111",
+          fontWeight: "600",
+        },
+      }}
+    />
 
-            <VictoryArea
-              data={incomeSeries}
-              interpolation="monotoneX"
-              style={{
-                data: {
-                  fill: "rgba(52,199,89,0.25)",
-                  stroke: "#34C759",
-                  strokeWidth: 3,
-                },
-              }}
-            />
+    {/* CENTER TEXT */}
+    <View style={styles.donutCenter}>
+      <Text style={styles.donutLabel}>Net</Text>
+      <Text
+        style={[
+          styles.donutValue,
+          { color: netCashFlow >= 0 ? "#34C759" : "#FF3B30" },
+        ]}
+      >
+        £{netCashFlow.toLocaleString()}
+      </Text>
+    </View>
+  </View>
+)}
 
-            <VictoryArea
-              data={expenseSeries}
-              interpolation="monotoneX"
-              style={{
-                data: {
-                  fill: "rgba(255,59,48,0.25)",
-                  stroke: "#FF3B30",
-                  strokeWidth: 3,
-                },
-              }}
-            />
-          </VictoryChart>
-        )}
       </View>
 
       {/* INCOME LIST */}
@@ -268,7 +268,7 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
       </TouchableOpacity>
     </View>
 
-    <View style={styles.card}>
+    <View style={styles.summaryCard}>
       {data.slice(0, 5).map((item, idx) => {
         const amount = Number(item?.payments?.[amountKey]) || 0;
         return (
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     position: "static",
     // justifyContent: "flex-end",
     alignItems: "center",
-    backgroundColor: "#fff",
+    // backgroundColor: "#fff",
     borderRadius: 20,
     padding: 16,
     shadowColor: "#000",
@@ -377,11 +377,27 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
     backgroundColor: "#F1F5F9",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
   periodBtnActive: { backgroundColor: "#0A84FF" },
   periodText: { fontSize: 12, color: "#64748B", fontWeight: "600" },
   periodTextActive: { color: "#fff" },
-
+ donutCenter: {
+  position: "absolute",
+  alignItems: "center",
+  justifyContent: "center",
+},
+donutLabel: {
+  fontSize: 14,
+  color: "#6B7280",
+  fontWeight: "600",
+},
+donutValue: {
+  fontSize: 22,
+  fontWeight: "800",
+},
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",

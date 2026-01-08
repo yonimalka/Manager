@@ -10,17 +10,17 @@ import api from "../services/api";
 const MaterialsInputModal = ({ userId, visible, onClose, onSubmit, projectId }) => {
     
     const [itemValue, setItemValue] = useState("");
-    const [countValue, setCountValue] = useState("");
+    const [qtyValue, setQtyValue] = useState("");
 
    const addItem = async () => {
     const newItem = {
         item: itemValue,
-        count: countValue
+        qty: qtyValue
     }
     // console.log(newItem);
     onSubmit(newItem);
     setItemValue(null);
-    setCountValue(null);
+    setQtyValue(null);
     try {
       const token = AsyncStorage.getItem("token");
               await api.post(`/AddItem/${projectId}`, newItem);
@@ -32,7 +32,7 @@ const MaterialsInputModal = ({ userId, visible, onClose, onSubmit, projectId }) 
         
    }
     return (
-        <Modal visible={visible} animationType="slide" transparent={true}>
+        <Modal visible={visible} animationType="slide" transparent={true} >
             <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
                     <Text>Enter Item:</Text>
@@ -42,12 +42,12 @@ const MaterialsInputModal = ({ userId, visible, onClose, onSubmit, projectId }) 
                         value={itemValue}
                         onChangeText={setItemValue}
                     />
-                    <Text>Enter Count:</Text>
+                    <Text>Enter Quantity:</Text>
                     <TextInput
                         style={styles.input}
                         placeholder="Type here..."
-                        value={countValue}
-                        onChangeText={setCountValue}
+                        value={qtyValue}
+                        onChangeText={setQtyValue}
                     />
                     <Button title="Submit" onPress={()=> addItem()} />
                     <Button title="Cancel" onPress={onClose} />
@@ -65,20 +65,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.5)",
+    
   },
   modalContent: {
     backgroundColor: "white",
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 30,
     width: "80%",
     alignItems: "center",
   },
   input: {
-    borderBottomWidth: 1,
+    borderWidth: 1,
+    borderRadius: 12,
     width: "100%",
     marginVertical: 10,
-    padding: 5,
+    padding: 10,
     textAlign: isRTL ? "right" : "left",
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
   },
 });
 
