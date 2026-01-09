@@ -172,7 +172,7 @@ const paymentDetailsSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
 })
 const FixedExpenseSchema = new mongoose.Schema({
-
+  userId: {type: String, ref: "User"},
   title: String,              // "Office Rent"
   category: String,           // "Rent", "Software", "Car"
   amount: Number,
@@ -434,14 +434,25 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   });
   
 });
-
+   
+  app.post("/fixedExpense", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.userId;
+      const { title, amount, category, frequency, dayOfMonth, dayOfWeek, month } = req.body;
+      console.log(title, amount, category, frequency, dayOfMonth, dayOfWeek, month);
+      
+    } catch (error){
+      console.error("Upload fixed expense error:", error);
+    res.status(500).json({ message: "Server error on fiexed expense" });
+    }
+  });
   app.post("/uploadReceipt", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const { sumOfReceipt, category, projectId, imageUrl } = req.body;
     // console.log(sumOfReceipt, category, projectId, imageUrl);
     
-    if (!imageUrl || !sumOfReceipt || !projectId) {
+    if (!imageUrl || !sumOfReceipt) {
       console.log("Missing required fields");
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -535,7 +546,7 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
     for (const r of receipts) {
       const response = await fetch(r.imageUrl);
       const buffer = await response.buffer();
-      const fileName = `${r.category}.jpg`;
+      const fileName = `${r.category}_${Date.now()}.jpg`;
       archive.append(buffer, { name: fileName });
     }
 

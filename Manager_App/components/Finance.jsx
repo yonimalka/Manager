@@ -11,11 +11,7 @@ import {
 } from "react-native";
 import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as FileSystem from "expo-file-system";
-import { Ionicons } from "@expo/vector-icons";
-import * as Sharing from "expo-sharing";
-import {SERVER_URL} from "@env";
+import api from "../services/api";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
 import Receipts from "./Receipts";
 
@@ -78,7 +74,7 @@ export default function FinanceFixedExpenses() {
     return null;
   }, [frequency, dayOfMonth, dayOfWeek, month]);
 
-  const saveFixedExpense = () => {
+  const saveFixedExpense =  () => {
     const payload = {
       title,
       amount: Number(amount),
@@ -88,7 +84,10 @@ export default function FinanceFixedExpenses() {
       dayOfWeek: frequency === "weekly" ? dayOfWeek : null,
       month: frequency === "yearly" ? month : null,
     };
-
+    
+    api.post("/fixedExpense", payload)
+    // console.log(res);
+    
     console.log("Saving fixed expense:", payload);
 
     setTitle("");
