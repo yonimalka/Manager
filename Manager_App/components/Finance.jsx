@@ -9,12 +9,15 @@ import {
   UIManager,
   StyleSheet,
 } from "react-native";
-import { Plus, ChevronDown, ChevronUp, Repeat } from "lucide-react-native";
+import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload } from "lucide-react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
+import { Ionicons } from "@expo/vector-icons";
 import * as Sharing from "expo-sharing";
 import {SERVER_URL} from "@env";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
+import Receipts from "./Receipts";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -27,6 +30,9 @@ const MONTHS = [
 ];
 
 export default function FinanceFixedExpenses() {
+
+  const navigation = useNavigation();
+
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
@@ -41,7 +47,11 @@ export default function FinanceFixedExpenses() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(!expanded);
   };
-
+  
+  const addReceipts = () => {
+    
+    navigation.navigate("Receipts");
+  };
   // 🔁 Recurrence preview (next occurrence)
   const nextOccurrence = useMemo(() => {
     const now = new Date();
@@ -158,12 +168,21 @@ export default function FinanceFixedExpenses() {
       )}
       </View>
      <ReceiptDownloadByDate />
+     {/* Upload Receipt Button */}
+     <View style={styles.container}>
+     <View style={styles.form}>
+      <CloudUpload size={24} color="#0A7AFF" />
+      <TouchableOpacity  onPress={addReceipts} activeOpacity={0.8}>
+        <Text style={styles.headerTitle}>upload receipt</Text>
+      </TouchableOpacity>
+     </View>
+     </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#fff", borderRadius: 16, padding: 46, marginVertical: 52, elevation: 2 },
+  container: { backgroundColor: "#fff", borderRadius: 16, padding: 20, marginVertical: 52, elevation: 2 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerTitle: { fontSize: 16, fontWeight: "600" },

@@ -112,7 +112,6 @@ const AboutProject = () => {
 };
 
   const addReceipts = () => {
-    
     navigation.navigate("Receipts", { projectId: projectId });
   };
 

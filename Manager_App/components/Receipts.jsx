@@ -78,10 +78,12 @@ export default function Receipts() {
       }
 
       const blob = await (await fetch(image)).blob();
-      const fileRef = ref(
+        const fileRef = ref(
         storage,
         `receipts/${userId}/${projectId}/${Date.now()}.jpg`
-      );
+        )
+      
+     
 
       const uploadTask = uploadBytesResumable(fileRef, blob);
       uploadTask.on(
