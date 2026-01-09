@@ -218,7 +218,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, default: null },
   projects: [ProjectSchema],
   totalExpenses: Number,
-  FixedExpense: [FixedExpenseSchema],
+  fixedExpense: [FixedExpenseSchema],
   totalIncomes: {type: Number},
   employees: [EmployeeSchema],  
 })
@@ -437,10 +437,23 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
    
   app.post("/fixedExpense", authMiddleware, async (req, res) => {
     try {
-      const userId = req.userId;
       const { title, amount, category, frequency, dayOfMonth, dayOfWeek, month } = req.body;
-      console.log(title, amount, category, frequency, dayOfMonth, dayOfWeek, month);
-      
+      // console.log(title, amount, category, frequency, dayOfMonth, dayOfWeek, month);
+      const user = UserModel.findById(req.userId)
+      const newFixedExpense = {
+        userId: req.userId,
+        title, 
+        amount, 
+        category, 
+        frequency, 
+        dayOfMonth, 
+        dayOfWeek, 
+        month
+      }
+      user.fixedExpense.push(newFixedExpense)
+       await user.save();
+      res.status(201).json({
+      message: "fixed expense saved successfully"});
     } catch (error){
       console.error("Upload fixed expense error:", error);
     res.status(500).json({ message: "Server error on fiexed expense" });
