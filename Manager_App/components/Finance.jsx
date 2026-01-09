@@ -85,8 +85,8 @@ export default function FinanceFixedExpenses() {
       month: frequency === "yearly" ? month : null,
     };
     
-    api.post("/fixedExpense", payload)
-    // console.log(res);
+    const res = api.post("/fixedExpense", payload)
+    console.log(res.data);
     
     console.log("Saving fixed expense:", payload);
 

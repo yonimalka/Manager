@@ -439,7 +439,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
     try {
       const { title, amount, category, frequency, dayOfMonth, dayOfWeek, month } = req.body;
       // console.log(title, amount, category, frequency, dayOfMonth, dayOfWeek, month);
-      const user = UserModel.findById(req.userId)
+      const user = await UserModel.findById(req.userId)
       const newFixedExpense = {
         userId: req.userId,
         title, 
