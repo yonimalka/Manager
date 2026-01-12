@@ -56,7 +56,7 @@ export default function ReceiptDownloadByDate({ onDownload }) {
     const token = await AsyncStorage.getItem("token");
     const fileUri = FileSystem.documentDirectory + "Receipts.zip";
 
-    const query =
+    const query =   
   from instanceof Date && to instanceof Date
     ? `?from=${from.toISOString()}&to=${to.toISOString()}`
     : "";
@@ -164,7 +164,7 @@ export default function ReceiptDownloadByDate({ onDownload }) {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginVertical: 12, elevation: 2 },
+  container: { backgroundColor: "#fff", borderRadius: 16, padding: 16,  elevation: 2 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerTitle: { fontSize: 16, fontWeight: "600" },

@@ -132,6 +132,7 @@ const ReceiptSchema = new mongoose.Schema(
     projectId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Project",
+    default: null,
     // required: true,
     },
     imageUrl: {
@@ -484,11 +485,14 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
     // Receipt object (Firebase-based)
     const receipt = await ReceiptModel.create({
     userId: req.userId,
-    projectId,
     imageUrl,
     sumOfReceipt,
     category,
   });
+  if (projectId) {
+  receipt.projectId = projectId;
+}
+
     console.log(receipt);
     // project.receipts.push(receipt);
 
