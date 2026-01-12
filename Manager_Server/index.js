@@ -367,7 +367,7 @@ app.get("/getUserDetails/:userId", async (req, res) => {
 // JWT-protected route
 app.get("/getUser", authMiddleware, async (req, res) => {
   try {
-    console.log(req.userId);
+    // console.log(req.userId);
     
     const user = await UserModel.findById(req.userId).populate("projects").select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -477,10 +477,6 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
     }
 
     const project = user.projects.id(projectId);
-    if (!project) {
-      console.log("Project not found");
-      return res.status(404).json({ message: "Project not found" });
-    }
 
     // Receipt object (Firebase-based)
     const receipt = await ReceiptModel.create({
@@ -735,16 +731,6 @@ const projectMap = user.projects.reduce((acc, project) => {
   acc[project._id.toString()] = project.name;
   return acc;
 }, {});
-
-// Map receipts to expenses using the projectMap
-// const expenses = (receipts || []).map((receipt) => ({
-//   payments: {
-//     sumOfReceipt: receipt.sumOfReceipt,
-//     category: receipt.category,
-//     date: receipt.createdAt,
-//   },
-//   projectName: projectMap[receipt.projectId.toString()] || "Unknown Project",
-// }));
     const expenses = (receipts || []).filter((receipt) => {
        const d = new Date(receipt.createdAt);
       return !isNaN(d) && d >= startDate && d <= now;
