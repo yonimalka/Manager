@@ -481,13 +481,14 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
     // Receipt object (Firebase-based)
     const receipt = await ReceiptModel.create({
     userId: req.userId,
+    projectId: projectId || null,
     imageUrl,
     sumOfReceipt,
     category,
   });
-  if (projectId) {
-  receipt.projectId = projectId;
-}
+//   if (projectId) {
+//   receipt.projectId = projectId;
+// }
 
     console.log(receipt);
     // project.receipts.push(receipt);
