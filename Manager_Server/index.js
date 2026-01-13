@@ -493,7 +493,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
     // project.receipts.push(receipt);
 
 if (projectId) {
-     project = await user.projects.findById(projectId);
+     project = user.projects.id(projectId);
 
   if (!project) {
     return res.status(404).json({ message: "Project not found" });
