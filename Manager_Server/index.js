@@ -499,6 +499,7 @@ if (projectId) {
     return res.status(404).json({ message: "Project not found" });
   }
    project.expenses += Number(sumOfReceipt);
+   await user.save();
  }
    
     user.totalExpenses += Number(sumOfReceipt);
