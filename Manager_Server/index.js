@@ -156,6 +156,7 @@ const ReceiptSchema = new mongoose.Schema(
     },
   },
   { timestamps: true });
+ReceiptSchema.index({ userId: 1, createdAt: 1 });
 
 const MaterialsSchema = new mongoose.Schema({
   items: {type: Array, default: []}
@@ -535,13 +536,39 @@ app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
 });
 
 app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  UserModel.findById(userId)
-  .then((user) => {
-    const getExpenses = user.totalExpenses;
-    res.json(getExpenses)
-  })
+  try {
+    const userId = req.userId;
+
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+    const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
+
+    const result = await ReceiptModel.aggregate([
+      {
+        $match: {
+          userId: userId,
+          createdAt: {
+            $gte: startOfYear,
+            $lt: startOfNextYear,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalExpenses: { $sum: "$sumOfReceipt" },
+        },
+      },
+    ]);
+
+    const totalExpenses = result[0]?.totalExpenses || 0;
+
+    res.json({ totalExpenses });
+  } catch (error) {
+    console.error("getTotalExpenses error:", error);
+    res.status(500).json({ message: "Failed to get total expenses" });
+  }
 });
+
 
 app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
   try {
