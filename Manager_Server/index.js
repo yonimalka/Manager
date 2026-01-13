@@ -198,6 +198,7 @@ const FixedExpenseSchema = new mongoose.Schema({
 
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
+FixedExpenseSchema.index({ userId: 1, isActive: 1, createdAt: 1 });
 
 const ProjectSchema = new mongoose.Schema({
   userId: {type: String, ref: "User",},
@@ -220,10 +221,10 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, default: null },
   projects: [ProjectSchema],
   totalExpenses: Number,
-  fixedExpense: [FixedExpenseSchema],
   totalIncomes: {type: Number},
   employees: [EmployeeSchema],  
 })
+const FixedExpenseModel = mongoose.model("FiexedExpense", FixedExpenseSchema);
 const ReceiptModel = mongoose.model("Receipt", ReceiptSchema);
 const ProjectModel = mongoose.model("Project", ProjectSchema);
 const UserModel = mongoose.model("User", UserSchema);
@@ -441,21 +442,23 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
     try {
       const { title, amount, category, frequency, dayOfMonth, dayOfWeek, month } = req.body;
       // console.log(title, amount, category, frequency, dayOfMonth, dayOfWeek, month);
-      const user = await UserModel.findById(req.userId)
-      const newFixedExpense = {
+      
+      const newFixedExpense =  await FixedExpenseModel.create({
         userId: req.userId,
         title, 
-        amount, 
+        amount: Number(amount), 
         category, 
         frequency, 
         dayOfMonth, 
         dayOfWeek, 
-        month
-      }
-      user.fixedExpense.push(newFixedExpense)
-       await user.save();
+        month,
+        isActive: true,
+      });
+      
       res.status(201).json({
-      message: "fixed expense saved successfully"});
+      message: "fixed expense saved successfully",
+      newFixedExpense,
+    });
     } catch (error){
       console.error("Upload fixed expense error:", error);
     res.status(500).json({ message: "Server error on fiexed expense" });
@@ -542,7 +545,7 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     const startOfYear = new Date(new Date().getFullYear(), 0, 1);
     const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
 
-    const result = await ReceiptModel.aggregate([
+    const receiptsResult = await ReceiptModel.aggregate([
       {
         $match: {
           userId: userId,
@@ -560,9 +563,39 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
       },
     ]);
 
-    const totalExpenses = result[0]?.totalExpenses || 0;
+    const receiptsTotal = receiptsResult[0]?.total || 0;
 
-    res.json({ totalExpenses });
+   const fixedResult = await FixedExpenseModel.aggregate([
+      {
+        $match: {
+          userId,
+          isActive: true,
+          createdAt: {
+            $gte: startOfYear,
+            $lt: startOfNextYear,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+        },
+      },
+    ]);
+
+    const fixedTotal = fixedResult[0]?.total || 0;
+
+    // 3️⃣ Combined
+    const totalExpenses = receiptsTotal + fixedTotal;
+
+    res.json({
+      totalExpenses,
+      breakdown: {
+        receipts: receiptsTotal,
+        fixed: fixedTotal,
+      },
+    });
   } catch (error) {
     console.error("getTotalExpenses error:", error);
     res.status(500).json({ message: "Failed to get total expenses" });

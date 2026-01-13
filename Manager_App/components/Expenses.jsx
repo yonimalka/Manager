@@ -12,6 +12,7 @@ import api from "../services/api";
 
 const Expenses = ({ userId, refresh }) => {
   const navigation = useNavigation();
+
   const [totalExpenses, setTotalExpenses] = useState(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -21,25 +22,10 @@ const Expenses = ({ userId, refresh }) => {
   const fetchExpenses = async () => {
     try {
       const response = await api.get(`/getTotalExpenses`);
-      setTotalExpenses(response.data);
+      // console.log(response.data);
+      setTotalExpenses(response.data.totalExpenses);
     } catch (err) {
       console.error("Error fetching expenses: ", err);
-    }
-  };
-
-  // 🔥 ZIP download function
-  const downloadAllReceiptsZip = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-       const fileUri = FileSystem.documentDirectory + "Receipts.zip";
-    const res = await FileSystem.downloadAsync(`${SERVER_URL}/downloadReceiptsZip`, fileUri,  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-    await Sharing.shareAsync(res.uri);
-    } catch (err) {
-      console.log("ZIP download error:", err);
     }
   };
 
