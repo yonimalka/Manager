@@ -748,7 +748,7 @@ const projectMap = user.projects.reduce((acc, project) => {
     category: receipt.category,
     date: receipt.createdAt,
   },
-  projectName: projectMap[receipt.projectId.toString()] || "Unknown Project",
+  projectName: projectMap[receipt.projectId] || "Unknown Project",
     }))
     
 console.log(expenses);
