@@ -164,10 +164,12 @@ export default function ReceiptDownloadByDate({ onDownload }) {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#fff", borderRadius: 16, padding: 16,  elevation: 2 },
+  container: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 16, marginBottom: 6, elevation: 2, shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 20,},
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
-  headerTitle: { fontSize: 16, fontWeight: "600" },
+  headerTitle: { fontSize: 16, fontWeight: "500" },
   body: { marginTop: 16, gap: 12 },
   rangeRow: { flexDirection: "row", gap: 12 },
   dateBox: { flex: 1, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12 },

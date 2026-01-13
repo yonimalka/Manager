@@ -476,7 +476,7 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const project = user.projects.id(projectId);
+    let project = null;
 
     // Receipt object (Firebase-based)
     const receipt = await ReceiptModel.create({
@@ -492,8 +492,15 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
     console.log(receipt);
     // project.receipts.push(receipt);
 
+if (projectId) {
+     project = await user.projects.findById(projectId);
 
-    project.expenses += Number(sumOfReceipt);
+  if (!project) {
+    return res.status(404).json({ message: "Project not found" });
+  }
+   project.expenses += Number(sumOfReceipt);
+ }
+   
     user.totalExpenses += Number(sumOfReceipt);
 
     await user.save();

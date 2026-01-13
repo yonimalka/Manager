@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
 
-  surfaceHeader: { flexDirection: "row", alignItems: "center" },
+  surfaceHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between"},
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   surfaceTitle: { fontSize: 16, fontWeight: "500", color: "#111827" },
 
