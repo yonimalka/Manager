@@ -4,4 +4,4 @@ function generateReceiptNumber() {
   return `INC-${year}-${rand}`;
 }
 
-module.exports = generateReceiptNumber;
+module.exports = {generateReceiptNumber};
