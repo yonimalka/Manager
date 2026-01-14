@@ -90,15 +90,8 @@ export default function FinanceFixedExpenses() {
   const goToReceipts = () => navigation.navigate("Receipts");
  
   async function submitReceipt(data) {
-    console.log(JSON.stringify(data));
-    
-  const res = await api.post("/incomeReceipt", {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
+    const r = JSON.stringify(data);
+  const res = await api.post("/incomeReceipt", { r});
 
   const receipt = await res.json();
   console.log(receipt);
