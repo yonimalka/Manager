@@ -558,7 +558,7 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
       {
         $group: {
           _id: null,
-          totalExpenses: { $sum: "$sumOfReceipt" },
+          total: { $sum: "$sumOfReceipt" },
         },
       },
     ]);

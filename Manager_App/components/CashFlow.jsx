@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
 } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   VictoryPie ,
   VictoryChart,
@@ -30,7 +31,7 @@ import { useAuth } from "./useAuth";
 
 export default function CashFlow() {
   const { userId } = useAuth();
-
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState("month");
 
