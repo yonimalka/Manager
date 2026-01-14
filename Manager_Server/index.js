@@ -19,7 +19,7 @@ const archiver = require("archiver");
 const { ObjectId } = require("mongodb");
 const fetch = require("node-fetch");
 const IncomeReceipt = require('./models/IncomeReceipt');
-const {generateReceiptNumber} = require('./utils/generateReceiptNumber');
+const generateReceiptNumber = require('./utils/generateReceiptNumber');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -525,17 +525,24 @@ if (projectId) {
 
 app.post("/incomeReceipt", authMiddleware, async (req, res) => {
   try {
-    console.log(req.body);
-    
+     console.log("Request body:", req.body);
+    console.log("UserId:", req.userId);
+
+    // Validate required fields
+    const { amount, payer } = req.body;
+    if (!amount || !payer) {
+      return res.status(400).json({ error: "Amount and payer are required" });
+    }
     const receipt = await IncomeReceipt.create({
       ...req.body,
       userId: req.userId,
       receiptNumber: generateReceiptNumber(),
     });
-    console.log(receipt);
-    
-    res.json(receipt);
+    console.log("Created receipt:", receipt);
+
+    res.status(201).json(receipt);
   } catch (err) {
+    console.error("Error creating receipt:", err); 
     res.status(500).json({ error: err.message });
   }
 })
