@@ -114,3 +114,115 @@ const Input = ({ icon, value, onChange, placeholder }) => (
     />
   </View>
 );
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 16,
+    margin: 16,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+
+  title: {
+    fontSize: 20,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+
+  input: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 16,
+  },
+
+  currencyRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  currencyBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    alignItems: "center",
+  },
+
+  active: {
+    backgroundColor: "#dcfce7",
+    borderColor: "#22c55e",
+  },
+
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    marginBottom: 12,
+  },
+
+  notes: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 80,
+    textAlignVertical: "top",
+    marginBottom: 12,
+    fontSize: 15,
+  },
+
+  uploadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
+    marginBottom: 12,
+  },
+
+  preview: {
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+
+  submitBtn: {
+    backgroundColor: "#16a34a",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+
+  submitText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});
+

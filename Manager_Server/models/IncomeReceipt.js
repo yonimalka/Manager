@@ -52,4 +52,4 @@ const IncomeReceiptSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("IncomeReceipt", IncomeReceiptSchema);
+module.exports = mongoose.model("IncomeReceipt", IncomeReceiptSchema);

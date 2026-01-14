@@ -19,7 +19,7 @@ const archiver = require("archiver");
 const { ObjectId } = require("mongodb");
 const fetch = require("node-fetch");
 const IncomeReceipt = require('./models/IncomeReceipt.js');
-const { generateReceiptNumber } = require('./utils/generateReceiptNumber.js');
+const generateReceiptNumber = require('./utils/generateReceiptNumber.js');
 
 const app = express();
 const PORT = process.env.PORT;
