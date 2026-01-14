@@ -544,7 +544,9 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
     const startOfYear = new Date(new Date().getFullYear(), 0, 1);
     const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
-
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const receiptsResult = await ReceiptModel.aggregate([
       {
         $match: {
@@ -566,23 +568,30 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     const receiptsTotal = receiptsResult[0]?.total || 0;
 
    const fixedResult = await FixedExpenseModel.aggregate([
-      {
-        $match: {
-          userId,
-          isActive: true,
-          createdAt: {
-            $gte: startOfYear,
-            $lt: startOfNextYear,
-          },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$amount" },
-        },
-      },
-    ]);
+  {
+    $match: {
+      userId,
+      isActive: true,
+
+      // started before this month ends
+      startDate: { $lte: startOfNextMonth },
+
+      // not ended before this month starts
+      $or: [
+        { endDate: { $exists: false } },
+        { endDate: null },
+        { endDate: { $gte: startOfMonth } },
+      ],
+    },
+  },
+  {
+    $group: {
+      _id: null,
+      total: { $sum: "$amount" },
+    },
+  },
+]);
+
 
     const fixedTotal = fixedResult[0]?.total || 0;
 
