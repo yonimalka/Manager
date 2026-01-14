@@ -18,6 +18,8 @@ const puppeteer = require('puppeteer');
 const archiver = require("archiver");
 const { ObjectId } = require("mongodb");
 const fetch = require("node-fetch");
+const IncomeReceipt = require('./models/IncomeReceipt.js');
+const { generateReceiptNumber } = require('./utils/generateReceiptNumber.js');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -521,6 +523,19 @@ if (projectId) {
   }
 });
 
+app.post("/incomeReceipt", authMiddleware, async (req, res) => {
+  try {
+    const receipt = await IncomeReceipt.create({
+      ...req.body,
+      userId: req.userId,
+      receiptNumber: generateReceiptNumber(),
+    });
+
+    res.json(receipt);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+})
 app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
@@ -591,7 +606,6 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     },
   },
 ]);
-
 
     const fixedTotal = fixedResult[0]?.total || 0;
 

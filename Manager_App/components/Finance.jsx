@@ -13,6 +13,7 @@ import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload } from "lucide-react-
 import { useNavigation } from "@react-navigation/native";
 import api from "../services/api";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
+import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -87,6 +88,20 @@ export default function FinanceFixedExpenses() {
   };
 
   const goToReceipts = () => navigation.navigate("Receipts");
+ 
+  async function submitReceipt(data) {
+  const res = await fetch("https://YOUR_API/api/receipts/income", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  const receipt = await res.json();
+  generateIncomeReceiptPDF(receipt);
+}
 
   // === CLAUDE iOS–STYLE UI ===
   return (
@@ -169,6 +184,7 @@ export default function FinanceFixedExpenses() {
           <Text style={styles.surfaceTitle}>Upload receipt</Text>
         </TouchableOpacity>
       </View>
+      <IncomeReceiptGenerator onSubmit={submitReceipt} />
     </View>
   );
 }

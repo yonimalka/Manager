@@ -1,0 +1,55 @@
+import mongoose from "mongoose";
+
+const IncomeReceiptSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: String,
+      ref: "User",
+      required: true,
+    },
+
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+    },
+
+    receiptNumber: {
+      type: String,
+      unique: true,
+      index: true,
+    },
+
+    amount: {
+      type: Number,
+      required: true,
+    },
+
+    currency: {
+      type: String,
+      default: "ILS",
+    },
+
+    payer: {
+      type: String,
+      required: true,
+    },
+
+    category: String,
+    notes: String,
+
+    imageUrl: String,
+
+    type: {
+      type: String,
+      default: "income",
+    },
+
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true }
+);
+
+export default mongoose.model("IncomeReceipt", IncomeReceiptSchema);
