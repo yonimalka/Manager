@@ -525,12 +525,15 @@ if (projectId) {
 
 app.post("/incomeReceipt", authMiddleware, async (req, res) => {
   try {
+    console.log(req.body);
+    
     const receipt = await IncomeReceipt.create({
       ...req.body,
       userId: req.userId,
       receiptNumber: generateReceiptNumber(),
     });
-
+    console.log(receipt);
+    
     res.json(receipt);
   } catch (err) {
     res.status(500).json({ error: err.message });
