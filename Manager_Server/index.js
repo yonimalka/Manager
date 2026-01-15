@@ -880,8 +880,6 @@ const projectMap = user.projects.reduce((acc, project) => {
     title: fe.title,
   },
   projectName: "Fixed Expense"
-    ? projectMap[fe.projectId.toString()] || "Unknown Project"
-    : "General",
 }));
 
     expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
