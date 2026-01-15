@@ -616,7 +616,8 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     },
   },
 ]);
-
+    console.log("fixedResults ",fixedResult);
+    
     const fixedTotal = fixedResult[0]?.total || 0;
 
     // 3️⃣ Combined
@@ -819,7 +820,22 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     } else {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
-    
+    const endDate = now;
+    const fixedExpenses = await FixedExpenseModel.find({
+  userId,
+  isActive: true,
+
+  // started before period ends
+  startDate: { $lte: endDate },
+
+  // not ended before period starts
+  $or: [
+    { endDate: { $exists: false } },
+    { endDate: null },
+    { endDate: { $gte: startDate } },
+  ],
+}).lean();
+
     const receipts = await ReceiptModel.find({ userId: req.userId });
     if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
     const user = await UserModel.findById(userId);
@@ -847,9 +863,28 @@ const projectMap = user.projects.reduce((acc, project) => {
     }))
     
 console.log(expenses);
-    
+    const fixedExpenseItems = fixedExpenses.map(fe => ({
+  payments: {
+    sumOfReceipt: fe.amount,
+    category: fe.category,
+    date: fe.startDate || startDate,
+    isFixed: true,
+    title: fe.title,
+  },
+  projectName: "Fixed Expense"
+    ? projectMap[fe.projectId.toString()] || "Unknown Project"
+    : "General",
+}));
+
     expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    res.json(expenses);
+   const combinedExpenses = [...expenses, ...fixedExpenseItems];
+
+// Sort by date (important for cash flow UI)
+combinedExpenses.sort(
+  (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
+);
+
+res.json(combinedExpenses);
   } catch (err) {
     console.error("Error fetching cash flow expenses:", err);
     res.status(500).json({ message: "Server error" });

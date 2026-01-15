@@ -14,7 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import api from "../services/api";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
 import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
-
+import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -90,13 +90,16 @@ export default function FinanceFixedExpenses() {
   const goToReceipts = () => navigation.navigate("Receipts");
  
   async function submitReceipt(data) {
-    const r = JSON.stringify(data);
-  const res = await api.post("/incomeReceipt", { r});
+   try {
+    const res = await api.post("/incomeReceipt", data); 
 
-  const receipt = await res.json();
-  console.log(receipt);
-  
-  generateIncomeReceiptPDF(receipt);
+    const receipt = await res.data;
+    console.log("Saved receipt:", receipt);
+
+    generateIncomeReceiptPDF(receipt);
+  } catch (err) {
+    console.error(err);
+  }
 }
 
   // === CLAUDE iOS–STYLE UI ===

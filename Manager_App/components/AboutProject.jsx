@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Image,
   Alert,
+  Modal,
   Dimensions,
   I18nManager,
   Platform,
@@ -29,6 +30,7 @@ import TasksInputModal from "./TasksInputModal";
 import MaterialsInputModal from "./MaterialsInputModal";
 import { generatePDF } from "./generatePdf";
 import { useAuth } from "./useAuth";
+import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
 
 const AboutProject = () => {
   const navigation = useNavigation();
@@ -44,7 +46,7 @@ const AboutProject = () => {
   const [showAll, setShowAll] = useState(false);
   const [toDoList, setToDoList] = useState([]);
   const [materialsArray, setMaterialsArray] = useState([]);
-  const [isTaskModalVisible, setTaskModalVisible] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
   const [itemValue, setItemValue] = useState("");
@@ -396,12 +398,54 @@ const AboutProject = () => {
   />
 </TouchableOpacity>
       </View>
+      <View style={{ flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      {/* Open modal */}
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        style={{
+          backgroundColor: "#10b981",
+          // padding: 14,
+          paddingVertical: 14,
+          borderRadius: 28,
+          margin: 16,
+          alignItems: "center",
+          justifyContent: "center",
+          alignSelf: "center",
+          marginBottom: 25,
+          paddingStart: 24,
+          paddingEnd: 24
+        }}
+      >
+        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 18, marginStart: 10, marginEnd: 10, }}>
+          New Income Receipt
+        </Text>
+      </TouchableOpacity>
 
-      {/* Upload Receipt Button */}
+      {/* Modal */}
+      <Modal
+  visible={visible}
+  animationType="fade"
+  transparent
+  onRequestClose={() => setVisible(false)}
+>
+  <View style={styles.backdrop}>
+    <View style={styles.modalCard}>
+      <IncomeReceiptGenerator
+        onSubmit={(data) => {
+          console.log(data);
+          setVisible(false);
+        }}
+        onClose={() => setVisible(false)}
+      />
+    </View>
+  </View>
+</Modal>
+{/* Upload Receipt Button */}
       <TouchableOpacity style={styles.uploadButton} onPress={addReceipts} activeOpacity={0.8}>
         <Ionicons name="cloud-upload-outline" size={22} color="#FFF" />
         <Text style={styles.uploadButtonText}>upload receipt</Text>
       </TouchableOpacity>
+    </View>
 
       {/* Receipts Gallery */}
       <View style={styles.section}>
@@ -515,7 +559,7 @@ const styles = StyleSheet.create({
   taskText: { color: "#222", textAlign: !isRTL ? "left" : "right" },
   checkedText: { textDecorationLine: "line-through", color: "#999", textAlign: !isRTL ? "left" : "right" },
   fabButton: { bottom: 0, marginTop: 10, backgroundColor: "#333", borderRadius: 28, width: 56, height: 56, justifyContent: "center", alignItems: "center", flexDirection: !isRTL ? "row" : "row-reverse", alignSelf: !isRTL ? "flex-end" : "flex-start" },
-  uploadButton: { backgroundColor: "#10b981", paddingVertical: 14, borderRadius: 28, flexDirection: !isRTL ? "row" : "row-reverse", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 25, paddingStart: 24, paddingEnd: 24 },
+  uploadButton: { backgroundColor: "#1a73e8", paddingVertical: 14, borderRadius: 28, flexDirection: !isRTL ? "row" : "row-reverse", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 25, paddingStart: 24, paddingEnd: 24 },
   uploadButtonText: { color: "#FFF", fontWeight: "700", fontSize: 18, marginStart: 10, marginEnd: 10, textAlign: !isRTL ? "left" : "right" },
   toggleText: { color: "#555", fontWeight: "700", fontSize: 16, textAlign: "center", marginBottom: 14 },
   receiptImage: { width: 140, height: 140, marginStart: !isRTL ? 16 : 0, marginEnd: isRTL ? 0 : 16, borderRadius: 14, backgroundColor: "#F0F0F0" },
@@ -580,7 +624,33 @@ addText: {
   fontSize: 16,
   fontWeight: "600",
 },
-  deleteText: { color: "#d32f2f", textAlign: !isRTL ? "right" : "left" },
+  deleteText: { color: "#d32f2f",
+  textAlign: !isRTL ? "right" : "left" 
+  },
+   backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",          
+    alignItems: "center",
+  },
+
+  modalCard: {
+    width: "92%",
+    maxHeight: "90%",
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+
+    // Shadow (iOS)
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+
+    // Shadow (Android)
+    elevation: 12,
+
+    overflow: "hidden", 
+  }
 });
 
 export default AboutProject;

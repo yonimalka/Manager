@@ -12,7 +12,7 @@ import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Upload, DollarSign, User, Tag, Calendar } from "lucide-react-native";
 
-export default function IncomeReceiptGenerator({ onSubmit }) {
+export default function IncomeReceiptGenerator({ onSubmit, onClose }) {
   const [amount, setAmount] = useState("");
   const [payer, setPayer] = useState("");
   const [category, setCategory] = useState("");
@@ -44,10 +44,16 @@ export default function IncomeReceiptGenerator({ onSubmit }) {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Income Receipt</Text>
+      <View style={styles.header}>
+  <Text style={styles.title}>Income Receipt</Text>
+
+  <TouchableOpacity onPress={onClose}>
+    <Text style={styles.close}>✕</Text>
+  </TouchableOpacity>
+</View>
 
       <Input icon={<DollarSign />} value={amount} onChange={setAmount} placeholder="Amount" />
-      <Input icon={<User />} value={payer} onChange={setPayer} placeholder="Received from" />
+      <Input icon={<User />} value={payer} onChange={setPayer} placeholder="Client's name" />
       <Input icon={<Tag />} value={category} onChange={setCategory} placeholder="Category" />
 
       {/* Currency */}
@@ -126,6 +132,17 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
+  header: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 16,
+},
+
+close: {
+  fontSize: 22,
+  color: "#9ca3af",
+},
 
   title: {
     fontSize: 20,
