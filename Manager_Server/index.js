@@ -821,27 +821,28 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     } else {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
-    const endDate = now;
-    const today = new Date();
-
+   
 const fixedExpenses = await FixedExpenseModel.find({
   userId,
   isActive: true,
-
-  // started in the past OR has no start date
-  $or: [
-    { startDate: { $exists: false } },
-    { startDate: null },
-    { startDate: { $lte: today } },
-  ],
-
-  // not ended yet
-  $or: [
-    { endDate: { $exists: false } },
-    { endDate: null },
-    { endDate: { $gte: today } },
-  ],
+  createdAt: { $lte: new Date() },
 }).lean();
+const today = new Date();
+const todayDay = today.getDate();
+
+const occurredFixedExpenses = fixedExpenses.filter(fe => {
+  if (fe.frequency === "monthly") {
+    // if dayOfMonth is not set, show it immediately
+    if (!fe.dayOfMonth) return true;
+
+    // show ONLY when its day has arrived
+    return todayDay >= fe.dayOfMonth;
+  }
+
+  // for now: weekly / yearly always included
+  return true;
+});
+
 const sample = await FixedExpenseModel.findOne({ userId });
 console.log(sample);
     const receipts = await ReceiptModel.find({ userId: req.userId });
@@ -871,15 +872,19 @@ const projectMap = user.projects.reduce((acc, project) => {
     }))
     
 // console.log(expenses);
-    const fixedExpenseItems = fixedExpenses.map(fe => ({
+    const fixedExpenseItems = occurredFixedExpenses.map(fe => ({
   payments: {
     sumOfReceipt: fe.amount,
-    category: fe.category,
-    date: fe.startDate || startDate,
+    category: fe.title,
+    date: new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      fe.dayOfMonth || todayDay
+    ),
     isFixed: true,
     title: fe.title,
   },
-  projectName: "Fixed Expense"
+  projectName: "Fixed Expense",
 }));
 
     expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
