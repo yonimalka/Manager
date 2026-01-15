@@ -616,8 +616,9 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     },
   },
 ]);
-    console.log("fixedResults ",fixedResult);
-    
+    // console.log("fixedResults ",fixedResult);
+    const sample = await FixedExpenseModel.findOne({ userId });
+    console.log(sample);
     const fixedTotal = fixedResult[0]?.total || 0;
 
     // 3️⃣ Combined
@@ -821,21 +822,28 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
     const endDate = now;
-    const fixedExpenses = await FixedExpenseModel.find({
+    const today = new Date();
+
+const fixedExpenses = await FixedExpenseModel.find({
   userId,
   isActive: true,
 
-  // started before period ends
-  startDate: { $lte: endDate },
+  // started in the past OR has no start date
+  $or: [
+    { startDate: { $exists: false } },
+    { startDate: null },
+    { startDate: { $lte: today } },
+  ],
 
-  // not ended before period starts
+  // not ended yet
   $or: [
     { endDate: { $exists: false } },
     { endDate: null },
-    { endDate: { $gte: startDate } },
+    { endDate: { $gte: today } },
   ],
 }).lean();
-
+const sample = await FixedExpenseModel.findOne({ userId });
+console.log(sample);
     const receipts = await ReceiptModel.find({ userId: req.userId });
     if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
     const user = await UserModel.findById(userId);
@@ -862,7 +870,7 @@ const projectMap = user.projects.reduce((acc, project) => {
   projectName: projectMap[receipt.projectId] || "Unknown Project",
     }))
     
-console.log(expenses);
+// console.log(expenses);
     const fixedExpenseItems = fixedExpenses.map(fe => ({
   payments: {
     sumOfReceipt: fe.amount,

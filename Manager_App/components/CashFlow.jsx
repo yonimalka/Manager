@@ -55,7 +55,7 @@ export default function CashFlow() {
 
       const inc = Array.isArray(incomeRes.data) ? incomeRes.data : [];
       const exp = Array.isArray(expenseRes.data) ? expenseRes.data : [];
-      // console.log("exp: ", expenseRes.data)
+      console.log("exp: ", expenseRes.data)
       // console.log("inc: ", inc);
       
       setIncomes(inc);
