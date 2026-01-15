@@ -597,16 +597,10 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     $match: {
       userId,
       isActive: true,
-
-      // started before this month ends
-      startDate: { $lte: startOfNextMonth },
-
-      // not ended before this month starts
-      $or: [
-        { endDate: { $exists: false } },
-        { endDate: null },
-        { endDate: { $gte: startOfMonth } },
-      ],
+      createdAt: {
+            $gte: startOfYear,
+            $lt: startOfNextYear,
+          },
     },
   },
   {
@@ -616,9 +610,6 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     },
   },
 ]);
-    // console.log("fixedResults ",fixedResult);
-    const sample = await FixedExpenseModel.findOne({ userId });
-    console.log(sample);
     const fixedTotal = fixedResult[0]?.total || 0;
 
     // 3️⃣ Combined

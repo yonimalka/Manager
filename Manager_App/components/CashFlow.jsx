@@ -270,7 +270,7 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
     </View>
 
     <View style={styles.summaryCard}>
-      {data.slice(0, 5).map((item, idx) => {
+      {data.slice(0, 8).map((item, idx) => {
         const amount = Number(item?.payments?.[amountKey]) || 0;
         return (
           <View key={idx} style={styles.transaction}>
