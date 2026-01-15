@@ -135,7 +135,7 @@ useEffect(() => {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.welcome}>welcome</Text>
+        <Text style={styles.welcome}>Hi {userName},</Text>
         <ValueProvider>
           {/* Summary Row */}
           <View style={styles.summaryRow}>
@@ -175,7 +175,7 @@ const isRTL = I18nManager.isRTL;
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f2f4f7" },
   container: { paddingTop: 30, paddingStart: 16, paddingEnd: 16, paddingBottom: 90 },
-  welcome: { fontSize: 26, fontWeight: "bold", textAlign: !isRTL ? "left" : "right", marginBottom: 37 },
+  welcome: { fontSize: 26, fontWeight: "700", textAlign: !isRTL ? "left" : "right", marginBottom: 37 },
   header: {
     // position: "absolute",
     flexDirection: "row-reverse",

@@ -360,7 +360,8 @@ app.get("/getUserDetails/:userId", async (req, res) => {
     const userDetails = {
       name: user.name,
       surname: user.surname,
-      email: user.email
+      email: user.email,
+      logo: user.logo,
     }
     res.json(userDetails)
    }).catch((err) =>{

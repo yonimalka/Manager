@@ -31,6 +31,7 @@ import MaterialsInputModal from "./MaterialsInputModal";
 import { generatePDF } from "./generatePdf";
 import { useAuth } from "./useAuth";
 import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
+import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 
 const AboutProject = () => {
   const navigation = useNavigation();
@@ -167,7 +168,20 @@ const AboutProject = () => {
   };
 
   const visibleReceipts = showAll ? receipts : receipts.slice(0, 6);
-
+  async function submitIncomeReceipt(data) {
+     try {
+      const res = await api.post("/incomeReceipt", data); 
+  
+      const receipt = await res.data;
+      console.log("Saved receipt:", receipt);
+      const response = await api.get(`/getUser`);
+      console.log(response.data);
+      
+      generateIncomeReceiptPDF(receipt);
+    } catch (err) {
+      console.error(err);
+    }
+  }
   const handleProjectDelete = async () => {
     Alert.alert(
       "Approve",
@@ -432,7 +446,7 @@ const AboutProject = () => {
     <View style={styles.modalCard}>
       <IncomeReceiptGenerator
         onSubmit={(data) => {
-          console.log(data);
+          submitIncomeReceipt(data)
           setVisible(false);
         }}
         onClose={() => setVisible(false)}
