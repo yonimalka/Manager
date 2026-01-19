@@ -269,8 +269,11 @@ app.get("/ping", (req, res) => res.send("pong"));
 app.post("/NewUser", async (req, res) => {
   try {
     const {name, businessName, businessId, address, logo, email, password} = req.body;
-  // console.log(name, surname, email, password);
-  if (UserModel.findOne({email})) {
+  console.log(email);
+  console.log("user validate ", UserModel.findOne({ email }));
+  
+  const validateUser = await UserModel.findOne({ email });
+  if (validateUser) {
     return res.status(402).json({ message: "user already exist" });
   }
   const hashedPassword = await bcrypt.hash(password, 10);
