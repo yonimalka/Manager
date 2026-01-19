@@ -80,7 +80,7 @@ export default function SignUp() {
         businessName: formData.businessName,
         businessId: formData.businessId,
         address: formData.address,
-        businessLogo: formData.businessLogo,
+        logo: formData.businessLogo,
       });
       Alert.alert("Success", "Account created successfully");
     } catch {
