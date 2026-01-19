@@ -252,7 +252,7 @@ const createNewUser = async () =>{
     console.error("Error creating user with projects:", error.message);
   }
 }
-createNewUser();
+// createNewUser();
 
 const generateAccessToken = (user) => {
   return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "7d" });
@@ -270,7 +270,7 @@ app.post("/NewUser", async (req, res) => {
   try {
     const {name, businessName, businessId, address, logo, email, password} = req.body;
   // console.log(name, surname, email, password);
-  if (UserModel.find({email: email})) {
+  if (UserModel.findOne({email})) {
     return res.status(402).json({ message: "user already exist" });
   }
   const hashedPassword = await bcrypt.hash(password, 10);
