@@ -267,7 +267,8 @@ const upload = multer({ storage });
 app.get("/ping", (req, res) => res.send("pong"));
 
 app.post("/NewUser", async (req, res) => {
-  const {name, businessName, businessId, address, logo, email, password} = req.body;
+  try {
+    const {name, businessName, businessId, address, logo, email, password} = req.body;
   // console.log(name, surname, email, password);
   if (UserModel.find({email: email})) {
     return res.status(401).json({ message: "user already exist" });
@@ -285,8 +286,16 @@ app.post("/NewUser", async (req, res) => {
     logo,
   });
   console.log(user);
+  await user.save()
+  const token = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+  res.status(200).json({ token, refreshToken });
+
+  } catch(err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
   
-  user.save()
 })
 
 app.post("/SignInDetails", async (req, res) => {
