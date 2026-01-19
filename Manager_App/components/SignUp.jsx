@@ -11,6 +11,7 @@ import {
   StyleSheet,
   I18nManager,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import { SERVER_URL } from "@env";
@@ -86,7 +87,23 @@ export default function SignUp() {
       Alert.alert("Error", "Failed to create account");
     }
   };
-
+  const pickImage = async () => {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission required");
+        return;
+      }
+  
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+      });
+  
+      if (!res.canceled) {
+        setFormData({...formData, businessLogo: res.assets[0].uri});
+        // uploadLogo(); // keep your existing upload logic
+      }
+    };
   return (
   <KeyboardAvoidingView
   style={{ flex: 1 }}
@@ -206,7 +223,7 @@ export default function SignUp() {
                 }
                 />
               </Input>
-              <TouchableOpacity style={styles.upload}>
+              <TouchableOpacity style={styles.upload} onPress={pickImage}>
                 <Icon name="cloud-upload-outline" size={20} />
                 <Text style={styles.uploadText}>Upload logo</Text>
               </TouchableOpacity>

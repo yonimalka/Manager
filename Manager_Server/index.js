@@ -268,7 +268,7 @@ app.get("/ping", (req, res) => res.send("pong"));
 
 app.post("/NewUser", async (req, res) => {
   const {name, businessName, businessId, address, logo, email, password} = req.body;
-  console.log(name, surname, email, password);
+  // console.log(name, surname, email, password);
   
   const hashedPassword = await bcrypt.hash(password, 10);
   const user = new UserModel({
@@ -282,6 +282,8 @@ app.post("/NewUser", async (req, res) => {
     totalIncomes: 0,
     logo,
   });
+  console.log(user);
+  
   user.save()
 })
 
