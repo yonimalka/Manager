@@ -217,7 +217,8 @@ const ProjectSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
   name: String,
   businessName: String,
-  id: Number,
+  address: String,
+  businessId: Number,
   email: String,
   logo: String,
   password: { type: String, default: null },
@@ -266,17 +267,20 @@ const upload = multer({ storage });
 app.get("/ping", (req, res) => res.send("pong"));
 
 app.post("/NewUser", async (req, res) => {
-  const {name, surname, email, password} = req.body;
+  const {name, businessName, businessId, address, logo, email, password} = req.body;
   console.log(name, surname, email, password);
   
   const hashedPassword = await bcrypt.hash(password, 10);
   const user = new UserModel({
-    name: name,
-    surname: surname,
-    email: email,
+    name,
+    businessName,
+    businessId,
+    address,
+    email,
     password: hashedPassword,
     totalExpenses: 0,
     totalIncomes: 0,
+    logo,
   });
   user.save()
 })
@@ -836,12 +840,12 @@ const occurredFixedExpenses = fixedExpenses.filter(fe => {
 });
 
 const sample = await FixedExpenseModel.findOne({ userId });
-console.log(sample);
+// console.log(sample);
     const receipts = await ReceiptModel.find({ userId: req.userId });
     if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
     const user = await UserModel.findById(userId);
     // if (!user) return res.status(404).json({ message: "User not found" });
-    console.log("receipts ", receipts)
+    // console.log("receipts ", receipts)
 // Get all unique projectIds from receipts
 const projectIds = [...new Set((receipts || []).map(r => r.projectId))];
 console.log("projectIds ", projectIds);
@@ -860,7 +864,7 @@ const projectMap = user.projects.reduce((acc, project) => {
     category: receipt.category,
     date: receipt.createdAt,
   },
-  projectName: projectMap[receipt.projectId] || "Unknown Project",
+  projectName: projectMap[receipt.projectId] || "General",
     }))
     
 // console.log(expenses);

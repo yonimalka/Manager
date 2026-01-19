@@ -20,7 +20,7 @@ import { Camera, Image as ImageIcon, X, Upload, Check } from "lucide-react-nativ
 
 const isRTL = I18nManager.isRTL;
 
-export default function Receipts() {
+export default function Receipts({ onClose }) {
   const navigation = useNavigation();
   const route = useRoute();
   const projectId = route.params?.projectId;
@@ -83,8 +83,6 @@ export default function Receipts() {
         `receipts/${userId}/${projectId}/${Date.now()}.jpg`
         )
       
-     
-
       const uploadTask = uploadBytesResumable(fileRef, blob);
       uploadTask.on(
         "state_changed",
@@ -109,17 +107,24 @@ export default function Receipts() {
         }
       );
     } finally {
-      navigation.goBack();
+      onClose();
       setLoading(false);
     }
   };
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.header}>Upload Receipt</Text>
-      <Text style={styles.subHeader}>
-        Capture or upload your receipt
-      </Text>
+    <View style={styles.headerRow}>
+  <Text style={styles.title}>Upload Receipt</Text>
+
+  <TouchableOpacity onPress={onClose}>
+    <Text style={styles.close}>✕</Text>
+  </TouchableOpacity>
+</View>
+
+<Text style={styles.subHeader}>
+  Capture or upload your receipt
+</Text>
 
       {/* Card */}
       <View style={styles.card}>
@@ -216,13 +221,28 @@ export default function Receipts() {
 
 const styles = StyleSheet.create({
   screen: {
-    flex: 1,
-    backgroundColor: "#F5F6F8",
-    padding: 20,
-    paddingTop: 50,
+  backgroundColor: "#ffffff",
+  borderRadius: 20,
+  padding: 26,
+  elevation: 4,
+  shadowColor: "#000",
+  shadowOpacity: 0.1,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 4 },
+},
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 4,
   },
-  header: {
-    fontSize: 32,
+  close: {
+  fontSize: 22,
+  color: "#9ca3af",
+},
+  title: {
+    fontSize: 22,
     fontWeight: "700",
     marginBottom: 4,
   },
@@ -330,4 +350,37 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: "#6B7280",
   },
+  modalBackdrop: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.4)",
+  justifyContent: "flex-end",
+},
+
+modalContainer: {
+  backgroundColor: "#F5F6F8",
+  borderTopLeftRadius: 26,
+  borderTopRightRadius: 26,
+  paddingBottom: 30,
+  maxHeight: "92%",
+
+  shadowColor: "#000",
+  shadowOpacity: 0.2,
+  shadowRadius: 30,
+  elevation: 20,
+},
+
+closeButton: {
+  position: "absolute",
+  top: 36,
+  right: 16,
+  zIndex: 10,
+  backgroundColor: "#fff",
+  borderRadius: 20,
+  padding: 6,
+  shadowColor: "#000",
+  shadowOpacity: 0.1,
+  shadowRadius: 6,
+  elevation: 4,
+},
+
 });

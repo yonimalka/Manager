@@ -2,199 +2,239 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  FlatList,
+  TextInput,
   TouchableOpacity,
-  Image,
-  ScrollView,
   StyleSheet,
+  Image,
   I18nManager,
+  Alert,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import axios from "axios";
-import { SERVER_URL } from "@env";
-import api from "../services/api";
-// import Constants from 'expo-constants';
 import * as ImagePicker from "expo-image-picker";
+import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "./useAuth";
-import MaterialsInputModal from "./MaterialsInputModal";
-import TaskInputModal from "./TasksInputModal";
-import { Ionicons } from "@expo/vector-icons";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage, auth, signInFirebase } from "./firebase";
-// const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
-
-const ProfileDetails = () => {
-   const navigation = useNavigation();
-     const route = useRoute();
-    //  const userId = route.params?.userId;
-    const { userId } = useAuth();
-    const [userDetails, setUserDetails] = useState([]);
-    const [image, setImage] = useState(null);
-    useEffect(() =>{
-     fetchData();
-    //  console.log("user Details:", userDetails);
-    }, [userId])
-
-    const fetchData = async () =>{
-      try {
-      const response = await api.get(`/getUserDetails/${userId}`);
-      setUserDetails(response.data);
-      // console.log("response:", response.data);
-      
-      } catch (error){
-        console.error("Error occurred: " + error);
-      }
-    }
-    const pickImage = async (fromCamera = false) => {
-      try {
-        // Request permission
-        const permission = fromCamera
-          ? await ImagePicker.requestCameraPermissionsAsync()
-          : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-        if (!permission.granted) {
-          Alert.alert(
-            "Permission denied",
-            "You need to allow access to your camera or gallery."
-          );
-          return;
-        }
-    
-        const result = fromCamera
-          ? await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images, 
-              quality: 0.7,
-            })
-          : await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              quality: 0.7,
-            });
-    
-        if (!result.canceled) {
-          setImage(result.assets[0].uri);
-        }
-        uploadLogo();
-      } catch (err) {
-        console.error("ImagePicker error:", err);
-        Alert.alert("Error", "Could not open camera/gallery");
-      }
-    };
-
-    const uploadLogo = async () => {
-     try {
-         // Sign in if not authenticated
-      if (!auth.currentUser) {
-        await signInFirebase();
-      }
-
-      // Convert image to blob
-      const response = await fetch(image);
-      const blob = await response.blob();
-
-      // Create unique storage path
-      const filePath = `/logos/${userId}/logo.jpg`;
-      const fileRef = ref(storage, filePath);
-
-      // Upload with progress
-      const uploadTask = uploadBytesResumable(fileRef, blob);
-      uploadTask.on(
-        "state_changed",
-        snapshot => {
-          const prog = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setProgress(Math.round(prog));
-        },
-        error => {
-          console.error("Firebase Storage upload error:", error);
-          Alert.alert("Upload error", error.message);
-          setLoading(false);
-        },
-        async () => {
-          const downloadURL = await getDownloadURL(fileRef);
-          // console.log("File uploaded to:", filePath);
-          // console.log("Download URL:", downloadURL);
-
-          await api.post("/uploadLogo", {
-            imageUrl: downloadURL,
-          });
-
-          Alert.alert("Success", "Logo uploaded successfully!");
-          navigation.goBack();
-        }
-      );
-    } catch (err) {
-      console.error("Upload exception:", err);
-      Alert.alert("Error", "Upload failed: " + (err.message || err.code));
-    } finally {
-      setLoading(false);
-    }
-   };
-    const handleDelete = async () => {
-      navigation.navigate("LoginScreen")
-      const res = await api.delete(`/deleteUser/${userId}`)
-      console.log(res.data);
-      
-    
-    }
-    
-    return (
-       <View style={styles.container}>
-        <Text style={styles.headTitle}>איזור אישי</Text>
-        <Text style={styles.card}>שם פרטי: {userDetails ? userDetails.name : null}</Text> 
-        <Text style={styles.card}>שם משפחה: {userDetails ? userDetails.surname : null}</Text>
-        <Text style={styles.card}>אימייל: {userDetails ? userDetails.email : null}</Text>
-        <TouchableOpacity style={styles.card} onPress={() => pickImage(false)}>
-                   <Text>הוסף לוגו</Text>
-                 </TouchableOpacity>
-        <TouchableOpacity
-         style={styles.actionButton}
-         onPress={handleDelete}
-         >
-         <Text style={styles.deleteText}>מחק חשבון</Text></TouchableOpacity>
-       </View>
-    )
-}
+import api from "../services/api";
+import { Camera, Trash2 } from "lucide-react-native";
 
 const isRTL = I18nManager.isRTL;
 
+export default function ProfileDetails() {
+  const navigation = useNavigation();
+  const { userId } = useAuth();
+
+  const [userDetails, setUserDetails] = useState({});
+  const [image, setImage] = useState(null);
+  const [address, setAddress] = useState("");
+
+  useEffect(() => {
+    fetchData();
+  }, [userId]);
+
+  const fetchData = async () => {
+    try {
+      const res = await api.get(`/getUserDetails/${userId}`);
+      setUserDetails(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission required");
+      return;
+    }
+
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+    });
+
+    if (!res.canceled) {
+      setImage(res.assets[0].uri);
+      // uploadLogo(); // keep your existing upload logic
+    }
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      "Delete Account",
+      "This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await api.delete(`/deleteUser/${userId}`);
+            navigation.navigate("LoginScreen");
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Profile</Text>
+
+      {/* Avatar / Logo */}
+      <View style={styles.avatarWrapper}>
+        {image ? (
+          <Image source={{ uri: image }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarText}>
+              {userDetails?.name?.[0] || "U"}
+            </Text>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
+          <Camera size={18} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Info Card */}
+      <View style={styles.card}>
+        <Label title="Name" />
+        <TextInput
+          value={userDetails.name}
+          style={styles.input}
+          placeholder="Your name"
+        />
+
+        <Label title="Business Name" />
+        <TextInput
+          value={userDetails.surname}
+          style={styles.input}
+          placeholder="Business name"
+        />
+        <View style={styles.field}>
+  <Text style={styles.label}>Address</Text>
+  <TextInput
+    value={address}
+    onChangeText={setAddress}
+    placeholder="Street, City, Postcode"
+    placeholderTextColor="#9CA3AF"
+    style={styles.input}
+    multiline
+  />
+</View>
+
+        <Label title="Email" />
+        <TextInput
+          value={userDetails.email}
+          style={[styles.input, styles.disabled]}
+          editable={false}
+        />
+      </View>
+
+      {/* Actions */}
+      <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+        <Trash2 size={18} color="#dc2626" />
+        <Text style={styles.deleteText}>Delete Account</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const Label = ({ title }) => (
+  <Text style={styles.label}>{title}</Text>
+);
+
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 70,
-    paddingBottom: 700,
-    padding: 16,
-    backgroundColor: "#f9f9f9",
+    flex: 1,
+    backgroundColor: "#F5F6F8",
+    padding: 20,
+    paddingTop: 60,
   },
-  headTitle: {
-    fontSize: 26,
-    fontWeight: "bold",
-    textAlign: isRTL ? "left" : "right",
-    marginBottom: 20,
+
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 24,
   },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    textAlign: isRTL ? "left" : "right",
-    padding: 16,
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  actionButton: {
-    backgroundColor: "#fff0f0",
-    padding: 14,
-    borderRadius: 12,
+
+  avatarWrapper: {
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.10,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 2,
+    marginBottom: 24,
   },
+
+  avatar: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+  },
+
+  avatarPlaceholder: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  avatarText: {
+    fontSize: 36,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+
+  cameraBtn: {
+    position: "absolute",
+    bottom: 0,
+    right: "35%",
+    backgroundColor: "#2563EB",
+    padding: 10,
+    borderRadius: 20,
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
+    marginBottom: 30,
+  },
+
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 6,
+  },
+
+  input: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    fontSize: 15,
+  },
+
+  disabled: {
+    opacity: 0.6,
+  },
+
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#FEE2E2",
+  },
+
   deleteText: {
-    color: "#d32f2f",
-    textAlign: isRTL ? "right" : "left",
-  }
+    color: "#dc2626",
+    fontWeight: "600",
+  },
 });
-export default ProfileDetails;
+

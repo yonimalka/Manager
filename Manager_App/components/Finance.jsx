@@ -8,11 +8,13 @@ import {
   Platform,
   UIManager,
   StyleSheet,
+  Modal,
 } from "react-native";
-import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload } from "lucide-react-native";
+import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload, BanknoteArrowUp } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import api from "../services/api";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
+import Receipts from "./Receipts";
 import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -34,7 +36,8 @@ export default function FinanceFixedExpenses() {
   const [dayOfMonth, setDayOfMonth] = useState("");
   const [dayOfWeek, setDayOfWeek] = useState(null);
   const [month, setMonth] = useState(null);
-
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [visible, setVisible] = useState(false);
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(!expanded);
@@ -89,29 +92,31 @@ export default function FinanceFixedExpenses() {
 
   const goToReceipts = () => navigation.navigate("Receipts");
  
-  async function submitReceipt(data) {
-   try {
-    const res = await api.post("/incomeReceipt", data); 
-
-    const receipt = await res.data;
-    console.log("Saved receipt:", receipt);
-
-    generateIncomeReceiptPDF(receipt);
-  } catch (err) {
-    console.error(err);
+  const submitIncomeReceipt = async (data) => {
+     try {
+      const res = await api.post("/incomeReceipt", data); 
+  
+      const receipt = await res.data;
+      console.log("Saved receipt:", receipt);
+      const response = await api.get(`/getUserDetails/${userId}`);
+      console.log(response.data);
+      const userDetails = response.data;
+      generateIncomeReceiptPDF(receipt, userDetails);
+    } catch (err) {
+      console.error(err);
+    }
   }
-}
 
-  // === CLAUDE iOS–STYLE UI ===
   return (
     <View style={styles.screen}>
-      <Text style={styles.sectionTitle}>Finance</Text>
-      <Text style={styles.sectionSubtitle}>Manage recurring expenses and receipts</Text>
-
+      <Text style={styles.headerTitle}>Finance</Text>
+      <Text style={styles.headerSubtitle}>Manage recurring expenses and receipts</Text>
+      
+      <Text style={styles.sectionTitle}>Expenses</Text>
       <View style={styles.surface}>
         <TouchableOpacity style={styles.surfaceHeader} onPress={toggleExpand} activeOpacity={0.7}>
           <View style={styles.headerLeft}>
-            <Repeat size={18} color="#0A7AFF" />
+            <Repeat size={18} color="#000" />
             <Text style={styles.surfaceTitle}>Fixed expense</Text>
           </View>
           {expanded ? <ChevronUp /> : <ChevronDown />}
@@ -176,24 +181,80 @@ export default function FinanceFixedExpenses() {
 
       {/* Receipts */}
       <ReceiptDownloadByDate />
-
+      
       <View style={styles.surface}>
-        <TouchableOpacity style={styles.inlineAction} onPress={goToReceipts} activeOpacity={0.7}>
-          <CloudUpload size={18} color="#0A7AFF" />
-          <Text style={styles.surfaceTitle}>Upload receipt</Text>
+        <TouchableOpacity
+          style={styles.inlineAction}
+          activeOpacity={0.7}
+          onPress={() => setReceiptModalVisible(true)}
+        >
+         <CloudUpload size={18} color="#000" />
+         <Text style={styles.surfaceTitle}>Upload receipt</Text>
         </TouchableOpacity>
       </View>
-      <IncomeReceiptGenerator onSubmit={submitReceipt} />
+      <Modal
+  visible={receiptModalVisible}
+  transparent
+  animationType="fade"
+  statusBarTranslucent
+>
+  {/* Background overlay */}
+  <View style={styles.backdrop}>
+    {/* Modal card */}
+    <View style={styles.modalCard}>
+      <Receipts onClose={() => setReceiptModalVisible(false)} />
     </View>
+  </View>
+</Modal>
+     
+     <Text style={styles.sectionTitle}>Incomes</Text>
+      <View style={styles.surface}>
+            {/* Open modal */}
+            <TouchableOpacity
+              onPress={() => setVisible(true)}
+              style={styles.inlineAction}
+            >
+            <BanknoteArrowUp/>
+              <Text style={styles.surfaceTitle}>
+                New Income Receipt
+              </Text>
+            </TouchableOpacity>
+      
+            {/* Modal */}
+            <Modal
+        visible={visible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setVisible(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.modalCard}>
+            <IncomeReceiptGenerator
+              onSubmit={(data) => {
+                submitIncomeReceipt(data)
+                setVisible(false);
+              }}
+              onClose={() => setVisible(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {flex: 1, padding: 20, paddingTop: 50, backgroundColor: "#F9FAFB", },
 
-  sectionTitle: { fontSize: 28, fontWeight: "600", color: "#111827", marginBottom: 10, },
-  sectionSubtitle: { fontSize: 14, color: "#6B7280", marginBottom: 22 },
-
+  headerTitle: { fontSize: 28, fontWeight: "600", color: "#111827", marginBottom: 10, },
+  headerSubtitle: { fontSize: 14, color: "#6B7280", marginBottom: 12 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "500",
+    marginBottom: 10,
+    marginTop: 10,
+  },
   surface: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
@@ -247,4 +308,28 @@ const styles = StyleSheet.create({
 
   inlineAction: { flexDirection: "row", alignItems: "center", gap: 10 },
   inlineActionText: { fontSize: 15, fontWeight: "500", color: "#111827" },
+   backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",          
+    alignItems: "center",
+  },
+
+  modalCard: {
+    width: "92%",
+    maxHeight: "90%",
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+
+    // Shadow (iOS)
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+
+    // Shadow (Android)
+    elevation: 12,
+
+    overflow: "hidden", 
+  },
 });

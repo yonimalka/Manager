@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,236 +10,342 @@ import {
   Alert,
   StyleSheet,
   I18nManager,
-} from 'react-native';
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import axios from 'axios';
-import { SERVER_URL } from '@env';
-import Icon from 'react-native-vector-icons/Ionicons';
-// import { Eye, EyeOff, ChevronRight, ChevronLeft, Upload } from 'lucide-react-native';
+import axios from "axios";
+import { SERVER_URL } from "@env";
+import Icon from "react-native-vector-icons/Ionicons";
 
+const Input = ({ label, error, children }) => (
+  <View style={styles.field}>
+    <Text style={styles.label}>{label}</Text>
+    {children}
+    {error && <Text style={styles.error}>{error}</Text>}
+  </View>
+);
 export default function SignUp() {
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    businessName: '',
-    businessId: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    businessName: "",
+    businessId: "",
+    address: "",
     businessLogo: null,
   });
 
   const [errors, setErrors] = useState({});
 
-  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validateEmail = (email) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const validateStep1 = () => {
-    const newErrors = {};
-    let valid = true;
-    if (!formData.firstName.trim()) { newErrors.firstName = 'First name required'; valid = false; }
-    if (!formData.lastName.trim()) { newErrors.lastName = 'Last name required'; valid = false; }
-    if (!formData.email.trim()) { newErrors.email = 'Email required'; valid = false; }
-    else if (!validateEmail(formData.email)) { newErrors.email = 'Invalid email'; valid = false; }
-    if (!formData.password.trim()) { newErrors.password = 'Password required'; valid = false; }
-    else if (formData.password.length < 8) { newErrors.password = 'At least 8 characters'; valid = false; }
+    
+    const e = {};
+    if (!formData.firstName) e.firstName = "Required";
+    if (!formData.lastName) e.lastName = "Required";
+    if (!formData.email) e.email = "Required";
+    else if (!validateEmail(formData.email)) e.email = "Invalid email";
+    if (!formData.password) e.password = "Required";
+    else if (formData.password.length < 8)
+      e.password = "Minimum 8 characters";
 
-    setErrors(newErrors);
-    return valid;
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const validateStep2 = () => {
-    const newErrors= {};
-    let valid = true;
-    if (!formData.businessName.trim()) { newErrors.businessName = 'Business name required'; valid = false; }
-    if (!formData.businessId.trim()) { newErrors.businessId = 'Business ID required'; valid = false; }
-
-    setErrors(newErrors);
-    return valid;
+    const e = {};
+    if (!formData.businessName) e.businessName = "Required";
+    if (!formData.businessId) e.businessId = "Required";
+    if (!formData.address) e.address = "Required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
-
-  const handleNext = () => {
-    if (validateStep1()) setStep(2);
-  };
-
-  const handleBack = () => setStep(1);
 
   const handleSignUp = async () => {
-    if (validateStep2()) {
-      try {
-        await axios.post(`${SERVER_URL}/NewUser`, {
-          name: formData.firstName,
-          surname: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          businessName: formData.businessName,
-          businessId: formData.businessId,
-        });
-        Alert.alert('Success', 'Account created successfully!');
-      } catch (err) {
-        Alert.alert('Error', 'Failed to create account');
-      }
+    if (!validateStep2()) return;
+
+    try {
+      await axios.post(`${SERVER_URL}/NewUser`, {
+        name: formData.firstName,
+        surname: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        businessName: formData.businessName,
+        businessId: formData.businessId,
+        address: formData.address,
+        businessLogo: formData.businessLogo,
+      });
+      Alert.alert("Success", "Account created successfully");
+    } catch {
+      Alert.alert("Error", "Failed to create account");
     }
   };
 
-  const handleUploadLogo = () => {
-    Alert.alert('Upload', 'Upload logo functionality');
-  };
-
-  const renderStep1 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Personal Information</Text>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>First Name</Text>
-        <TextInput
-          style={[styles.input, errors.firstName && styles.inputError, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
-          placeholder="First Name"
-          value={formData.firstName}
-          onChangeText={(text) => setFormData({ ...formData, firstName: text })}
-        />
-        {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Last Name</Text>
-        <TextInput
-          style={[styles.input, errors.lastName && styles.inputError, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
-          placeholder="Last Name"
-          value={formData.lastName}
-          onChangeText={(text) => setFormData({ ...formData, lastName: text })}
-        />
-        {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={[styles.input, errors.email && styles.inputError, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
-          placeholder="Email"
-          value={formData.email}
-          onChangeText={(text) => setFormData({ ...formData, email: text })}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordWrapper}>
-          <TextInput
-            style={[styles.input, errors.password && styles.inputError, { flex: 1, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
-            placeholder="Password"
-            value={formData.password}
-            onChangeText={(text) => setFormData({ ...formData, password: text })}
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-             <Icon name={showPassword ? "eye-off" : "eye"} size={20} />
-          </TouchableOpacity>
-        </View>
-        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-      </View>
-      <LinearGradient
-          colors={["#60a5fa", "#3b82f6", "#1e40af"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.nextButton}
-          >
-         <TouchableOpacity  onPress={handleNext}>
-          {/* <Text style={styles.nextButtonText}>Next</Text> */}
-          <Icon name="chevron-forward" position={"static"} alignSelf={"center"} color={"#fff"} size={40} />
-         </TouchableOpacity>
-          </LinearGradient>
-      
-    </View>
-  );
-
-  const renderStep2 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Business Information</Text>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Business Name</Text>
-        <TextInput
-          style={[styles.input, errors.businessName && styles.inputError, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
-          placeholder="Business Name"
-          value={formData.businessName}
-          onChangeText={(text) => setFormData({ ...formData, businessName: text })}
-        />
-        {errors.businessName && <Text style={styles.errorText}>{errors.businessName}</Text>}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Business ID</Text>
-        <TextInput
-          style={[styles.input, errors.businessId && styles.inputError, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
-          placeholder="Business ID"
-          value={formData.businessId}
-          onChangeText={(text) => setFormData({ ...formData, businessId: text })}
-        />
-        {errors.businessId && <Text style={styles.errorText}>{errors.businessId}</Text>}
-      </View>
-
-      <TouchableOpacity style={styles.uploadButton} onPress={handleUploadLogo}>
-        <Icon name="cloud-upload-outline" size={20} />
-        <Text>Upload Logo</Text>
-      </TouchableOpacity>
-
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Icon name="chevron-back" color={"#fff"} size={20} />
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-          <Text style={styles.signUpButtonText}>Sign Up</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <View style={styles.progressContainer}>
-          <View style={[styles.dot, step === 1 && styles.activeDot]} />
-          <View style={[styles.dot, step === 2 && styles.activeDot]} />
-          {/* <Text style={{ textAlign: I18nManager.isRTL ? 'right' : 'left' }}>Step {step} of 2</Text> */}
+  <KeyboardAvoidingView
+  style={{ flex: 1 }}
+  behavior={Platform.OS === "ios" ? "padding" : undefined}
+  keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+>
+  <ScrollView
+    keyboardShouldPersistTaps="handled"
+    contentContainerStyle={styles.scrollContainer}
+  >
+  <View style={styles.content}>
+        {/* Progress */}
+        <View style={styles.progress}>
+          <View style={[styles.dot, step === 1 && styles.dotActive]} />
+          <View style={[styles.dot, step === 2 && styles.dotActive]} />
         </View>
 
-        {step === 1 ? renderStep1() : renderStep2()}
+        {/* Card */}
+        <View style={styles.card}>
+          {step === 1 ? (
+            <>
+              <Text style={styles.title}>Create your account</Text>
+
+              <Input label="First Name" error={errors.firstName}>
+                <TextInput
+                  style={styles.input}
+                  value={formData.firstName}
+                  onChangeText={(t) =>
+                    setFormData({ ...formData, firstName: t })
+                  }
+                />
+              </Input>
+
+              <Input label="Last Name" error={errors.lastName}>
+                <TextInput
+                  style={styles.input}
+                  value={formData.lastName}
+                  onChangeText={(t) =>
+                    setFormData({ ...formData, lastName: t })
+                  }
+                />
+              </Input>
+
+              <Input label="Email" error={errors.email}>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={formData.email}
+                  onChangeText={(t) =>
+                    setFormData({ ...formData, email: t })
+                  }
+                />
+              </Input>
+
+              <Input label="Password" error={errors.password}>
+                <View style={styles.password}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    secureTextEntry={!showPassword}
+                    value={formData.password}
+                    onChangeText={(t) =>
+                      setFormData({ ...formData, password: t })
+                    }
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Icon
+                      name={showPassword ? "eye-off" : "eye"}
+                      size={20}
+                      color="#6B7280"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </Input>
+
+              <LinearGradient
+                colors={["#3B82F6", "#1D4ED8"]}
+                style={styles.primaryBtn}
+              >
+                <TouchableOpacity onPress={() => validateStep1() && setStep(2)}>
+                  <Text style={styles.primaryText}>Continue</Text>
+                </TouchableOpacity>
+              </LinearGradient>
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>Business details</Text>
+
+              <Input label="Business Name" error={errors.businessName}>
+                <TextInput
+                  style={styles.input}
+                  value={formData.businessName}
+                  onChangeText={(t) =>
+                    setFormData({ ...formData, businessName: t })
+                  }
+                />
+              </Input>
+
+              <Input label="Business ID" error={errors.businessId}>
+                <TextInput
+                  style={styles.input}
+                  value={formData.businessId}
+                  onChangeText={(t) =>
+                    setFormData({ ...formData, businessId: t })
+                  }
+                />
+              </Input>
+              <Input label="Address" error={errors.address}>
+                <TextInput
+                style={styles.input}
+                placeholder="Street, City, Postcode"
+                value={formData.address}
+                onChangeText={(t)=>
+                  setFormData({...formData, address: t})
+                }
+                />
+              </Input>
+              <TouchableOpacity style={styles.upload}>
+                <Icon name="cloud-upload-outline" size={20} />
+                <Text style={styles.uploadText}>Upload logo</Text>
+              </TouchableOpacity>
+
+              <View style={styles.row}>
+                <TouchableOpacity
+                  style={styles.secondaryBtn}
+                  onPress={() => setStep(1)}
+                >
+                  <Text>Back</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.primarySolid}
+                  onPress={handleSignUp}
+                >
+                  <Text style={styles.primaryText}>Create account</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+       </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', top: 40, padding: 26 },
-  scrollContainer: { paddingBottom: 40 },
-  progressContainer: { flexDirection:"row", justifyContent: "center", marginBottom: 16, alignItems: 'center' },
-  dot: { width: 12, height: 12, borderRadius: 4, backgroundColor: '#ccc', marginHorizontal: 4 },
-  activeDot: { backgroundColor: 'blue' },
-  stepContainer: { marginBottom: 24 },
-  stepTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 22, marginTop: 30 },
-  inputGroup: { marginBottom: 22 },
-  label: { marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 8, backgroundColor: 'white' },
-  inputError: { borderColor: 'red' },
-  errorText: { color: 'red', marginTop: 4 },
-  passwordWrapper: { flexDirection: 'row', alignItems: 'center' },
-  eyeIcon: { padding: 8 },
-  nextButton: { flexDirection: 'row', position: "absolute", alignSelf: "flex-end", backgroundColor: 'blue', width: 70, height: 70, borderRadius: 12, justifyContent: 'center', alignItems: 'center', bottom: -330,},
-  nextButtonText: { color: '#fff', fontWeight: 'bold', marginRight: 6 },
-  uploadButton: { flexDirection: 'row', borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center',},
-  buttonRow: { flexDirection: 'row', marginTop: 12 },
-  backButton: { flex: 1, flexDirection: 'row', borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 6 },
-  backButtonText: { marginLeft: 6 },
-  signUpButton: { flex: 1, backgroundColor: 'blue', padding: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  signUpButtonText: { color: '#fff', fontWeight: 'bold' },
+  container: { flex: 1, backgroundColor: "#F3F4F6" },
+  scroll: { padding: 24 },
+  scrollContainer: {
+  flexGrow: 1,
+  justifyContent: "center",  
+  alignItems: "center",       
+  paddingHorizontal: 24,
+  
+},
+
+content: {
+  width: "100%",
+  maxWidth: 420,
+},
+
+  progress: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#CBD5E1",
+    marginHorizontal: 4,
+  },
+  dotActive: { backgroundColor: "#2563EB" },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    // marginVertical: 30,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 6,
+    
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 50,
+    color: "#111827",
+  },
+
+  field: { marginBottom: 14 },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 6,
+    color: "#374151",
+  },
+
+  input: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 0.5,
+    borderColor: "#E5E7EB",
+  },
+
+  password: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  error: { color: "#DC2626", fontSize: 12, marginTop: 4 },
+
+  primaryBtn: {
+    marginTop: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    padding: 14,
+  },
+
+  primarySolid: {
+    flex: 1,
+    backgroundColor: "#2563EB",
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+  },
+
+  primaryText: { color: "#fff", fontWeight: "700" },
+
+  upload: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    marginVertical: 14,
+  },
+
+  uploadText: { color: "#374151" },
+
+  row: { flexDirection: "row", gap: 10 },
+
+  secondaryBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+  },
 });

@@ -82,7 +82,7 @@ export default function ReceiptDownloadByDate({ onDownload }) {
         {/* Header */}
         <TouchableOpacity style={styles.header} onPress={toggleExpand}>
           <View style={styles.headerLeft}>
-            <Calendar size={18} color="#0A7AFF" />
+            <Calendar size={18} color="#000" />
             <Text style={styles.headerTitle}>Download Receipts</Text>
           </View>
           {expanded ? <ChevronUp /> : <ChevronDown />}

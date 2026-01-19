@@ -38,7 +38,7 @@ const IncomeReceiptSchema = new mongoose.Schema(
     notes: String,
 
     imageUrl: String,
-
+    paymentMethod: String,
     type: {
       type: String,
       default: "income",

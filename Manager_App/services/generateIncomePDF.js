@@ -5,14 +5,14 @@ import * as Sharing from "expo-sharing";
  * Generate a modern, Google-style UK income receipt PDF
  * @param {Object} receipt - The receipt object
  */
-export async function generateIncomeReceiptPDF(receipt) {
+export async function generateIncomeReceiptPDF(receipt, userDetails) {
   const date = new Date(receipt.date);
   const formattedDate = `${date.getDate().toString().padStart(2, "0")}/${
     (date.getMonth() + 1).toString().padStart(2, "0")
   }/${date.getFullYear()}`;
 
   // Replace with your actual logo URL
-  const logoUrl = "https://via.placeholder.com/200x60?text=Company+Logo";
+  const logoUrl = userDetails.logo;
 
   const html = `
   <html>
@@ -108,7 +108,7 @@ export async function generateIncomeReceiptPDF(receipt) {
           padding: 16px 32px;
           font-size: 18px;
           font-weight: 700;
-          color:rgb(51, 176, 97);
+          color:rgb(32, 101, 58);
         }
 
         .notes {
@@ -142,9 +142,9 @@ export async function generateIncomeReceiptPDF(receipt) {
             <img src="${logoUrl}" alt="Company Logo"/>
           </div>
           <div class="company-info">
-            Your Company Name<br>
+            ${userDetails.name}<br>
             123 Example Street, London, UK<br>
-            info@company.com
+            ${userDetails.email}
           </div>
         </div>
 
@@ -161,9 +161,6 @@ export async function generateIncomeReceiptPDF(receipt) {
             <span>For:</span> ${receipt.payer}
           </div>
           <div class="box">
-            <span>Category:</span> ${receipt.category || "N/A"}
-          </div>
-          <div class="box">
             <span>Payment Method:</span> ${receipt.paymentMethod || "N/A"}
           </div>
         </div>
@@ -177,7 +174,7 @@ export async function generateIncomeReceiptPDF(receipt) {
           </thead>
           <tbody>
             <tr>
-              <td>${receipt.notes || "Payment received"}</td>
+              <td>${receipt.category || "Payment received"}</td>
               <td>£${Number(receipt.amount).toLocaleString("en-GB", {minimumFractionDigits: 2})}</td>
             </tr>
           </tbody>

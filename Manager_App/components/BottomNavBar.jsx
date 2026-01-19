@@ -2,7 +2,8 @@
 import React from "react";
 import { View, TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons"
+
 
 export default function BottomNavBar() {
   const navigation = useNavigation();
@@ -10,7 +11,7 @@ export default function BottomNavBar() {
   const tabs = [
     { name: "CashFlow", icon: "trending-up-outline", label: "CashFlow" },
     { name: "NewProject", icon: "add-circle-outline", label: "New" },
-    { name: "PriceOffer", icon: "cash-outline", label: "Quote" },
+    { name: "Finance", icon: "cash-outline", label: "Finance" },
     { name: "ProfileDetails", icon: "person-outline", label: "Me" },
   ];
 

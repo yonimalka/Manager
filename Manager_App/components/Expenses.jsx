@@ -31,7 +31,6 @@ const Expenses = ({ userId, refresh }) => {
 
   return (
    <View>
-      <TouchableOpacity onPress={() => navigation.navigate("Finance")}>
         <LinearGradient
               colors={["#f87171", "#ef4444"]}
               start={{ x: 0, y: 0 }}
@@ -58,7 +57,6 @@ const Expenses = ({ userId, refresh }) => {
                 style={styles.bgIcon}
               />
             </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 };

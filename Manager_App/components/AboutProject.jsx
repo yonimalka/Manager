@@ -174,10 +174,10 @@ const AboutProject = () => {
   
       const receipt = await res.data;
       console.log("Saved receipt:", receipt);
-      const response = await api.get(`/getUser`);
+      const response = await api.get(`/getUserDetails/${userId}`);
       console.log(response.data);
-      
-      generateIncomeReceiptPDF(receipt);
+      const userDetails = response.data;
+      generateIncomeReceiptPDF(receipt, userDetails);
     } catch (err) {
       console.error(err);
     }
