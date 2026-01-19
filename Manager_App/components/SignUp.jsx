@@ -15,6 +15,8 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/Ionicons";
 
 const Input = ({ label, error, children }) => (
@@ -25,6 +27,8 @@ const Input = ({ label, error, children }) => (
   </View>
 );
 export default function SignUp() {
+
+  const navigation = useNavigation();
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -70,9 +74,9 @@ export default function SignUp() {
 
   const handleSignUp = async () => {
     if (!validateStep2()) return;
-
-    try {
-      await axios.post(`${SERVER_URL}/NewUser`, {
+    try { 
+      console.log("res");
+      const response = await axios.post(`${SERVER_URL}/NewUser`, {
         name: formData.firstName,
         surname: formData.lastName,
         email: formData.email,
@@ -82,9 +86,30 @@ export default function SignUp() {
         address: formData.address,
         logo: formData.businessLogo,
       });
+      
+      if (response.status === 200) {
+      const { token, userId } = response.data;
+    
+      // Save JWT
+      await AsyncStorage.setItem("token", token);
+
+      // console.log("JWT stored:", token);
+      // Alert.alert("after Async", "after");
+      // Navigate to Home
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "HomeScreen" }],
+      });
+      // Alert.alert("after navigatoin", "after");
+    }else {
+     console.log(response.data?.message );
+     
+    }
       Alert.alert("Success", "Account created successfully");
-    } catch {
-      Alert.alert("Error", "Failed to create account");
+    } catch (err) {
+      console.log(err.message);
+      console.log(response.data?.message )
+      
     }
   };
   const pickImage = async () => {

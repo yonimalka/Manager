@@ -271,7 +271,7 @@ app.post("/NewUser", async (req, res) => {
     const {name, businessName, businessId, address, logo, email, password} = req.body;
   // console.log(name, surname, email, password);
   if (UserModel.find({email: email})) {
-    return res.status(401).json({ message: "user already exist" });
+    return res.status(402).json({ message: "user already exist" });
   }
   const hashedPassword = await bcrypt.hash(password, 10);
   const user = new UserModel({
