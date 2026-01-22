@@ -25,6 +25,7 @@ const Incomes = (refresh) => {
             return;
           }
       const response = await api.get(`/getTotalIncomes`);
+      console.log(response.data, "d");
       
       setTotalIncomes(response.data);
     } catch (err) {
@@ -34,7 +35,7 @@ const Incomes = (refresh) => {
 
   useEffect(() => {
     fetchIncomes();
-  }, [value, refresh]);
+  }, [value]);
 
   // מחזיר רק את הערך, בלי עיצוב
   return (
