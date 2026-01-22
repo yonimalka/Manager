@@ -44,7 +44,7 @@ const IncomeReceiptSchema = new mongoose.Schema(
       default: "income",
     },
 
-    date: {
+    createdAt: {
       type: Date,
       default: Date.now,
     },

@@ -685,14 +685,94 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error while creating ZIP" });
   }
 });
+// const userId = req.userId;
 
+//     const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+//     const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
+//     const now = new Date();
+//     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+//     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+//     const receiptsResult = await ReceiptModel.aggregate([
+//       {
+//         $match: {
+//           userId: userId,
+//           createdAt: {
+//             $gte: startOfYear,
+//             $lt: startOfNextYear,
+//           },
+//         },
+//       },
+//       {
+//         $group: {
+//           _id: null,
+//           total: { $sum: "$sumOfReceipt" },
+//         },
+//       },
+//     ]);
+
+//     const receiptsTotal = receiptsResult[0]?.total || 0;
+
+//    const fixedResult = await FixedExpenseModel.aggregate([
+//   {
+//     $match: {
+//       userId,
+//       isActive: true,
+//       createdAt: {
+//             $gte: startOfYear,
+//             $lt: startOfNextYear,
+//           },
+//     },
+//   },
+//   {
+//     $group: {
+//       _id: null,
+//       total: { $sum: "$amount" },
+//     },
+//   },
+// ]);
+//     const fixedTotal = fixedResult[0]?.total || 0;
+
+//     // 3️⃣ Combined
+//     const totalExpenses = receiptsTotal + fixedTotal;
+
+//     res.json({
+//       totalExpenses,
+//       breakdown: {
+//         receipts: receiptsTotal,
+//         fixed: fixedTotal,
+//       },
+//     });
 app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   const userId = req.userId;
-  UserModel.findById(userId)
-  .then((user) => {
-    const getIncomes = user.totalIncomes;
-    res.json(getIncomes)
-  })
+  const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+    const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const receiptsResult = IncomeReceipt.aggregate([
+      {
+        $match: {
+          userId: userId,
+          createdAt: {
+            $gte: startOfYear,
+            $lt: startOfNextYear,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+        },
+      },
+    ]);
+     const receiptsTotal = receiptsResult[0]?.total || 0;
+     res.json(receiptsTotal)
+  // UserModel.findById(userId)
+  // .then((user) => {
+  //   const getIncomes = user.totalIncomes;
+  //   res.json(getIncomes)
+  // })
 })
 app.post('/AddTask/:projectId', authMiddleware, async (req, res) => {
   const userId = req.userId;

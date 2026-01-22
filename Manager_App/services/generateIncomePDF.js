@@ -143,7 +143,7 @@ export async function generateIncomeReceiptPDF(receipt, userDetails) {
             <img src="${userDetails.logo}" alt="Company Logo"/>
           </div>
           <div class="company-info">
-            ${userDetails.bussinessName}<br>
+            ${userDetails.businessName}<br>
             ${userDetails.address}<br>
             ${userDetails.email}
           </div>

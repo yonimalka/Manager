@@ -175,7 +175,7 @@ const AboutProject = () => {
       const receipt = await res.data;
       console.log("Saved receipt:", receipt);
       const response = await api.get(`/getUserDetails/${userId}`);
-      console.log(response.data);
+      console.log("getUserDetails/" ,response.data);
       const userDetails = response.data;
       generateIncomeReceiptPDF(receipt, userDetails);
     } catch (err) {
