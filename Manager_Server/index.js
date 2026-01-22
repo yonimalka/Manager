@@ -749,7 +749,7 @@ app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const receiptsResult = IncomeReceipt.aggregate([
+    const receiptsResult = await IncomeReceipt.aggregate([
       {
         $match: {
           userId: userId,

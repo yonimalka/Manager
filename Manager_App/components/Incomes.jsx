@@ -25,7 +25,7 @@ const Incomes = (refresh) => {
             return;
           }
       const response = await api.get(`/getTotalIncomes`);
-      console.log(response.data, "d");
+      console.log(response.data, "dd");
       
       setTotalIncomes(response.data);
     } catch (err) {
