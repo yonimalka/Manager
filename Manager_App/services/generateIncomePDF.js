@@ -10,7 +10,8 @@ export async function generateIncomeReceiptPDF(receipt, userDetails) {
   const formattedDate = `${date.getDate().toString().padStart(2, "0")}/${
     (date.getMonth() + 1).toString().padStart(2, "0")
   }/${date.getFullYear()}`;
-
+  console.log("user Details: " ,userDetails);
+  
   // Replace with your actual logo URL
   const logoUrl = userDetails.logo;
 
@@ -139,11 +140,11 @@ export async function generateIncomeReceiptPDF(receipt, userDetails) {
       <div class="container">
         <div class="header">
           <div class="logo">
-            <img src="${logoUrl}" alt="Company Logo"/>
+            <img src="${userDetails.logo}" alt="Company Logo"/>
           </div>
           <div class="company-info">
-            ${userDetails.name}<br>
-            123 Example Street, London, UK<br>
+            ${userDetails.bussinessName}<br>
+            ${userDetails.address}<br>
             ${userDetails.email}
           </div>
         </div>

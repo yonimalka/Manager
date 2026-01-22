@@ -18,6 +18,9 @@ import { SERVER_URL } from "@env";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/Ionicons";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage, auth, signInFirebase } from "./firebase";
+
 
 const Input = ({ label, error, children }) => (
   <View style={styles.field}>
@@ -75,7 +78,7 @@ export default function SignUp() {
   const handleSignUp = async () => {
     if (!validateStep2()) return;
     try { 
-      console.log("res");
+      
       const response = await axios.post(`${SERVER_URL}/NewUser`, {
         name: formData.firstName,
         surname: formData.lastName,
@@ -125,8 +128,36 @@ export default function SignUp() {
       });
   
       if (!res.canceled) {
-        setFormData({...formData, businessLogo: res.assets[0].uri});
-        // uploadLogo(); // keep your existing upload logic
+        if (!auth.currentUser) {
+        await signInFirebase();
+      }
+
+      const blob = await (await fetch(image)).blob();
+        const fileRef = ref(
+        storage,
+        `logos/${userId}/${Date.now()}.jpg`
+        )
+      
+      const uploadTask = uploadBytesResumable(fileRef, blob);
+      uploadTask.on(
+        "state_changed",
+        snap => {
+          setProgress(
+            Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
+          );
+        },
+        err => {
+          Alert.alert("Upload failed", err.message);
+          setLoading(false);
+        },
+        async () => {
+          const url = await getDownloadURL(fileRef);
+          setFormData({...formData, businessLogo: url});
+          console.log(url);
+          
+        }
+      );
+        
       }
     };
   return (
@@ -233,6 +264,7 @@ export default function SignUp() {
                 <TextInput
                   style={styles.input}
                   value={formData.businessId}
+                  keyboardType="number-pad"
                   onChangeText={(t) =>
                     setFormData({ ...formData, businessId: t })
                   }

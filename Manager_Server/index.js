@@ -377,7 +377,7 @@ app.get("/getUserDetails/:userId", async (req, res) => {
    .then((user)=>{
     const userDetails = {
       name: user.name,
-      bussinessName: user.businessName,
+      businessName: user.businessName,
       businessId: user.businessId,
       address: user.address,
       email: user.email,

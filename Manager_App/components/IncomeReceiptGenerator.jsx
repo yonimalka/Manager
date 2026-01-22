@@ -117,6 +117,7 @@ const Input = ({ icon, value, onChange, placeholder }) => (
       onChangeText={onChange}
       placeholder={placeholder}
       style={styles.input}
+      
     />
   </View>
 );

@@ -27,12 +27,15 @@ export default function ProfileDetails() {
 
   useEffect(() => {
     fetchData();
+    console.log(userDetails);
+      
   }, [userId]);
 
   const fetchData = async () => {
     try {
       const res = await api.get(`/getUserDetails/${userId}`);
       setUserDetails(res.data);
+      setImage(res.data.logo);
     } catch (err) {
       console.error(err);
     }
@@ -81,7 +84,7 @@ export default function ProfileDetails() {
       {/* Avatar / Logo */}
       <View style={styles.avatarWrapper}>
         {image ? (
-          <Image source={{ uri: image }} style={styles.avatar} />
+          <Image source={{ uri: userDetails.logo }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarText}>
@@ -106,14 +109,21 @@ export default function ProfileDetails() {
 
         <Label title="Business Name" />
         <TextInput
-          value={userDetails.surname}
+          value={userDetails.bussinessName}
           style={styles.input}
           placeholder="Business name"
+        />
+        <Label title="Business ID" />
+        <TextInput
+          keyboardType="numeric"
+          value={String(userDetails.businessId)}
+          style={styles.input}
+          placeholder="Business ID"
         />
         <View style={styles.field}>
   <Text style={styles.label}>Address</Text>
   <TextInput
-    value={address}
+    value={userDetails.address}
     onChangeText={setAddress}
     placeholder="Street, City, Postcode"
     placeholderTextColor="#9CA3AF"
