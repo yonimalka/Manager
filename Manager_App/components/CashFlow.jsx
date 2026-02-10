@@ -25,6 +25,7 @@ import {
   Home,
   Briefcase
 } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
 import api from "../services/api";
 import { useAuth } from "./useAuth";
@@ -55,7 +56,7 @@ export default function CashFlow() {
 
       const inc = Array.isArray(incomeRes.data) ? incomeRes.data : [];
       const exp = Array.isArray(expenseRes.data) ? expenseRes.data : [];
-      console.log("exp: ", expenseRes.data)
+      // console.log("exp: ", expenseRes.data)
       // console.log("inc: ", inc);
       
       setIncomes(inc);
@@ -106,17 +107,9 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 140 }}>
-    <TouchableOpacity onPress={() => navigation.goBack()}>
-              <MaterialIcons
-               name="arrow-back-ios" 
-               size={24} 
-               color="#374151" 
-               style={{
-                transform: [{ scaleX:  1 }],
-                marginBottom: 40
-               }}
-               />
-               </TouchableOpacity>
+    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.title}>Cash Flow</Text>
@@ -313,7 +306,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 64,
   },
-
+  backButton: {
+    width: 40,
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: "rgba(35, 31, 31, 0.2)", 
+    alignItems: "center", 
+    justifyContent: "center",
+    marginBottom: 15,
+},
   header: { marginBottom: 20 },
   title: { fontSize: 38, fontWeight: "700", color: "#111" },
   subtitle: { fontSize: 14, color: "#6B7280", marginTop: 4, marginBottom: 12, },

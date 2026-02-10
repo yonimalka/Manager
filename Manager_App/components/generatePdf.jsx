@@ -43,17 +43,17 @@ export const generatePDF = async (payload) => {
   // Build Materials table if exists
   const materialsTable = hasMaterials
     ? buildTable(
-        "כתב כמויות",
-        ["פריט", "כמות"],
-        hasMaterials.map(m => [m.item, m.count])
+        "Materials List",
+        ["Item", "Qty"],
+        hasMaterials.map(m => [m.item, m.qty])
       )
     : "";
 
   // Build Tasks table if exists
   const tasksTable = hasTasks
     ? buildTable(
-        "רשימת משימות",
-        ["משימה", "תיאור", "בוצע"],
+        "Task List",
+        ["Task", "Details", "Status"],
         hasTasks.map(t => [
           t.task,
           t.details,
@@ -64,7 +64,7 @@ export const generatePDF = async (payload) => {
 
   // MAIN HTML DOCUMENT
   const html = `
-    <html dir="rtl" lang="he">
+    <html dir="ltr" lang="en">
       <head>
         <meta charset="utf-8" />
         <style>
@@ -80,8 +80,8 @@ export const generatePDF = async (payload) => {
           }
           h3 {
             color: #064e3b;
-            border-right: 4px solid #10b981;
-            padding-right: 10px;
+            border-left: 4px solid #10b981;
+            padding-left: 10px;
             margin-bottom: 60px;
           }
           table {
@@ -111,7 +111,7 @@ export const generatePDF = async (payload) => {
        
       <body>
       <div class="section">
-          <strong>שם הפרויקט:</strong> ${project} <br>
+          <strong>Project Name:</strong> ${project} <br>
         </div>
         ${tasksTable}
         ${materialsTable}

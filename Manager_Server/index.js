@@ -212,7 +212,12 @@ const ProjectSchema = new mongoose.Schema({
   materials: [MaterialsSchema],
   expenses: {type: Number},
   toDoList: [toDoListSchema],
-})
+   createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true })
 
 const UserSchema = new mongoose.Schema({
   name: String,
@@ -327,7 +332,6 @@ app.post("/SignInDetails", async (req, res) => {
 
 app.post("/GoogleSignIn", async (req, res)=>{
   const { googleId, email, name, avatar } = req.body;
-  console.log(googleId, email, name);
   
   try {
     let user = await UserModel.findOne({ email })
@@ -558,6 +562,7 @@ app.post("/incomeReceipt", authMiddleware, async (req, res) => {
       ...req.body,
       userId: req.userId,
       receiptNumber: generateReceiptNumber(),
+      createdAt
     });
     console.log("Created receipt:", receipt);
 

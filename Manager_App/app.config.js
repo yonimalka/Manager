@@ -5,7 +5,7 @@ const version = "1.0.1";
 export default {
   expo: {
     name: "Mago",
-    slug: "Manager",
+    slug: "Manager",  
     version: version,
     orientation: "portrait",
     icon: "./assets/mago-logo-transparent.png",
@@ -17,6 +17,7 @@ export default {
       backgroundColor: "#ffffff"
     },
     ios: {
+      usesAppleSignIn: true,
       supportsTablet: true,
       bundleIdentifier: "com.yonatanmalka.Manager",
       buildNumber: "4",

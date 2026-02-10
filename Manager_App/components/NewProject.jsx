@@ -16,6 +16,7 @@ import {
   Dimensions,
   I18nManager,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -95,6 +96,9 @@ const NewProject = () => {
     >
       <ScrollView contentContainerStyle={styles.container}>
         {/* Header */}
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
         <View style={styles.headerBlock}>
           <Text style={styles.headerTitle}>New Project</Text>
           <Text style={styles.headerSubtitle}>Create and configure your project</Text>
@@ -202,6 +206,15 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingVertical: 45,
   },
+  backButton: {
+    width: 40,
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: "rgba(35, 31, 31, 0.2)", 
+    alignItems: "center", 
+    justifyContent: "center",
+    marginBottom: 15,
+},
   headerBlock: {
     marginBottom: 24,
   },
@@ -292,7 +305,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom:10,
+    marginBottom: 10,
   },
   listItem: {
     flexDirection: "row",

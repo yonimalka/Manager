@@ -1,37 +1,20 @@
 import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Alert,
-  Modal,
-  Dimensions,
-  I18nManager,
-  Platform,
-  Share,
-  TextInput
+  View, Text, ScrollView, FlatList, TouchableOpacity, StyleSheet,
+  Image, Alert, Modal, Dimensions, TextInput, Animated,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-// import Ionicons from "@expo/vector-icons/Ionicons";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import Entypo from "@expo/vector-icons/Entypo";
 import { Ionicons } from "@expo/vector-icons";
-import * as Sharing from "expo-sharing";
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SERVER_URL } from "@env";
 import api from "../services/api";
-import TasksInputModal from "./TasksInputModal";
-import MaterialsInputModal from "./MaterialsInputModal";
 import { generatePDF } from "./generatePdf";
 import { useAuth } from "./useAuth";
-import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
+import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
+import Receipts from "./Receipts";
+
+const { width } = Dimensions.get("window");
 
 const AboutProject = () => {
   const navigation = useNavigation();
@@ -44,79 +27,44 @@ const AboutProject = () => {
   const [projectDetails, setProjectDetails] = useState(null);
   const [expenses, setExpenses] = useState(0);
   const [receipts, setReceipts] = useState([]);
-  const [showAll, setShowAll] = useState(false);
+  const [showAllReceipts, setShowAllReceipts] = useState(false);
   const [toDoList, setToDoList] = useState([]);
   const [materialsArray, setMaterialsArray] = useState([]);
-  const [visible, setVisible] = useState(false);
+  const [incomeModalVisible, setIncomeModalVisible] = useState(false);
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
   const [itemValue, setItemValue] = useState("");
   const [qtyValue, setQtyValue] = useState("");
   const [taskValue, setTaskValue] = useState("");
   const [detailsValue, setDetailsValue] = useState("");
-  // Fetch token once
-  const getToken = async () => {
-    return await AsyncStorage.getItem("token");
-  };
+  const [activeTab, setActiveTab] = useState("tasks");
+  const [scrollY] = useState(new Animated.Value(0));
 
   const fetchProject = async () => {
     try {
       const response = await api.get(`/getProject/${projectId}`);
-
       setProjectDetails(response.data);
       setExpenses(response.data.expenses || 0);
-
       const receiptsResponse = await api.get(`/getReceipts/${projectId}`);
       setReceipts(receiptsResponse.data);
+      console.log(projectDetails)
     } catch (error) {
       console.error("Error fetching project details:", error);
     }
   };
+
   useEffect(() => {
-    // fetchProject();
-    // console.log(projectDetails);
     setToDoList(project?.toDoList || []);
     setMaterialsArray(project?.materials[0]?.items || []);
-    
   }, [project]);
 
   useEffect(() => {
     if (!shouldRefresh) {
-      // console.log("refreshing");
-      
       fetchProject();
       navigation.setParams({ shouldRefresh: false });
     }
   }, [shouldRefresh]);
-
-  const renderStatBlock = (label, value, variant) => {
-  const gradients = {
-    info: ["#E3F2FD", "#BBDEFB"],
-    payment: ["#4ade80", "#10b981"],
-    expenses: ["#f87171", "#ef4444"],
-    default: ["#FAFAFA", "#F0F0F0"],
-  };
-
-  const gradientColors = gradients[variant] || gradients.default;
-
-
-  return (
-    <LinearGradient
-      key={label}
-      colors={gradientColors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.statBlock}
-    >
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </LinearGradient>
-  );
-};
-
-  const addReceipts = () => {
-    navigation.navigate("Receipts", { projectId: projectId });
-  };
 
   const toggleCheck = async (item, index) => {
     const updatedList = toDoList.map((task, i) =>
@@ -124,547 +72,391 @@ const AboutProject = () => {
     );
     updatedList.sort((a, b) => a.checked - b.checked);
     setToDoList(updatedList);
-
     try {
-      const token = await getToken();
-      await api.post(`/updateTasks/${projectId}`, {
-        ...item,
-        checked: !item.checked,
-      });
+      await api.post(`/updateTasks/${projectId}`, { ...item, checked: !item.checked });
     } catch (error) {
       console.error("Error updating task:", error);
     }
-    !shouldRefresh;
   };
 
-  const handleAddTask = async (newTask) => {
-    setToDoList([...toDoList, { ...newTask, checked: false }]);
-    const newItem = {
-        task: taskValue,
-        details: detailsValue
+  const handleAddTask = async () => {
+    if (!taskValue || !detailsValue) return;
+    const newItem = { task: taskValue, details: detailsValue };
+    setToDoList([...toDoList, { ...newItem, checked: false }]);
+    setTaskValue("");
+    setDetailsValue("");
+    try {
+      await api.post(`/AddTask/${projectId}`, newItem);
+    } catch (error) {
+      console.error("Error adding task:", error);
     }
-    // console.log(newItem);
-    // onSubmit(newItem);
-    setTaskValue(null);
-    setDetailsValue(null);
-    try {
-      const token = await AsyncStorage.getItem("token")
-              await api.post(`/AddTask/${projectId}`, newItem);
-            } catch (error) {
-              console.error("Error adding task:", error);
-            }
   };
 
-  const handleAddMaterial = async (newItem) => {
+  const handleAddMaterial = async () => {
+    if (!itemValue || !qtyValue) return;
+    const newItem = { item: itemValue, qty: qtyValue };
     setMaterialsArray([...materialsArray, newItem]);
-    setItemValue('');
-    setQtyValue('');
+    setItemValue("");
+    setQtyValue("");
     try {
-      const token = AsyncStorage.getItem("token");
-              await api.post(`/AddItem/${projectId}`, newItem);
-            } catch (error) {
-              console.error("Error adding product:", error);
-            }  
+      await api.post(`/AddItem/${projectId}`, newItem);
+    } catch (error) {
+      console.error("Error adding product:", error);
+    }
   };
 
-  const visibleReceipts = showAll ? receipts : receipts.slice(0, 6);
   async function submitIncomeReceipt(data) {
-     try {
-      const res = await api.post("/incomeReceipt", data); 
-  
+    try {
+      const res = await api.post("/incomeReceipt", data);
+      await api.post(`/updatePayment/${projectId}`, { paidAmount: data.amount });
       const receipt = await res.data;
-      console.log("Saved receipt:", receipt);
       const response = await api.get(`/getUserDetails/${userId}`);
-      console.log("getUserDetails/" ,response.data);
       const userDetails = response.data;
       generateIncomeReceiptPDF(receipt, userDetails);
+      fetchProject();
     } catch (err) {
       console.error(err);
     }
   }
+
   const handleProjectDelete = async () => {
-    Alert.alert(
-      "Approve",
-      "Are you sure you want to delete this project?",
-      [
-        { text: "cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const token = await getToken();
-              const res = await api.delete(`/deleteProject/${projectId}`);
-              Alert.alert(res.data.message);
-              navigation.goBack();
-            } catch (error) {
-              console.error("Failed to delete project:", error);
-              Alert.alert("error", "לא ניתן היה למחוק את הפרויקט.");
-            }
+    Alert.alert("Delete Project", "Are you sure you want to delete this project?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive",
+        onPress: async () => {
+          try {
+            const res = await api.delete(`/deleteProject/${projectId}`);
+            Alert.alert("Success", res.data.message);
+            navigation.goBack();
+          } catch (error) {
+            console.error("Failed to delete project:", error);
+            Alert.alert("Error", "Failed to delete project.");
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
+  const visibleReceipts = showAllReceipts ? receipts : receipts.slice(0, 6);
+  const profit = (project?.paid || 0) - expenses;
+  const profitPercentage = project?.payment ? ((profit / project.payment) * 100).toFixed(1) : 0;
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 100], outputRange: [1, 0], extrapolate: "clamp",
+  });
+
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Project Summary */}
-      <View style={styles.projectCard}>
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialIcons
-           name="arrow-back-ios" 
-           size={24} 
-           color="#374151" 
-           style={{
-            transform: [{ scaleX: I18nManager.isRTL ? -1 : 1 }],
-            marginBottom: 40
-           }}
-           />
-        </TouchableOpacity>
-        <Text style={styles.projectTitle}>{project?.name}</Text>
-         <View style={styles.projectStats}>
-        {/* {renderStatBlock("ימים", project?.days, "info")} */}
-        {renderStatBlock("Total payment", `${project?.payment}₪`, "payment")}
-        {renderStatBlock("Expenses", `${expenses}₪`, "expenses")}
-      </View>
-      </View>
-
-      {/* To-Do List */}
-      <View style={styles.section}>
-      <View style={styles.sectionTop}>
-      <Text style={styles.sectionTitle}>Tasks</Text>
-        <TouchableOpacity
-                style={styles.shareButton}
-                onPress={() => generatePDF({
-  type: "tasks",
-  data: {list: toDoList,
-  name: project.name,}
-})}
-              >
-                <Ionicons name="share-outline" size={25} color="#000" />
-                {/* <Text style={[styles.actionText, { color: "#000" }]}>שתף</Text> */}
-              </TouchableOpacity>
-      </View>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.cell, styles.headerText, { flex: 0.5 }]}>✔</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>Category</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 1.8 }]}>Items</Text>
-        </View>
-
-        <FlatList
-          data={toDoList}
-          keyExtractor={(item, index) => index.toString()}
-          scrollEnabled={false}
-          renderItem={({ item, index }) => (
-            <View style={styles.row}  key={index}>
-              <TouchableOpacity
-                onPress={() => toggleCheck(item, index)}
-                style={[styles.cell, { flex: 0.5 }]}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={item.checked ? "checkbox" : "square-outline"}
-                  size={24}
-                  color={item.checked ? "#2E7D32" : "#616161"}
-                />
-              </TouchableOpacity>
-              <Text style={[styles.cell, styles.taskText, { flex: 1 }, item.checked && styles.checkedText]}>
-                {item.task}
-              </Text>
-              <Text style={[styles.cell, styles.taskText, { flex: 1.8 }, item.checked && styles.checkedText]}>
-                {item.details}
-              </Text>
-            </View>
-          )}
-        />
-        {isAddingTask && (
-  <View style={styles.expandContainer}>
-    <TextInput
-      placeholder="Task"
-      value={taskValue}
-      onChangeText={setTaskValue}
-      style={styles.input}
-    />
-
-    <TextInput
-      placeholder="Task Details"
-      value={detailsValue}
-      onChangeText={setDetailsValue}
-      // keyboardType="numeric"
-      style={styles.input}
-    />
-
-    <View style={styles.expandActions}>
-      <TouchableOpacity
-        style={styles.addBtn}
-        onPress={() => {
-          if (!taskValue || !detailsValue) return;
-
-          handleAddTask({
-            task: taskValue,
-            details: detailsValue
-          });
-          // addTask();
-          setTaskValue("");
-          setDetailsValue("");
-          // setIsAddingTask(false);
-        }}
-      >
-        <Text style={styles.addText}>Add</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
-
-        <TouchableOpacity
-  style={styles.fabButton}
-  onPress={() => setIsAddingTask(prev => !prev)}
-  activeOpacity={0.8}
->
-  <Ionicons
-    name={isAddingTask ? "close" : "add"}
-    size={28}
-    color="#FFF"
-  />
-</TouchableOpacity>
-      </View>
-
-      {/* Materials List */}
-      <View style={styles.section}>
-      <View style={styles.sectionTop}>
-      <Text style={styles.sectionTitle}>Material List</Text>
-        <TouchableOpacity
-                style={styles.shareButton}
-                onPress={() => generatePDF({
-  type: "materials",
-  data: {list: materialsArray,
-  name: project.name}
-})}
-              >
-                <Ionicons name="share-outline" size={25} color="#000" />
-                {/* <Text style={[styles.actionText, { color: "#000" }]}>שתף</Text> */}
-              </TouchableOpacity>
-      </View>
-        <View style={styles.tableHeader}>
-          <Text style={[styles.cell, styles.headerText, { flex: 1 }]}>Qty</Text>
-          <Text style={[styles.cell, styles.headerText, { flex: 2 }]}>Item</Text>
-        </View>
-        <FlatList
-          data={materialsArray}
-          keyExtractor={(item, index) => index.toString()}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Text style={[styles.cell, styles.taskText, { flex: 1 }]}>{item.qty}</Text>
-              <Text style={[styles.cell, styles.taskText, { flex: 2 }]}>{item.item}</Text>
-            </View>
-          )}
-        />
-        {isAddingMaterial && (
-  <View style={styles.expandContainer}>
-    <TextInput
-      placeholder="Item"
-      value={itemValue}
-      onChangeText={setItemValue}
-      style={styles.input}
-    />
-
-    <TextInput
-      placeholder="Qty"
-      value={qtyValue}
-      onChangeText={setQtyValue}
-      keyboardType="numeric"
-      style={styles.input}
-    />
-
-    <View style={styles.expandActions}>
-      <TouchableOpacity
-        style={styles.addBtn}
-        onPress={() => {
-          if (!itemValue || !qtyValue) return;
-
-          handleAddMaterial({
-            item: itemValue,
-            qty: qtyValue,
-          });
-          setItemValue("");
-          setQtyValue("");
-          // setIsAddingMaterial(false);
-        }}
-      >
-        <Text style={styles.addText}>Add</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
-
-        <TouchableOpacity
-  style={styles.fabButton}
-  onPress={() =>{ setItemValue('')
-    setQtyValue(''), setIsAddingMaterial(prev => !prev)}}
-  activeOpacity={0.8}
->
-  <Ionicons
-    name={isAddingMaterial ? "close" : "add"}
-    size={28}
-    color="#FFF"
-  />
-</TouchableOpacity>
-      </View>
-      <View style={{ flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-      {/* Open modal */}
-      <TouchableOpacity
-        onPress={() => setVisible(true)}
-        style={{
-          backgroundColor: "#10b981",
-          // padding: 14,
-          paddingVertical: 14,
-          borderRadius: 28,
-          margin: 16,
-          alignItems: "center",
-          justifyContent: "center",
-          alignSelf: "center",
-          marginBottom: 25,
-          paddingStart: 24,
-          paddingEnd: 24
-        }}
-      >
-        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 18, marginStart: 10, marginEnd: 10, }}>
-          New Income Receipt
-        </Text>
-      </TouchableOpacity>
-
-      {/* Modal */}
-      <Modal
-  visible={visible}
-  animationType="fade"
-  transparent
-  onRequestClose={() => setVisible(false)}
->
-  <View style={styles.backdrop}>
-    <View style={styles.modalCard}>
-      <IncomeReceiptGenerator
-        onSubmit={(data) => {
-          submitIncomeReceipt(data)
-          setVisible(false);
-        }}
-        onClose={() => setVisible(false)}
-      />
-    </View>
-  </View>
-</Modal>
-{/* Upload Receipt Button */}
-      <TouchableOpacity style={styles.uploadButton} onPress={addReceipts} activeOpacity={0.8}>
-        <Ionicons name="cloud-upload-outline" size={22} color="#FFF" />
-        <Text style={styles.uploadButtonText}>upload receipt</Text>
-      </TouchableOpacity>
-    </View>
-
-      {/* Receipts Gallery */}
-      <View style={styles.section}>
-        <TouchableOpacity onPress={() => setShowAll(!showAll)}>
-          <Text style={styles.toggleText}>{showAll ? "show more" : "show less"}</Text>
-        </TouchableOpacity>
-        <FlatList
-          data={visibleReceipts}
-          horizontal
-          keyExtractor={(item) => item._id}
-          key={(item) => item._id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 10 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => navigation.navigate("ReceiptPreview", { item })}>
-              <Image source={{ uri: item.imageUrl }} style={styles.receiptImage} resizeMode="cover" />
+    <View style={s.screen}>
+      <LinearGradient colors={["#3B82F6", "#F9FAFB"]} style={s.header}>
+        <View style={s.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          {/* <View style={s.headerActions}>
+            <TouchableOpacity style={s.headerIconButton}>
+              <Ionicons name="star-outline" size={22} color="#fff" />
             </TouchableOpacity>
-          )}
-        />
-      </View>
+            <TouchableOpacity style={s.headerIconButton}>
+              <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View> */}
+        </View>
+        <Animated.View style={[s.headerContent, { opacity: headerOpacity }]}>
+          <Text style={s.projectTitle}>{project?.name}</Text>
+          <Text style={s.projectSubtitle}>
+            {project?.days} days • Created {new Date(project?.createdAt).toLocaleDateString()}
+          </Text>
+        </Animated.View>
+      </LinearGradient>
 
-      <TouchableOpacity style={styles.deleteButton} onPress={handleProjectDelete}>
-        <Text style={styles.deleteText}>Delete Project</Text>
-      </TouchableOpacity>
-    </ScrollView>
+<Animated.ScrollView
+  contentContainerStyle={s.scrollContent}
+  showsVerticalScrollIndicator={false}
+  onScroll={Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: true }
+  )}
+  scrollEventThrottle={16}
+>
+        <View style={s.statsContainer}>
+          <View style={s.statsRow}>
+            <View style={s.statCard}>
+              <LinearGradient colors={["#10B981", "#059669"]} style={s.statCardGradient}>
+                <View style={s.statIconContainer}>
+                  <Ionicons name="cash-outline" size={24} color="#fff" />
+                </View>
+                <Text style={s.statValue}>₪{projectDetails?.paid}</Text>
+                <Text style={s.statLabel}>Total Payment</Text>
+              </LinearGradient>
+            </View>
+            <View style={s.statCard}>
+              <LinearGradient colors={["#EF4444", "#DC2626"]} style={s.statCardGradient}>
+                <View style={s.statIconContainer}>
+                  <Ionicons name="card-outline" size={24} color="#fff" />
+                </View>
+                <Text style={s.statValue}>₪{expenses}</Text>
+                <Text style={s.statLabel}>Expenses</Text>
+              </LinearGradient>
+            </View>
+          </View>
+          <View style={s.profitCard}>
+            <LinearGradient colors={profit >= 0 ? ["#3B82F6", "#2563EB"] : ["#F59E0B", "#D97706"]} style={s.profitCardGradient}>
+              <View style={s.profitContent}>
+                <View>
+                  <Text style={s.profitLabel}>Net Profit</Text>
+                  <Text style={s.profitValue}>₪{profit}</Text>
+                </View>
+                <View style={s.profitBadge}>
+                  <Ionicons name={profit >= 0 ? "trending-up" : "trending-down"} size={20} color="#fff" />
+                  <Text style={s.profitPercentage}>{profitPercentage}%</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+
+        <View style={s.tabContainer}>
+          {["tasks", "materials", "receipts"].map((tab) => (
+            <TouchableOpacity key={tab} style={[s.tab, activeTab === tab && s.tabActive]} onPress={() => setActiveTab(tab)}>
+              <Ionicons
+                name={tab === "tasks" ? "checkbox-outline" : tab === "materials" ? "cube-outline" : "receipt-outline"}
+                size={20} color={activeTab === tab ? "#3B82F6" : "#9CA3AF"}
+              />
+              <Text style={[s.tabText, activeTab === tab && s.tabTextActive]}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)} ({tab === "tasks" ? toDoList.length : tab === "materials" ? materialsArray.length : receipts.length})
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {activeTab === "tasks" && (
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Task List</Text>
+              <TouchableOpacity style={s.shareButton} onPress={() => generatePDF({ type: "tasks", data: { list: toDoList, name: project.name } })}>
+                <Ionicons name="share-outline" size={20} color="#3B82F6" />
+              </TouchableOpacity>
+            </View>
+            {toDoList.length === 0 && !isAddingTask ? (
+              <View style={s.emptyState}>
+                <Ionicons name="checkbox-outline" size={48} color="#D1D5DB" />
+                <Text style={s.emptyText}>No tasks yet</Text>
+                <Text style={s.emptySubtext}>Add your first task to get started</Text>
+              </View>
+            ) : (
+              <FlatList data={toDoList} keyExtractor={(item, index) => index.toString()} scrollEnabled={false}
+                renderItem={({ item, index }) => (
+                  <TouchableOpacity onPress={() => toggleCheck(item, index)} style={s.taskItem} activeOpacity={0.7}>
+                    <View style={s.taskCheckbox}>
+                      <Ionicons name={item.checked ? "checkmark-circle" : "ellipse-outline"} size={28} color={item.checked ? "#10B981" : "#D1D5DB"} />
+                    </View>
+                    <View style={s.taskContent}>
+                      <Text style={[s.taskTitle, item.checked && s.taskTitleChecked]}>{item.task}</Text>
+                      <Text style={[s.taskDetails, item.checked && s.taskDetailsChecked]}>{item.details}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+            {isAddingTask && (
+              <View style={s.addItemContainer}>
+                <TextInput placeholder="Task name" value={taskValue} onChangeText={setTaskValue} style={s.input} placeholderTextColor="#9CA3AF" />
+                <TextInput placeholder="Task details" value={detailsValue} onChangeText={setDetailsValue} style={s.input} placeholderTextColor="#9CA3AF" multiline />
+                <TouchableOpacity style={s.addButton} onPress={handleAddTask}>
+                  <Text style={s.addButtonText}>Add Task</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <TouchableOpacity style={s.fab} onPress={() => setIsAddingTask((prev) => !prev)} activeOpacity={0.8}>
+              <Ionicons name={isAddingTask ? "close" : "add"} size={28} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {activeTab === "materials" && (
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Materials</Text>
+              <TouchableOpacity style={s.shareButton} onPress={() => generatePDF({ type: "materials", data: { list: materialsArray, name: project.name } })}>
+                <Ionicons name="share-outline" size={20} color="#3B82F6" />
+              </TouchableOpacity>
+            </View>
+            {materialsArray.length === 0 && !isAddingMaterial ? (
+              <View style={s.emptyState}>
+                <Ionicons name="cube-outline" size={48} color="#D1D5DB" />
+                <Text style={s.emptyText}>No materials yet</Text>
+                <Text style={s.emptySubtext}>Add materials needed for this project</Text>
+              </View>
+            ) : (
+              <FlatList data={materialsArray} keyExtractor={(item, index) => index.toString()} scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <View style={s.materialItem}>
+                    <View style={s.materialIcon}>
+                      <Ionicons name="cube" size={20} color="#3B82F6" />
+                    </View>
+                    <View style={s.materialContent}>
+                      <Text style={s.materialName}>{item.item}</Text>
+                      <Text style={s.materialQty}>Quantity: {item.qty}</Text>
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+            {isAddingMaterial && (
+              <View style={s.addItemContainer}>
+                <TextInput placeholder="Item name" value={itemValue} onChangeText={setItemValue} style={s.input} placeholderTextColor="#9CA3AF" />
+                <TextInput placeholder="Quantity" value={qtyValue} onChangeText={setQtyValue} keyboardType="numeric" style={s.input} placeholderTextColor="#9CA3AF" />
+                <TouchableOpacity style={s.addButton} onPress={handleAddMaterial}>
+                  <Text style={s.addButtonText}>Add Material</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <TouchableOpacity style={s.fab} onPress={() => setIsAddingMaterial((prev) => !prev)} activeOpacity={0.8}>
+              <Ionicons name={isAddingMaterial ? "close" : "add"} size={28} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {activeTab === "receipts" && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Receipts Gallery</Text>
+            {receipts.length === 0 ? (
+              <View style={s.emptyState}>
+                <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
+                <Text style={s.emptyText}>No receipts uploaded</Text>
+                <Text style={s.emptySubtext}>Upload receipt images to track expenses</Text>
+              </View>
+            ) : (
+              <>
+                <FlatList data={visibleReceipts} horizontal keyExtractor={(item) => item._id} showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.receiptsList}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => navigation.navigate("ReceiptPreview", { item })} style={s.receiptCard}>
+                      <Image source={{ uri: item.imageUrl }} style={s.receiptImage} />
+                      <View style={s.receiptOverlay}>
+                        <Ionicons name="eye-outline" size={24} color="#fff" />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+                {receipts.length > 6 && (
+                  <TouchableOpacity style={s.toggleButton} onPress={() => setShowAllReceipts(!showAllReceipts)}>
+                    <Text style={s.toggleButtonText}>{showAllReceipts ? "Show Less" : `Show All (${receipts.length})`}</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+        )}
+
+        <View style={s.actionButtons}>
+          <TouchableOpacity style={s.actionButton} onPress={() => setIncomeModalVisible(true)}>
+            <LinearGradient colors={["#10B981", "#059669"]} style={s.actionButtonGradient}>
+              <Ionicons name="add-circle-outline" size={22} color="#fff" />
+              <Text style={s.actionButtonText}>New Income Receipt</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.actionButton} onPress={() => setReceiptModalVisible(true)}>
+            <LinearGradient colors={["#3B82F6", "#2563EB"]} style={s.actionButtonGradient}>
+              <Ionicons name="cloud-upload-outline" size={22} color="#fff" />
+              <Text style={s.actionButtonText}>Upload Receipt</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={s.deleteButton} onPress={handleProjectDelete}>
+          <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          <Text style={s.deleteText}>Delete Project</Text>
+        </TouchableOpacity>
+      </Animated.ScrollView>
+
+      <Modal visible={incomeModalVisible} animationType="fade" transparent onRequestClose={() => setIncomeModalVisible(false)}>
+        <View style={s.modalBackdrop}>
+          <View style={s.modalCard}>
+            <IncomeReceiptGenerator onSubmit={(data) => { submitIncomeReceipt(data); setIncomeModalVisible(false); }} onClose={() => setIncomeModalVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={receiptModalVisible} transparent animationType="fade" statusBarTranslucent>
+        <View style={s.modalBackdrop}>
+          <View style={s.modalCard}>
+            <Receipts onClose={() => setReceiptModalVisible(false)} projectId={projectId} />
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
-const StatBlock = ({ label, value }) => (
-  <View style={styles.statBlock}>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
-
-const { width } = Dimensions.get("window");
-const isRTL = I18nManager.isRTL;
-
-const styles = StyleSheet.create({
-  container: {
-    paddingTop: 50,
-    paddingStart: width * 0.05,
-    paddingEnd: width * 0.05,
-    paddingBottom: 40,
-    backgroundColor: "#F9F9F9",
-    flexGrow: 1,
-  },
-  projectCard: { borderRadius: 16, paddingVertical: 18, marginBottom: 30 },
-  projectTitle: { fontSize: 26, fontWeight: "700", color: "#333", marginBottom: 20, textAlign: !isRTL ? "left" : "right" },
-  projectStats: { flexDirection: !isRTL ? "row" : "row-reverse", justifyContent: "space-between",},
-   statBlock: {
-    position: "relative",
-    flex: 1,
-    borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 6,
-    alignItems: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.18,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 4,
-        shadowColor: "#000",
-      },
-    }),
-  },
-  statValue: {
-    fontSize: 25,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: !isRTL ? "left" : "right",
-  },
-  statLabel: {
-    fontSize: 15,
-    color: "#fff",
-    marginTop: 4,
-    textAlign: !isRTL ? "left" : "right",
-  },
-  sectionTop: {
-    flexDirection: "row",
-    position: '',
-    justifyContent: "space-between",
-    // backgroundColor: "#999",
-    
-  },
-  shareButton: {
-    // alignSelf: "flex-start",
-
-  },
-  section: { backgroundColor: "#FFF", borderRadius: 16, padding: 18, marginBottom: 30, ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.18,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 4,
-        shadowColor: "#000",
-      },
-    }),},
-  sectionTitle: { fontSize: 22, fontWeight: "700", color: "#444", marginBottom: 18, textAlign: !isRTL ? "left" : "right" },
-  tableHeader: { flexDirection: !isRTL ? "row" : "row-reverse", borderBottomWidth: 1, borderColor: "#E0E0E0", paddingBottom: 10, marginBottom: 10 },
-  row: { flexDirection: !isRTL ? "row" : "row-reverse", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: "#F0F0F0" },
-  cell: { color: "#424242", fontSize: 16, textAlign: !isRTL ? "left" : "right", paddingStart: 12, paddingEnd: 12 },
-  headerText: { fontWeight: "700", color: "#666", fontSize: 17, textAlign: !isRTL ? "left" : "right" },
-  taskText: { color: "#222", textAlign: !isRTL ? "left" : "right" },
-  checkedText: { textDecorationLine: "line-through", color: "#999", textAlign: !isRTL ? "left" : "right" },
-  fabButton: { bottom: 0, marginTop: 10, backgroundColor: "#333", borderRadius: 28, width: 56, height: 56, justifyContent: "center", alignItems: "center", flexDirection: !isRTL ? "row" : "row-reverse", alignSelf: !isRTL ? "flex-end" : "flex-start" },
-  uploadButton: { backgroundColor: "#1a73e8", paddingVertical: 14, borderRadius: 28, flexDirection: !isRTL ? "row" : "row-reverse", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 25, paddingStart: 24, paddingEnd: 24 },
-  uploadButtonText: { color: "#FFF", fontWeight: "700", fontSize: 18, marginStart: 10, marginEnd: 10, textAlign: !isRTL ? "left" : "right" },
-  toggleText: { color: "#555", fontWeight: "700", fontSize: 16, textAlign: "center", marginBottom: 14 },
-  receiptImage: { width: 140, height: 140, marginStart: !isRTL ? 16 : 0, marginEnd: isRTL ? 0 : 16, borderRadius: 14, backgroundColor: "#F0F0F0" },
-  deleteButton: { backgroundColor: "#fff0f0", padding: 14, borderRadius: 12, alignItems: "center", ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.18,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 4,
-        shadowColor: "#000",
-      },
-    }), },
-    expandContainer: {
-  marginTop: 12,
-  backgroundColor: "#F8F8F8",
-  padding: 12,
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: "#E0E0E0",
-},
-
-input: {
-  backgroundColor: "#FFF",
-  borderRadius: 8,
-  paddingHorizontal: 12,
-  paddingVertical: 10,
-  fontSize: 16,
-  borderWidth: 1,
-  borderColor: "#DDD",
-  marginBottom: 8,
-},
-
-expandActions: {
-  flexDirection: "row",
-  justifyContent: "flex-end",
-  gap: 12,
-  marginTop: 4,
-},
-
-cancelBtn: {
-  paddingVertical: 8,
-  paddingHorizontal: 12,
-},
-
-cancelText: {
-  color: "#999",
-  fontSize: 16,
-},
-
-addBtn: {
-  backgroundColor: "#0A7AFF",
-  paddingVertical: 8,
-  paddingHorizontal: 16,
-  borderRadius: 8,
-},
-
-addText: {
-  color: "#FFF",
-  fontSize: 16,
-  fontWeight: "600",
-},
-  deleteText: { color: "#d32f2f",
-  textAlign: !isRTL ? "right" : "left" 
-  },
-   backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",          
-    alignItems: "center",
-  },
-
-  modalCard: {
-    width: "92%",
-    maxHeight: "90%",
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-
-    // Shadow (iOS)
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-
-    // Shadow (Android)
-    elevation: 12,
-
-    overflow: "hidden", 
-  }
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#F9FAFB" },
+  header: { paddingTop: 60, paddingBottom: 40, paddingHorizontal: 20,  },
+  headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255, 255, 255, 0.2)", alignItems: "center", justifyContent: "center" },
+  headerActions: { flexDirection: "row", gap: 12 },
+  headerIconButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255, 255, 255, 0.2)", alignItems: "center", justifyContent: "center" },
+  headerContent: { gap: 4 },
+  projectTitle: { fontSize: 28, fontWeight: "800", color: "rgba(19, 16, 16, 0.8)" },
+  projectSubtitle: { fontSize: 14, color: "rgba(19, 16, 16, 0.8)", fontWeight: "500" },
+  scrollContent: { paddingBottom: 0 },
+  statsContainer: { paddingHorizontal: 20, marginTop: 0, marginBottom: 24 },
+  statsRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
+  statCard: { flex: 1, borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  statCardGradient: { padding: 20, minHeight: 140 },
+  statIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255, 255, 255, 0.2)", alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  statValue: { fontSize: 24, fontWeight: "800", color: "#fff", marginBottom: 4 },
+  statLabel: { fontSize: 13, color: "rgba(255, 255, 255, 0.9)", fontWeight: "600" },
+  profitCard: { borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  profitCardGradient: { padding: 20 },
+  profitContent: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  profitLabel: { fontSize: 14, color: "rgba(255, 255, 255, 0.9)", fontWeight: "600", marginBottom: 4 },
+  profitValue: { fontSize: 32, fontWeight: "800", color: "#fff" },
+  profitBadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255, 255, 255, 0.2)", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  profitPercentage: { fontSize: 18, fontWeight: "700", color: "#fff" },
+  tabContainer: { flexDirection: "row", paddingHorizontal: 20, gap: 8, marginBottom: 24 },
+  tab: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 12, backgroundColor: "#F3F4F6" },
+  tabActive: { backgroundColor: "#E0F2FE" },
+  tabText: { fontSize: 13, fontWeight: "600", color: "#9CA3AF" },
+  tabTextActive: { color: "#3B82F6" },
+  section: { backgroundColor: "#fff", marginHorizontal: 20, borderRadius: 20, padding: 20, marginBottom: 24, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
+  shareButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#E0F2FE", alignItems: "center", justifyContent: "center" },
+  taskItem: { flexDirection: "row", alignItems: "flex-start", paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
+  taskCheckbox: { marginRight: 12 },
+  taskContent: { flex: 1 },
+  taskTitle: { fontSize: 16, fontWeight: "600", color: "#111827", marginBottom: 4 },
+  taskTitleChecked: { textDecorationLine: "line-through", color: "#9CA3AF" },
+  taskDetails: { fontSize: 14, color: "#6B7280" },
+  taskDetailsChecked: { textDecorationLine: "line-through", color: "#D1D5DB" },
+  materialItem: { flexDirection: "row", alignItems: "center", paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#F3F4F6" },
+  materialIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#E0F2FE", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  materialContent: { flex: 1 },
+  materialName: { fontSize: 16, fontWeight: "600", color: "#111827", marginBottom: 2 },
+  materialQty: { fontSize: 14, color: "#6B7280" },
+  receiptsList: { paddingVertical: 8 },
+  receiptCard: { marginRight: 12, borderRadius: 16, overflow: "hidden", position: "relative" },
+  receiptImage: { width: 160, height: 160, borderRadius: 16 },
+  receiptOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.3)", alignItems: "center", justifyContent: "center", opacity: 0 },
+  toggleButton: { marginTop: 12, paddingVertical: 10, alignItems: "center" },
+  toggleButtonText: { fontSize: 14, fontWeight: "600", color: "#3B82F6" },
+  emptyState: { alignItems: "center", paddingVertical: 40 },
+  emptyText: { fontSize: 16, fontWeight: "600", color: "#6B7280", marginTop: 12 },
+  emptySubtext: { fontSize: 14, color: "#9CA3AF", marginTop: 4 },
+  addItemContainer: { marginTop: 16, gap: 12 },
+  input: { backgroundColor: "#F9FAFB", borderRadius: 12, padding: 14, fontSize: 15, borderWidth: 1, borderColor: "#E5E7EB", color: "#111827" },
+  addButton: { backgroundColor: "#3B82F6", borderRadius: 12, padding: 14, alignItems: "center" },
+  addButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  fab: { marginTop: 16, backgroundColor: "#3B82F6", borderRadius: 28, width: 56, height: 56, justifyContent: "center", alignItems: "center", alignSelf: "flex-end", shadowColor: "#3B82F6", shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  actionButtons: { paddingHorizontal: 20, gap: 12, marginBottom: 24 },
+  actionButton: { borderRadius: 16, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
+  actionButtonGradient: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16, paddingHorizontal: 24 },
+  actionButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  deleteButton: { marginHorizontal: 20, marginBottom: 30, backgroundColor: "#FEF2F2", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "#FEE2E2" },
+  deleteText: { color: "#EF4444", fontSize: 16, fontWeight: "600" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  modalCard: { width: "92%", height: "90%", backgroundColor: "#ffffff", borderRadius: 24, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 12, overflow: "hidden" },
 });
 
 export default AboutProject;

@@ -22,7 +22,7 @@ const Expenses = ({ userId, refresh }) => {
   const fetchExpenses = async () => {
     try {
       const response = await api.get(`/getTotalExpenses`);
-      // console.log(response.data);
+      // console.log("dss",response.data);
       setTotalExpenses(response.data.totalExpenses);
     } catch (err) {
       console.error("Error fetching expenses: ", err);
@@ -30,7 +30,7 @@ const Expenses = ({ userId, refresh }) => {
   };
 
   return (
-   <View>
+   <View style={styles.financeCard}>
         <LinearGradient
               colors={["#f87171", "#ef4444"]}
               start={{ x: 0, y: 0 }}
@@ -39,7 +39,7 @@ const Expenses = ({ userId, refresh }) => {
             >
               <View style={styles.summaryHeader}>
                 <View style={styles.iconCircle}>
-                  <MaterialIcons name="trending-down" size={22} color="#fff" />
+                  <MaterialIcons name="trending-down" size={24} color="#fff" />
                 </View>
                 <Text style={styles.summaryTitleWhite}>Expenses</Text>
               </View>
@@ -64,30 +64,90 @@ const Expenses = ({ userId, refresh }) => {
 export default Expenses;
 
 const styles = StyleSheet.create({
+  financeCard: {
+    flex: 1,
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  gradientCard: {  
+    padding: 20,
+    minHeight: 150,
+  },
   expensesText: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "600",
     marginBottom: 10,
     color: "white",
   },
-  // button: {
-  //   backgroundColor: "#1e88e5",
-  //   paddingVertical: 10,
-  //   paddingHorizontal: 16,
-  //   borderRadius: 8,
-  //   alignSelf: "flex-start",
-  // },
   buttonText: {
     color: "white",
     fontWeight: "bold",
     fontSize: 14,
   },
-  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  iconCircle: { backgroundColor: "rgba(255,255,255,0.2)", padding: 6, borderRadius: 50 },
-  summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
-  gradientCard: {  borderRadius: 20, padding: 16, marginHorizontal: 6, overflow: "hidden", position: "static", },
-  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff", alignSelf: "flex-end" },
-  bgIcon: { position: "absolute", bottom: -20, left: -20, transform: [{ rotate: "-12deg" }] },
+  summaryHeader: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 8 
+  },
+  iconCircle: { 
+     width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  summaryTitleWhite: { 
+    fontSize: 18, 
+    fontWeight: "600", 
+    color: "#fff",
+    marginBottom: 12,
+  },
+  summaryHeader: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 8 
+  },
+  summaryAmount: { 
+    fontSize: 20, 
+    fontWeight: "700", 
+    color: "#fff", 
+    alignSelf: "flex-end" 
+  },
+  bgIcon: { 
+    position: "absolute", 
+    bottom: -20, 
+    left: -20, 
+    transform: [{ rotate: "-12deg" }] 
+  },
 });
 
+// financeCard: {
+//     flex: 1,
+//     borderRadius: 20,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOpacity: 0.1,
+//     shadowRadius: 12,
+//     shadowOffset: { width: 0, height: 4 },
+//     elevation: 6,
+//   },
+//   financeCardGradient: {
+//     padding: 20,
+//     minHeight: 140,
+//   },
+//   financeIconContainer: {
+//     width: 40,
+//     height: 40,
+//     borderRadius: 20,
+//     backgroundColor: "rgba(255, 255, 255, 0.2)",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     marginBottom: 12,
+//   },

@@ -12,7 +12,8 @@ const Incomes = (refresh) => {
   const { value } = useValue();
   const [totalIncomes, setTotalIncomes] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+  const [shouldRefresh, setShouldRefresh] = useState(false);
+
   const fetchIncomes = async () => {
     
     try {
@@ -25,9 +26,10 @@ const Incomes = (refresh) => {
             return;
           }
       const response = await api.get(`/getTotalIncomes`);
-      console.log(response.data, "dd");
+      
       
       setTotalIncomes(response.data);
+      setShouldRefresh(!refresh)
     } catch (err) {
       console.error("Error fetching incomes: ", err);
     }
@@ -35,11 +37,11 @@ const Incomes = (refresh) => {
 
   useEffect(() => {
     fetchIncomes();
-  }, [value]);
+  }, [refresh, totalIncomes]);
 
   // מחזיר רק את הערך, בלי עיצוב
   return (
-  <View>
+  <View style={styles.financeCard}>
  <LinearGradient
               colors={["#4ade80", "#10b981"]}
               start={{ x: 0, y: 0 }}
@@ -48,7 +50,7 @@ const Incomes = (refresh) => {
             >
               <View style={styles.summaryHeader}>
                 <View style={styles.iconCircle}>
-                  <MaterialIcons name="trending-up" size={22} color="#fff" />
+                  <MaterialIcons name="trending-up" size={24} color="#fff" />
                 </View>
                 <Text style={styles.summaryTitleWhite}>Incomes</Text>
               </View>
@@ -72,11 +74,55 @@ const Incomes = (refresh) => {
 export default Incomes;
 
 const styles = StyleSheet.create({
-  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  iconCircle: { backgroundColor: "rgba(255,255,255,0.2)", padding: 6, borderRadius: 50 },
-  summaryTitleWhite: { fontSize: 14, fontWeight: "600", color: "#fff" },
-  gradientCard: { flex: 1, borderRadius: 20, padding: 16, overflow: "hidden", position: "static" },
-  summaryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  summaryAmount: { fontSize: 20, fontWeight: "700", color: "#fff", alignSelf: "flex-end" },
-  bgIcon: { position: "absolute", bottom: -20, left: -20, transform: [{ rotate: "-12deg" }] },
+  financeCard: {
+    flex: 1,
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  gradientCard: { 
+    padding: 20,
+    minHeight: 150,
+  },
+  summaryHeader: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 8 
+  },
+  iconCircle: { 
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  summaryTitleWhite: { 
+    fontSize: 18, 
+    fontWeight: "600", 
+    color: "#fff",
+    marginBottom: 10,
+  },
+  summaryHeader: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 8 
+  },
+  summaryAmount: { 
+    fontSize: 20, 
+    fontWeight: "700", 
+    color: "#fff", 
+    alignSelf: "flex-end" 
+  },
+  bgIcon: { 
+    position: "absolute", 
+    bottom: -20, 
+    left: -20, 
+    transform: [{ rotate: "-12deg" }] 
+  },
 })

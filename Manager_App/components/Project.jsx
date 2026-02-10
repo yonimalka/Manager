@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import api from "../services/api";
 
@@ -112,7 +113,7 @@ const Project = ({ projectName, totalAmount, id }) => {
   return (
     <View style={styles.card}>
       {/* Menu Button */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.menuButton}
         onPress={() => setMenuVisible(!menuVisible)}
       >
@@ -131,7 +132,7 @@ const Project = ({ projectName, totalAmount, id }) => {
             <Text style={styles.menuText}>update payment</Text>
           </TouchableOpacity>
         </View>
-      )}
+      )} */}
 
       {/* Smooth Animated Progress Circle */}
       <View style={styles.circleWrapper}>
@@ -182,9 +183,11 @@ const Project = ({ projectName, totalAmount, id }) => {
           <Text style={styles.total}>/ £{totalAmount.toLocaleString()}</Text>
         </View>
       </View>
-
+      <View style={styles.projectArrow}>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </View>
       {/* Payment Modal */}
-      <Modal visible={modalVisible} transparent animationType="fade">
+      {/* <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>How much?</Text>
@@ -213,7 +216,7 @@ const Project = ({ projectName, totalAmount, id }) => {
             </View>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
     </View>
   );
 };
@@ -222,24 +225,16 @@ const isRTL = I18nManager.isRTL;
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: !isRTL ? "row-reverse" : "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
+      backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
-    position: "relative",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
 
   menuButton: {
@@ -336,7 +331,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#777",
   },
-
+  projectArrow: {
+    marginLeft: "auto",
+    paddingLeft: 12,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
