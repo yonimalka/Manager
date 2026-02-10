@@ -16,7 +16,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "SERVER_URL": "https://manager-asqh.onrender.com",
+        "SERVER_URL": "https://manager-production-1942.up.railway.app",
         "GOOGLE_IOS_CLIENT_ID": "YOUR_IOS_CLIENT_ID_HERE"
       },
       "android": {

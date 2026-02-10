@@ -82,7 +82,7 @@ const LoginScreen = () => {
 
     try {
       const details = { email: email.trim(), password };
-      console.log(" serverUrl",SERVER_URL);
+      console.log("serverUrl ",SERVER_URL);
       const response = await axios.post(
         `${SERVER_URL}/SignInDetails`,
         details,

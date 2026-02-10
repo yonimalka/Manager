@@ -56,7 +56,7 @@ export default function GoogleSignInButton() {
 // console.log( "google user: ,", googleUser);
 
       // Send user to backend
-      console.log(SERVER_URL);
+      console.log("",SERVER_URL);
       
       const res = await axios.post(`${SERVER_URL}/GoogleSignIn`, {
         googleId: googleUser.id,
