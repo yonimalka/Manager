@@ -22,7 +22,7 @@ const IncomeReceipt = require('./models/IncomeReceipt');
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
 const JWT_REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
 // issue token
@@ -254,7 +254,7 @@ const createNewUser = async () =>{
     // const result = await user.save();
     // console.log("User with projects created:", result);
   } catch (err) {
-    console.error("Error creating user with projects:", error.message);
+    console.error("Error creating user with projects:", err.message);
   }
 }
 // createNewUser();
