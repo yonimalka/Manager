@@ -56,7 +56,6 @@ export default function GoogleSignInButton() {
 // console.log( "google user: ,", googleUser);
 
       // Send user to backend
-      console.log("",SERVER_URL);
       
       const res = await axios.post(`${SERVER_URL}/GoogleSignIn`, {
         googleId: googleUser.id,
@@ -88,7 +87,7 @@ export default function GoogleSignInButton() {
       disabled={!request}
       onPress={() => promptAsync()}
     >
-      <Text style={styles.text}>Sign in with Google</Text>
+      {/* <Text style={styles.text}>Sign in with Google</Text> */}
       <Image
         source={require("../assets/google.png")}
         style={styles.icon}
@@ -100,7 +99,7 @@ export default function GoogleSignInButton() {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 38,
+    borderRadius: 50,
     borderWidth: 1,
     borderColor: "#DADCE0",
     paddingVertical: 9,
@@ -115,13 +114,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-
-    marginTop: 40,
-    marginBottom: 30,
+    marginHorizontal: 10,
+    marginTop: 20,
+    marginBottom: 20,
   },
   icon: {
-    width: 30,
+    width: 40,
     height: 40,
+    // borderWidth: 1,
     
   },
   text: {

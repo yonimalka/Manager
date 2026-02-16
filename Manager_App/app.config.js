@@ -4,7 +4,7 @@ const version = "1.0.1";
 
 export default {
   expo: {
-    name: "Mago",
+    name: "Maggo",
     slug: "Manager",  
     version: version,
     orientation: "portrait",
@@ -17,9 +17,9 @@ export default {
       backgroundColor: "#ffffff"
     },
     ios: {
-      usesAppleSignIn: true,
       supportsTablet: true,
       bundleIdentifier: "com.yonatanmalka.Manager",
+      usesAppleSignIn: true,
       buildNumber: "4",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
@@ -48,6 +48,7 @@ export default {
       projectId: "a0b72a58-39e1-4ed6-8402-837f500c13e3"
     },
     plugins: [
+      "expo-apple-authentication",
       "expo-web-browser",
       [
         "@react-native-google-signin/google-signin",

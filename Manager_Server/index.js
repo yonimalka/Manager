@@ -12,6 +12,7 @@ require('dotenv').config();
 const { jsonToPdf } = require('./pdf/jsonToPdf');
 const { log } = require('handlebars');
 const jwt = require('jsonwebtoken');
+const jwksClient = require("jwks-rsa");
 const authMiddleware = require('./authMiddleware');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
@@ -25,6 +26,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
 const JWT_REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
+const client = jwksClient({
+  jwksUri: "https://appleid.apple.com/auth/keys",
+});
 // issue token
 
 app.use(cors());
@@ -227,6 +231,17 @@ const UserSchema = new mongoose.Schema({
   email: String,
   logo: String,
   password: { type: String, default: null },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+
+  appleId: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
   projects: [ProjectSchema],
   totalExpenses: Number,
   totalIncomes: {type: Number},
@@ -260,11 +275,11 @@ const createNewUser = async () =>{
 // createNewUser();
 
 const generateAccessToken = (user) => {
-  return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "15m" });
 };
 
 const generateRefreshToken = (user) => {
-  return jwt.sign({ userId: user._id }, JWT_REFRESH_SECRET, { expiresIn: "15d" });
+  return jwt.sign({ userId: user._id }, JWT_REFRESH_SECRET, { expiresIn: "30d" });
 };
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -334,18 +349,20 @@ app.post("/GoogleSignIn", async (req, res)=>{
   const { googleId, email, name, avatar } = req.body;
   
   try {
-    let user = await UserModel.findOne({ email })
+      let user = await UserModel.findOne({
+      $or: [{ googleId }, { email }]
+    });
+
     if (!user) {
-       user = new UserModel({
-        name: name,
-        logo: avatar, 
-        email: email,
-        password: null,
-        totalExpenses: 0,
-        totalIncomes: 0,
+
+      user = new UserModel({
+        googleId,
+        email,
+        name,
+        logo: avatar,
       });
+
       await user.save();
-      console.log("User Created:", user);
     }
     
     
@@ -359,6 +376,73 @@ app.post("/GoogleSignIn", async (req, res)=>{
     res.status(500).json({ message: "Server error" });
   
   }
+});
+
+function getAppleKey(header, callback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    callback(null, key.getPublicKey());
+  });
+}
+
+function verifyAppleToken(identityToken) {
+  return new Promise((resolve, reject) => {
+
+    jwt.verify(
+      identityToken,
+      getAppleKey,
+      {
+        algorithms: ["RS256"],
+        issuer: "https://appleid.apple.com",
+        audience: process.env.APPLE_BUNDLE_ID,
+      },
+      (err, decoded) => {
+        if (err) reject(err);
+        else resolve(decoded);
+      }
+    );
+
+  });
+}
+app.post("/AppleSignIn", async (req, res) => {
+
+  try {
+
+    const { identityToken, fullName } = req.body;
+
+    const appleData = await verifyAppleToken(identityToken);
+
+    const appleId = appleData.sub;
+    const email = appleData.email;
+
+    let user = await UserModel.findOne({
+      $or: [{ appleId }, { email }]
+    });
+
+    if (!user) {
+
+      user = new UserModel({
+        appleId,
+        email,
+        name: fullName?.givenName || "Apple User",
+      });
+
+      await user.save();
+
+    }
+
+    const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    res.json({ token, refreshToken });
+
+  } catch (err) {
+
+    res.status(401).json({
+      message: "Invalid Apple login"
+    });
+
+  }
+
 });
 
 app.post("/refresh", (req, res) => {

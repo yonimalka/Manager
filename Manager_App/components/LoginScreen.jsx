@@ -18,9 +18,12 @@ import { TextInput } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import GoogleSignInButton from "./GoogleSignInButton";
+import AppleSignInButton from "./AppleSignInButton";
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Path } from "react-native-svg";
+import Constants from 'expo-constants';
 
+console.log("Bundle ID:", Constants.expoConfig.ios.bundleIdentifier);
 const LoginScreen = () => {
   const navigation = useNavigation();
 
@@ -82,7 +85,7 @@ const LoginScreen = () => {
 
     try {
       const details = { email: email.trim(), password };
-      console.log("serverUrl ",SERVER_URL);
+      // console.log("serverUrl ",SERVER_URL);
       const response = await axios.post(
         `${SERVER_URL}/SignInDetails`,
         details,
@@ -118,6 +121,9 @@ const LoginScreen = () => {
   };
   const handleAppleSignIn = async () => {
   try {
+    console.log("Apple available:", await AppleAuthentication.isAvailableAsync());
+    console.log("Apple user:", await AppleAuthentication.getCredentialStateAsync("test").catch(()=>null));
+    
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
         AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -262,19 +268,12 @@ const LoginScreen = () => {
               <Text style={styles.dividerText}>OR</Text>
               <View style={styles.dividerLine} />
             </View>
-
+            <View style={styles.signInButtons}>
             {/* Google Sign In */}
             <GoogleSignInButton disabled={isLoading} />
             {/* ios Sign In */}
-            {Platform.OS === 'ios' && (
-  <AppleAuthentication.AppleAuthenticationButton
-    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-    cornerRadius={8}
-    style={{ width: '100%', height: 50, marginTop: 10 }}
-    onPress={handleAppleSignIn}
-  />
-)}
+            <AppleSignInButton />
+            </View>
             {/* Sign Up Link */}
             <View style={styles.signUpContainer}>
               <Text style={styles.signUpText}>Don't have an account? </Text>
@@ -321,7 +320,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 52,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#1e90ff",
     marginBottom: 8,
     textAlign: "center",
@@ -440,6 +439,10 @@ const styles = StyleSheet.create({
     color: "#999",
     fontSize: 14,
     fontWeight: "500",
+  },
+  signInButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
   },
   signUpContainer: {
     flexDirection: "row",
