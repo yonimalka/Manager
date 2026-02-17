@@ -102,12 +102,12 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 1,
     borderColor: "#DADCE0",
-    paddingVertical: 9,
+    // paddingVertical: 9,
     // width: "100%",
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 10,
+    // paddingHorizontal: 10,
     // Shadow
     elevation: 2,
     shadowColor: "#000",
@@ -119,8 +119,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   icon: {
-    width: 40,
-    height: 40,
+    width: 60,
+    height: 60,
     // borderWidth: 1,
     
   },

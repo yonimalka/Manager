@@ -105,7 +105,7 @@ const AboutProject = () => {
     }
   };
 
-  async function submitIncomeReceipt(data) {
+  const submitIncomeReceipt = async (data) => {
     try {
       const res = await api.post("/incomeReceipt", data);
       await api.post(`/updatePayment/${projectId}`, { paidAmount: data.amount });

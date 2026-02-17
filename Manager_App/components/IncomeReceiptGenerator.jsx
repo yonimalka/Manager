@@ -156,7 +156,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose }) {
       date: date.toISOString(),
       description: description.trim(),
       image,
-      generatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
 
     onSubmit(receiptData);

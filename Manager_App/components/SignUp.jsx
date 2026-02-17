@@ -86,6 +86,9 @@ export default function SignUp() {
     try {
       if (!auth.currentUser) {
         await signInFirebase();
+      } else {
+        console.log("false");
+        
       }
 
       const uid = auth.currentUser.uid;

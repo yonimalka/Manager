@@ -646,7 +646,7 @@ app.post("/incomeReceipt", authMiddleware, async (req, res) => {
       ...req.body,
       userId: req.userId,
       receiptNumber: generateReceiptNumber(),
-      createdAt
+      // createdAt
     });
     console.log("Created receipt:", receipt);
 

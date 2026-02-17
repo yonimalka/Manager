@@ -119,28 +119,6 @@ const LoginScreen = () => {
       setIsLoading(false);
     }
   };
-  const handleAppleSignIn = async () => {
-  try {
-    console.log("Apple available:", await AppleAuthentication.isAvailableAsync());
-    console.log("Apple user:", await AppleAuthentication.getCredentialStateAsync("test").catch(()=>null));
-    
-    const credential = await AppleAuthentication.signInAsync({
-      requestedScopes: [
-        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-        AppleAuthentication.AppleAuthenticationScope.EMAIL,
-      ],
-    });
-
-    // send credential.identityToken to your server
-    console.log(credential);
-  } catch (e) {
-    if (e.code === 'ERR_CANCELED') {
-      // user canceled
-    } else {
-      console.log(e);
-    }
-  }
-};
 
   const EyeIcon = ({ visible }) => (
     <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -338,8 +316,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: "#dc3545",
+    // borderLeftWidth: 4,
+    // borderLeftColor: "#dc3545",
   },
   errorText: {
     color: "#dc3545",

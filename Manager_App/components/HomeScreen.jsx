@@ -140,12 +140,12 @@ const HomeScreen = () => {
     <Animated.View
       style={[
         styles.projectCardWrapper,
-        {
-          opacity: scrollY.interpolate({
-            inputRange: [-1, 0, index * 100, (index + 1) * 100],
-            outputRange: [1, 1, 1, 0.8],
-          }),
-        },
+        // {
+        //   opacity: scrollY.interpolate({
+        //     inputRange: [-1, 0, index * 100, (index + 1) * 100],
+        //     outputRange: [1, 1, 1, 0.8],
+        //   }),
+        // },
       ]}
     >
       <TouchableOpacity
@@ -219,7 +219,7 @@ const HomeScreen = () => {
                   : "Good Evening"}
               </Text>
               <Text style={styles.greetingName}>
-                {userName || "Welcome"}
+                {userName == "Apple User" ? null : userName}
               </Text>
             </View>
           </View>

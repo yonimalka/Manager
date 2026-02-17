@@ -118,15 +118,15 @@ const handleLogin = async () => {
 const styles = StyleSheet.create({
 
   button: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#0000",
     borderRadius: 38,
     borderWidth: 1,
     borderColor: "#DADCE0",
-    paddingVertical: 9,
+    // paddingVertical: 9,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 10,
+    // paddingHorizontal: 10,
 
     elevation: 2,
     shadowColor: "#000",
@@ -139,9 +139,10 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    width: 40,
-    height: 40,
+    width: 60,
+    height: 60,
     // borderWidth: 1,
+    borderRadius: 50,
   },
 
   text: {
