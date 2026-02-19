@@ -257,9 +257,9 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
   <View style={{ marginTop: 28 }}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <TouchableOpacity style={[styles.addBtn, { backgroundColor: color }]}>
+      {/* <TouchableOpacity style={[styles.addBtn, { backgroundColor: color }]}>
         <MaterialIcons name="add" size={18} color="#fff" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
 
     <View style={styles.summaryCard}>
@@ -404,7 +404,7 @@ donutValue: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 18,
   },
   sectionTitle: { fontSize: 20, fontWeight: "700" },
 

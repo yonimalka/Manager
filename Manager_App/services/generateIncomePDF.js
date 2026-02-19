@@ -1,14 +1,22 @@
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage, auth } from "../components/firebase";
 
-/**
- * Generate a professional, business-compliant income receipt PDF
- * @param {Object} receipt - The receipt data
- * @param {Object} userDetails - Business/user information
- * @param {Object} options - PDF generation options
- */
-export async function generateIncomeReceiptPDF(receipt, userDetails, options = {}) {
+export async function generateIncomeReceiptPDF(
+  receipt,
+  userDetails,
+  options = {}
+) {
+  const {
+    userId,
+    projectId = "General",
+    uploadToFirebase = true,
+    allowSharing = false,
+    onProgress = () => {},
+  } = options;
+
   try {
     const {
       currency = "USD",
@@ -543,93 +551,61 @@ export async function generateIncomeReceiptPDF(receipt, userDetails, options = {
     </html>
     `;
 
-    // Generate PDF
-    const { uri } = await Print.printToFileAsync({
-      html,
-      base64: false,
-    });
+    // 2. Generate PDF locally
+    const { uri } = await Print.printToFileAsync({ html });
 
-    // Share or save
-    if (await Sharing.isAvailableAsync()) {
+    // 3. Allow sharing if requested
+    if (allowSharing) {
       await Sharing.shareAsync(uri, {
         mimeType: "application/pdf",
-        dialogTitle: `Income Receipt - ${receiptNumber}`,
-        UTI: "com.adobe.pdf",
+        dialogTitle: "Share Receipt",
       });
-    } else {
-      // Fallback: save to device
-      const fileName = `Income_Receipt_${receiptNumber}_${Date.now()}.pdf`;
-      const newPath = `${FileSystem.documentDirectory}${fileName}`;
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newPath,
-      });
-      console.log("PDF saved to:", newPath);
-      return newPath;
     }
 
-    return uri;
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-    throw new Error("Failed to generate receipt PDF: " + error.message);
-  }
-}
+    // 4. Upload to Firebase if requested
+    let downloadURL = null;
 
-/**
- * Preview HTML before generating PDF (useful for debugging)
- */
-export async function previewReceiptHTML(receipt, userDetails, options = {}) {
-  // Returns the HTML string for preview/debugging
-  // Implementation would be similar to above but return HTML instead of generating PDF
-}
+    if (uploadToFirebase && userId) {
+      if (!auth.currentUser) {
+        await signInFirebase();
+      }
 
-/**
- * Generate multiple receipts in batch
- */
-export async function generateBatchReceiptPDFs(receipts, userDetails, options = {}) {
-  try {
-    const results = [];
-    
-    for (const receipt of receipts) {
-      const uri = await generateIncomeReceiptPDF(receipt, userDetails, options);
-      results.push({ receiptNumber: receipt.receiptNumber, uri, success: true });
+      const blob = await (await fetch(uri)).blob();
+
+      const fileRef = ref(
+        storage,
+        `users/${userId}/incomeReceipts/${projectId}/Receipt_${receipt.receiptNumber || Date.now()}.pdf`
+      );
+
+      const uploadTask = uploadBytesResumable(fileRef, blob);
+
+      downloadURL = await new Promise((resolve, reject) => {
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress =
+              snapshot.bytesTransferred / snapshot.totalBytes;
+            onProgress(Math.round(progress * 100));
+          },
+          reject,
+          async () => {
+            const url = await getDownloadURL(fileRef);
+            resolve(url);
+          }
+        );
+      });
     }
-    
-    return results;
+
+    return {
+      localUri: uri,
+      downloadURL,
+    };
+
   } catch (error) {
-    console.error("Error in batch generation:", error);
     throw error;
   }
 }
 
-/**
- * Validate receipt data before PDF generation
- */
-export function validateReceiptData(receipt, userDetails) {
-  const errors = [];
 
-  if (!receipt.amount || isNaN(receipt.amount) || receipt.amount <= 0) {
-    errors.push("Valid amount is required");
-  }
 
-  if (!receipt.payer) {
-    errors.push("Payer name is required");
-  }
-
-  if (!receipt.date && !receipt.createdAt) {
-    errors.push("Receipt date is required");
-  }
-
-  if (!userDetails.businessName && !userDetails.name) {
-    errors.push("Business name is required");
-  }
-
-  if (!userDetails.email) {
-    errors.push("Business email is required");
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
+    

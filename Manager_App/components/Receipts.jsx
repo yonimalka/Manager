@@ -185,7 +185,7 @@ export default function Receipts({ onClose, projectId }) {
       const blob = await (await fetch(image)).blob();
       const fileRef = ref(
         storage,
-        `users/${userId}/receipts/${projectId}/${Date.now()}.jpg`
+        `users/${userId}/receipts/${projectId ? projectId : `General`}/${Date.now()}.jpg`
       );
 
       const uploadTask = uploadBytesResumable(fileRef, blob);

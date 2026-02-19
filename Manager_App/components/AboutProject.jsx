@@ -107,12 +107,10 @@ const AboutProject = () => {
 
   const submitIncomeReceipt = async (data) => {
     try {
-      const res = await api.post("/incomeReceipt", data);
+      
+      await api.post("/incomeReceipt", data);
       await api.post(`/updatePayment/${projectId}`, { paidAmount: data.amount });
-      const receipt = await res.data;
-      const response = await api.get(`/getUserDetails/${userId}`);
-      const userDetails = response.data;
-      generateIncomeReceiptPDF(receipt, userDetails);
+      
       fetchProject();
     } catch (err) {
       console.error(err);
@@ -373,7 +371,7 @@ const AboutProject = () => {
       <Modal visible={incomeModalVisible} animationType="fade" transparent onRequestClose={() => setIncomeModalVisible(false)}>
         <View style={s.modalBackdrop}>
           <View style={s.modalCard}>
-            <IncomeReceiptGenerator onSubmit={(data) => { submitIncomeReceipt(data); setIncomeModalVisible(false); }} onClose={() => setIncomeModalVisible(false)} />
+            <IncomeReceiptGenerator projectId={projectId} onSubmit={(data) => { submitIncomeReceipt(data); setIncomeModalVisible(false); }} onClose={() => setIncomeModalVisible(false)} />
           </View>
         </View>
       </Modal>

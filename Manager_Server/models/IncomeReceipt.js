@@ -37,7 +37,7 @@ const IncomeReceiptSchema = new mongoose.Schema(
     category: String,
     notes: String,
 
-    imageUrl: String,
+    pdfUrl: String,
     paymentMethod: String,
     type: {
       type: String,

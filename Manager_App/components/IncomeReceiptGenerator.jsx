@@ -25,8 +25,12 @@ import {
   Hash,
   CheckCircle2,
 } from "lucide-react-native";
+import api from "../services/api";
+import { useAuth } from "./useAuth";
+import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 
-export default function IncomeReceiptGenerator({ onSubmit, onClose }) {
+export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId }) {
+  const { userId } = useAuth();
   const [amount, setAmount] = useState("");
   const [payer, setPayer] = useState("");
   const [payerAddress, setPayerAddress] = useState("");
@@ -139,13 +143,14 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose }) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
       Alert.alert("Validation Error", "Please fill in all required fields correctly.");
       return;
     }
-
-    const receiptData = {
+    
+    try {
+      const receiptData = {
       receiptNumber,
       amount: Number(amount),
       payer: payer.trim(),
@@ -158,8 +163,28 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose }) {
       image,
       createdAt: new Date().toISOString(),
     };
+    const response = await api.get(`/getUserDetails/${userId}`);
+    const userDetails = response.data;
+     const pdfUrl = await generateIncomeReceiptPDF(
+      receiptData,
+      userDetails,
+      {
+        userId,
+        projectId,
+        allowSharing: true,
+        // onProgress: (progress) => {
+        //   setProgress(progress);
+        // },
+      }
+    );
 
+    receiptData.pdfUrl = pdfUrl;
     onSubmit(receiptData);
+    } catch (err) {
+      console.error("error occurd on Receipt Generator", err);
+      
+    }
+    
   };
 
   return (
