@@ -784,7 +784,9 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
     const toDate = to ? new Date(to) : null;
 
     // Build query
-    let query = { userId: req.userId };
+    let query = {
+  userId: new mongoose.Types.ObjectId(req.userId)
+};;
     if (fromDate && toDate) {
       query.createdAt = { $gte: fromDate, $lte: toDate };
     }
