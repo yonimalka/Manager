@@ -15,8 +15,9 @@ import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload, BanknoteArrowUp, Cal
 import { useNavigation } from "@react-navigation/native";
 import api from "../services/api";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
+import IncomesDownloadByDate from "./IncomesDownloadByDate";
 import Receipts from "./Receipts";
-import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
+import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -318,7 +319,7 @@ export default function FinanceFixedExpenses() {
       {/* Income Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Income</Text>
-        <ReceiptDownloadByDate />
+        <IncomesDownloadByDate />
         <View style={styles.card}>
           <TouchableOpacity
             onPress={() => setVisible(true)}

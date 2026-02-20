@@ -789,7 +789,8 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
 
     const receipts = await IncomeReceipt.find(query);
     if (!receipts.length) return res.status(404).json({ message: "No receipts found for this date range" });
-
+    
+    console.log("receipts ZIP: ",receipts)
     res.setHeader("Content-Disposition", "attachment; filename=receipts.zip");
     res.setHeader("Content-Type", "application/zip");
 
@@ -799,8 +800,8 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
     for (const r of receipts) {
       const response = await fetch(r.pdfUrl);
       const buffer = await response.buffer();
-      // const fileName = `${r.category}_${Date.now()}.jpg`;
-      archive.append(buffer);
+      const fileName = `${r.category}_${Date.now()}.pdf`;
+      archive.append(buffer, { name: fileName});
     }
 
     await archive.finalize();

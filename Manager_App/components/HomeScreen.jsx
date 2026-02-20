@@ -22,7 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
 import Receipts from "./Receipts";
-import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
+import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 import Incomes from "./Incomes";
 import Expenses from "./Expenses";
@@ -119,13 +119,9 @@ const HomeScreen = () => {
   }
   const submitIncomeReceipt = async (data) => {
     try {
-      const res = await api.post("/incomeReceipt", data);
-      const receipt = await res.data;
-      console.log("Saved receipt:", receipt);
-      const response = await api.get(`/getUserDetails/${userId}`);
-      console.log(response.data);
-      const userDetails = response.data;
-      generateIncomeReceiptPDF(receipt, userDetails);
+      await api.post("/incomeReceipt", data);
+      await api.get(`/getUserDetails/${userId}`);
+      
     } catch (err) {
       console.error(err);
     }

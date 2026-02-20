@@ -11,7 +11,7 @@ import api from "../services/api";
 import { generatePDF } from "./generatePdf";
 import { useAuth } from "./useAuth";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
-import IncomeReceiptGenerator from "./IncomeReceiptGenerator";
+import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 import Receipts from "./Receipts";
 
 const { width } = Dimensions.get("window");
