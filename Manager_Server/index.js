@@ -789,7 +789,13 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
       query.createdAt = { $gte: fromDate, $lte: toDate };
     }
 
-    const receipts = await IncomeReceipt.find(query);
+    console.log("userId:", req.userId);
+
+console.log("Before Mongo query");
+
+const receipts = await IncomeReceipt.find(query);
+
+console.log("After Mongo query");
     if (!receipts.length) return res.status(404).json({ message: "No receipts found for this date range" });
     
     console.log("receipts ZIP: ",receipts)
