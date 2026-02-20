@@ -747,7 +747,9 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
     const toDate = to ? new Date(to) : null;
 
     // Build query
-    let query = { userId: req.userId };
+    let query = {
+  userId: new mongoose.Types.ObjectId(req.userId)
+};
     if (fromDate && toDate) {
       query.createdAt = { $gte: fromDate, $lte: toDate };
     }
@@ -791,16 +793,10 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
       query.createdAt = { $gte: fromDate, $lte: toDate };
     }
 
-    console.log("userId:", req.userId);
-
-console.log("Before Mongo query");
-
 const receipts = await IncomeReceipt.find(query);
 
-console.log("After Mongo query");
     if (!receipts.length) return res.status(404).json({ message: "No receipts found for this date range" });
     
-    console.log("receipts ZIP: ",receipts)
     res.setHeader("Content-Disposition", "attachment; filename=receipts.zip");
     res.setHeader("Content-Type", "application/zip");
 
@@ -809,23 +805,13 @@ console.log("After Mongo query");
 
    for (const r of receipts) {
 
-  console.log("Processing receipt:", r._id);
-
-  console.log("Fetching URL:", r.pdfUrl);
-
   const response = await fetch(r.pdfUrl);
-
-  console.log("Fetch response status:", response.status);
 
   const buffer = await response.buffer();
 
-  console.log("Buffer size:", buffer.length);
-
-  const fileName = `${r.category}_${r._id}.pdf`;
+  const fileName = `${r.category}.pdf`;
 
   archive.append(buffer, { name: fileName });
-
-  console.log("Appended:", fileName);
 }
 
     await archive.finalize();
