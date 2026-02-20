@@ -805,12 +805,26 @@ console.log("After Mongo query");
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.pipe(res);
 
-    for (const r of receipts) {
-      const response = await fetch(r.pdfUrl);
-      const buffer = await response.buffer();
-      const fileName = `${r.category}.pdf`;
-      archive.append(buffer, { name: fileName});
-    }
+   for (const r of receipts) {
+
+  console.log("Processing receipt:", r._id);
+
+  console.log("Fetching URL:", r.pdfUrl);
+
+  const response = await fetch(r.pdfUrl);
+
+  console.log("Fetch response status:", response.status);
+
+  const buffer = await response.buffer();
+
+  console.log("Buffer size:", buffer.length);
+
+  const fileName = `${r.category}_${r._id}.pdf`;
+
+  archive.append(buffer, { name: fileName });
+
+  console.log("Appended:", fileName);
+}
 
     await archive.finalize();
   } catch (err) {
