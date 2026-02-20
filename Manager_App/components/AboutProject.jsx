@@ -48,7 +48,7 @@ const AboutProject = () => {
       setExpenses(response.data.expenses || 0);
       const receiptsResponse = await api.get(`/getReceipts/${projectId}`);
       setReceipts(receiptsResponse.data);
-      console.log(projectDetails)
+      // console.log(projectDetails)
     } catch (error) {
       console.error("Error fetching project details:", error);
     }
@@ -183,7 +183,7 @@ const AboutProject = () => {
                 <View style={s.statIconContainer}>
                   <Ionicons name="cash-outline" size={24} color="#fff" />
                 </View>
-                <Text style={s.statValue}>₪{projectDetails?.paid}</Text>
+                <Text style={s.statValue}>${projectDetails?.paid}</Text>
                 <Text style={s.statLabel}>Total Payment</Text>
               </LinearGradient>
             </View>
@@ -192,7 +192,7 @@ const AboutProject = () => {
                 <View style={s.statIconContainer}>
                   <Ionicons name="card-outline" size={24} color="#fff" />
                 </View>
-                <Text style={s.statValue}>₪{expenses}</Text>
+                <Text style={s.statValue}>${expenses}</Text>
                 <Text style={s.statLabel}>Expenses</Text>
               </LinearGradient>
             </View>
@@ -202,7 +202,7 @@ const AboutProject = () => {
               <View style={s.profitContent}>
                 <View>
                   <Text style={s.profitLabel}>Net Profit</Text>
-                  <Text style={s.profitValue}>₪{profit}</Text>
+                  <Text style={s.profitValue}>${profit}</Text>
                 </View>
                 <View style={s.profitBadge}>
                   <Ionicons name={profit >= 0 ? "trending-up" : "trending-down"} size={20} color="#fff" />

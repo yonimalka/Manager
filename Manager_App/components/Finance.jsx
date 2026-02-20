@@ -284,12 +284,9 @@ export default function FinanceFixedExpenses() {
         
         <View style={styles.section}>
         <Text style={styles.sectionTitle}>Receipts</Text>
-        
-        
          
             <ReceiptDownloadByDate />
-      
-        
+
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.actionCard}
@@ -321,7 +318,7 @@ export default function FinanceFixedExpenses() {
       {/* Income Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Income</Text>
-        
+        <ReceiptDownloadByDate />
         <View style={styles.card}>
           <TouchableOpacity
             onPress={() => setVisible(true)}

@@ -23,7 +23,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Path } from "react-native-svg";
 import Constants from 'expo-constants';
 
-console.log("Bundle ID:", Constants.expoConfig.ios.bundleIdentifier);
+
 const LoginScreen = () => {
   const navigation = useNavigation();
 
@@ -150,10 +150,10 @@ const LoginScreen = () => {
           {/* Logo Section */}
           <View style={styles.logoContainer}>
             <Image
-              source={require("../assets/mago-logo-transparent.png")}
+              source={require("../assets/MaggoLogo-transparent.png")}
               style={styles.logo}
             />
-            <Text style={styles.title}>Maggo</Text>
+            {/* <Text style={styles.title}>Maggo</Text> */}
             {/* <Text style={styles.subtitle}>Sign in to continue</Text> */}
           </View>
 
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-    paddingTop: 25,
+    paddingTop: 5,
   },
   scrollContent: {
     flexGrow: 1,
@@ -291,8 +291,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 230,
+    height: 230,
     marginBottom: 16,
     resizeMode: "contain",
   },
@@ -302,6 +302,9 @@ const styles = StyleSheet.create({
     color: "#1e90ff",
     marginBottom: 8,
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.35)",
+  textShadowOffset: { width: 0, height: 5 },
+  textShadowRadius: 8,
   },
   subtitle: {
     fontSize: 16,
@@ -316,8 +319,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
-    // borderLeftWidth: 4,
-    // borderLeftColor: "#dc3545",
   },
   errorText: {
     color: "#dc3545",

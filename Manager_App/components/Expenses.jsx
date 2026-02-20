@@ -47,7 +47,7 @@ const Expenses = ({ userId, refresh }) => {
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
                 <Text style={styles.summaryAmount}> 
-               {totalExpenses ? `${totalExpenses}£` : "0£"}
+               {totalExpenses ? `${totalExpenses}$` : "0$"}
                 </Text>
               )}
               <MaterialIcons

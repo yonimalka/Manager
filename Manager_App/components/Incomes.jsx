@@ -26,7 +26,7 @@ const Incomes = (refresh) => {
             return;
           }
       const response = await api.get(`/getTotalIncomes`);
-      
+       
       
       setTotalIncomes(response.data);
       setShouldRefresh(!refresh)
@@ -58,7 +58,7 @@ const Incomes = (refresh) => {
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
                 <Text style={styles.summaryAmount}>
-                {value ? `${value}£` : totalIncomes ? `${totalIncomes}£` : "0£"}
+                {value ? `${value}£` : totalIncomes ? `${totalIncomes}$` : "0$"}
                 </Text>
               )}
               <MaterialIcons

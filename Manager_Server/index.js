@@ -634,8 +634,8 @@ if (projectId) {
 
 app.post("/incomeReceipt", authMiddleware, async (req, res) => {
   try {
-     console.log("Request body:", req.body);
-    console.log("UserId:", req.userId);
+    //  console.log("Request body:", req.body);
+    // console.log("UserId:", req.userId);
 
     // Validate required fields
     const { amount, payer } = req.body;
@@ -774,63 +774,41 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error while creating ZIP" });
   }
 });
-// const userId = req.userId;
+app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
+  try {
+    const { from, to } = req.query;
 
-//     const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-//     const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
-//     const now = new Date();
-//     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-//     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-//     const receiptsResult = await ReceiptModel.aggregate([
-//       {
-//         $match: {
-//           userId: userId,
-//           createdAt: {
-//             $gte: startOfYear,
-//             $lt: startOfNextYear,
-//           },
-//         },
-//       },
-//       {
-//         $group: {
-//           _id: null,
-//           total: { $sum: "$sumOfReceipt" },
-//         },
-//       },
-//     ]);
+    const fromDate = from ? new Date(from) : null;
+    const toDate = to ? new Date(to) : null;
 
-//     const receiptsTotal = receiptsResult[0]?.total || 0;
+    // Build query
+    let query = { userId: req.userId };
+    if (fromDate && toDate) {
+      query.createdAt = { $gte: fromDate, $lte: toDate };
+    }
 
-//    const fixedResult = await FixedExpenseModel.aggregate([
-//   {
-//     $match: {
-//       userId,
-//       isActive: true,
-//       createdAt: {
-//             $gte: startOfYear,
-//             $lt: startOfNextYear,
-//           },
-//     },
-//   },
-//   {
-//     $group: {
-//       _id: null,
-//       total: { $sum: "$amount" },
-//     },
-//   },
-// ]);
-//     const fixedTotal = fixedResult[0]?.total || 0;
+    const receipts = await IncomeReceipt.find(query);
+    if (!receipts.length) return res.status(404).json({ message: "No receipts found for this date range" });
 
-//     // 3️⃣ Combined
-//     const totalExpenses = receiptsTotal + fixedTotal;
+    res.setHeader("Content-Disposition", "attachment; filename=receipts.zip");
+    res.setHeader("Content-Type", "application/zip");
 
-//     res.json({
-//       totalExpenses,
-//       breakdown: {
-//         receipts: receiptsTotal,
-//         fixed: fixedTotal,
-//       },
-//     });
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    for (const r of receipts) {
+      const response = await fetch(r.pdfUrl);
+      const buffer = await response.buffer();
+      // const fileName = `${r.category}_${Date.now()}.jpg`;
+      archive.append(buffer);
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    console.error("ZIP generation error:", err);
+    res.status(500).json({ message: "Server error while creating ZIP" });
+  }
+});
 app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const startOfYear = new Date(new Date().getFullYear(), 0, 1);

@@ -8,11 +8,11 @@ export default {
     slug: "Manager",  
     version: version,
     orientation: "portrait",
-    icon: "./assets/mago-logo-transparent.png",
+    icon: "./assets/MaggoLogo.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
     splash: {
-      image: "./assets/mago-logo-transparent.png",
+      image: "./assets/MaggoLogo.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
@@ -33,12 +33,12 @@ export default {
       permissions: ["INTERNET"],
       usesCleartextTraffic: false,
       adaptiveIcon: {
-        foregroundImage: "./assets/mago-logo-transparent.png",
+        foregroundImage: "./assets/MaggoLogo.png",
         backgroundColor: "#ffffff"
       }
     },
     web: {
-      favicon: "./assets/mago-logo-transparent.png"
+      favicon: "./assets/MaggoLogo.png"
     },
     extra: {
       SERVER_URL: process.env.SERVER_URL,

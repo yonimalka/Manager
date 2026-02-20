@@ -178,7 +178,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       }
     );
 
-    receiptData.pdfUrl = pdfUrl;
+    receiptData.pdfUrl = pdfUrl.downloadURL;
     onSubmit(receiptData);
     } catch (err) {
       console.error("error occurd on Receipt Generator", err);

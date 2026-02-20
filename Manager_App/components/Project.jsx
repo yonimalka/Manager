@@ -179,8 +179,8 @@ const Project = ({ projectName, totalAmount, id }) => {
         )}
 
         <View style={styles.amountRow}>
-          <Text style={styles.paid}>£{paidAmount.toLocaleString()}</Text>
-          <Text style={styles.total}>/ £{totalAmount.toLocaleString()}</Text>
+          <Text style={styles.paid}>${paidAmount.toLocaleString()}</Text>
+          <Text style={styles.total}>/ ${totalAmount.toLocaleString()}</Text>
         </View>
       </View>
       <View style={styles.projectArrow}>

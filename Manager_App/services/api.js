@@ -2,7 +2,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "@env";
-console.log("gjhgj");
+console.log("");
 
 // Create Axios instance
 const api = axios.create({
