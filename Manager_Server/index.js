@@ -776,8 +776,10 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
 });
 app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
   try {
+    console.log("enter route on downloadIncomesReceiptsZip");
+    
     const { from, to } = req.query;
-
+     
     const fromDate = from ? new Date(from) : null;
     const toDate = to ? new Date(to) : null;
 
@@ -800,7 +802,7 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
     for (const r of receipts) {
       const response = await fetch(r.pdfUrl);
       const buffer = await response.buffer();
-      const fileName = `${r.category}_${Date.now()}.pdf`;
+      const fileName = `${r.category}.pdf`;
       archive.append(buffer, { name: fileName});
     }
 

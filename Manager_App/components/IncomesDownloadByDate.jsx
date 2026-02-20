@@ -61,7 +61,6 @@ export default function ReceiptDownloadByDate() {
       const query = from instanceof Date && to instanceof Date
         ? `?from=${from.toISOString()}&to=${to.toISOString()}`
         : "";
-
       const res = await FileSystem.downloadAsync(
         `${SERVER_URL}/downloadIncomesReceiptsZip${query}`,
         fileUri,
