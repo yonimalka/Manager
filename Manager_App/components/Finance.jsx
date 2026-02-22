@@ -284,7 +284,7 @@ export default function FinanceFixedExpenses() {
       {/* Receipts Section */}
         
         <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Receipts</Text>
+        <Text style={styles.sectionTitle}>Expenses</Text>
          
             <ReceiptDownloadByDate />
 
@@ -318,7 +318,7 @@ export default function FinanceFixedExpenses() {
 
       {/* Income Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Income</Text>
+        <Text style={styles.sectionTitle}>Incomes</Text>
         <IncomesDownloadByDate />
         <View style={styles.card}>
           <TouchableOpacity

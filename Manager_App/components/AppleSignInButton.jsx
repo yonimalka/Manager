@@ -11,6 +11,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import api from "../services/api";
 
 const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
@@ -52,6 +53,9 @@ const signInWithApple = async () => {
     // Save tokens locally
     await AsyncStorage.setItem("token", token);
     await AsyncStorage.setItem("refreshToken", refreshToken);
+    const res =  await api.get(`/getUserDetails`);
+    console.log(res.data);
+    
      // Navigate to home
         navigation.reset({
         index: 0,
@@ -62,7 +66,7 @@ const signInWithApple = async () => {
       token,
       refreshToken,
     };
-
+    
   } catch (error) {
 
     if (error.code === "ERR_CANCELED") {

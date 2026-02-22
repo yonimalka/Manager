@@ -457,8 +457,8 @@ app.post("/refresh", (req, res) => {
     res.json({ accessToken: newAccessToken });
   });
 });
-app.get("/getUserDetails/:userId", async (req, res) => {
-   const userId = req.params.userId;
+app.get("/getUserDetails", authMiddleware, async (req, res) => {
+   const userId = req.userId;
   //  console.log(userId);
    
    await UserModel.findById(userId)

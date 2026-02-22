@@ -10,12 +10,17 @@ import {
   Alert,
   Keyboard,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "./useAuth";
 import api from "../services/api";
-import { Camera, Trash2 } from "lucide-react-native";
+import { Camera, Trash2, Pencil  } from "lucide-react-native";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage, auth, signInFirebase } from "./firebase";
 
 const isRTL = I18nManager.isRTL;
 
@@ -50,9 +55,32 @@ export default function ProfileDetails() {
 
   const handleSave = async () => {
     try {
-      console.log(userDetails);
-      
-      await api.post(`/updateUser`, userDetails);
+      if (!auth.currentUser) {
+      await signInFirebase();
+    }
+
+    const uid = auth.currentUser.uid;
+    let logoUrl = userDetails.logo; // default to existing
+
+    // Only upload if image changed
+    if (image && image !== userDetails.logo) {
+      const response = await fetch(image);
+      const blob = await response.blob();
+
+      const fileRef = ref(storage, `users/${uid}/company-logo/logo.jpg`);
+
+      await uploadBytesResumable(fileRef, blob);
+
+      logoUrl = await getDownloadURL(fileRef);
+    }
+      setUserDetails((prev) => ({
+        ...prev,
+        logo: logoUrl,
+      }));
+
+      // Also update local variable before sending
+      userDetails.logo = logoUrl;
+      await api.post("/updateUser", userDetails);
       setIsEditing(false);
       // Alert.alert("Success", "Profile updated successfully");
     } catch (err) {
@@ -76,8 +104,15 @@ export default function ProfileDetails() {
     });
 
     if (!res.canceled) {
-      setImage(res.assets[0].uri);
-    }
+  const newImage = res.assets[0].uri;
+
+  setImage(newImage);
+
+  setUserDetails((prev) => ({
+    ...prev,
+    logo: newImage,
+  }));
+}
   };
 
   const handleDelete = async () => {
@@ -100,24 +135,26 @@ export default function ProfileDetails() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+    // keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+  >
+  <ScrollView
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+    >
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
-
-      {/* Edit Button */}
-      {!isEditing && (
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => setIsEditing(true)}
-        >
-          <Text style={styles.editText}>Edit Details</Text>
-        </TouchableOpacity>
-      )}
+      {/* <Text style={styles.title}>Profile</Text> */}
 
       {/* Avatar */}
       <View style={styles.avatarWrapper}>
-        {image ? (
-          <Image source={{ uri: image }} style={styles.avatar} />
-        ) : (
+        {image || userDetails.logo ? (
+  <Image
+    source={{ uri: image || userDetails.logo }}
+    style={styles.avatar}
+  />
+) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarText}>
               {userDetails?.name?.[0] || "U"}
@@ -131,7 +168,15 @@ export default function ProfileDetails() {
           </TouchableOpacity>
         )}
       </View>
-
+      {/* Edit Button */}
+      {!isEditing && (
+        <TouchableOpacity
+  style={styles.editBtn}
+  onPress={() => setIsEditing(true)}
+>
+  <Pencil size={22} color="#2563EB" />
+</TouchableOpacity>
+      )}
       {/* Info Card */}
       <View style={styles.card}>
         <Label title="Name" />
@@ -145,7 +190,7 @@ export default function ProfileDetails() {
 
         <Label title="Business Name" />
         <TextInput
-          value={userDetails.bussinessName}
+          value={userDetails.businessName}
           style={styles.input}
           editable={isEditing}
           onChangeText={(text) => handleChange("bussinessName", text)}
@@ -193,6 +238,8 @@ export default function ProfileDetails() {
         <Text style={styles.deleteText}>Delete Account</Text>
       </TouchableOpacity>
     </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 }
@@ -206,7 +253,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F5F6F8",
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 100,
   },
 
   title: {
@@ -217,7 +264,14 @@ const styles = StyleSheet.create({
 
   editBtn: {
     alignSelf: "flex-end",
-    marginBottom: 10,
+  marginBottom: 10,
+  backgroundColor: "#E0E7FF",
+  padding: 8,
+  borderRadius: 20,
+  position: "absolute",
+  top: 60,
+  right: 20,
+  zIndex: 10,
   },
 
   editText: {
