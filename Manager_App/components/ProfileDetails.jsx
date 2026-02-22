@@ -8,6 +8,8 @@ import {
   Image,
   I18nManager,
   Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
@@ -23,12 +25,10 @@ export default function ProfileDetails() {
 
   const [userDetails, setUserDetails] = useState({});
   const [image, setImage] = useState(null);
-  const [address, setAddress] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     fetchData();
-    console.log(userDetails);
-      
   }, [userId]);
 
   const fetchData = async () => {
@@ -41,7 +41,29 @@ export default function ProfileDetails() {
     }
   };
 
+  const handleChange = (field, value) => {
+    setUserDetails((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      console.log(userDetails);
+      
+      await api.post(`/updateUser`, userDetails);
+      setIsEditing(false);
+      // Alert.alert("Success", "Profile updated successfully");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Something went wrong");
+    }
+  };
+
   const pickImage = async () => {
+    if (!isEditing) return;
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("Permission required");
@@ -55,7 +77,6 @@ export default function ProfileDetails() {
 
     if (!res.canceled) {
       setImage(res.assets[0].uri);
-      // uploadLogo(); // keep your existing upload logic
     }
   };
 
@@ -78,13 +99,24 @@ export default function ProfileDetails() {
   };
 
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
     <View style={styles.container}>
       <Text style={styles.title}>Profile</Text>
 
-      {/* Avatar / Logo */}
+      {/* Edit Button */}
+      {!isEditing && (
+        <TouchableOpacity
+          style={styles.editBtn}
+          onPress={() => setIsEditing(true)}
+        >
+          <Text style={styles.editText}>Edit Details</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Avatar */}
       <View style={styles.avatarWrapper}>
         {image ? (
-          <Image source={{ uri: userDetails.logo }} style={styles.avatar} />
+          <Image source={{ uri: image }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarText}>
@@ -93,9 +125,11 @@ export default function ProfileDetails() {
           </View>
         )}
 
-        <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
-          <Camera size={18} color="#fff" />
-        </TouchableOpacity>
+        {isEditing && (
+          <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
+            <Camera size={18} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Info Card */}
@@ -104,6 +138,8 @@ export default function ProfileDetails() {
         <TextInput
           value={userDetails.name}
           style={styles.input}
+          editable={isEditing}
+          onChangeText={(text) => handleChange("name", text)}
           placeholder="Your name"
         />
 
@@ -111,26 +147,30 @@ export default function ProfileDetails() {
         <TextInput
           value={userDetails.bussinessName}
           style={styles.input}
+          editable={isEditing}
+          onChangeText={(text) => handleChange("bussinessName", text)}
           placeholder="Business name"
         />
+
         <Label title="Business ID" />
         <TextInput
           keyboardType="numeric"
-          value={String(userDetails.businessId)}
+          value={String(userDetails.businessId || "")}
           style={styles.input}
+          editable={isEditing}
+          onChangeText={(text) => handleChange("businessId", text)}
           placeholder="Business ID"
         />
-        <View style={styles.field}>
-  <Text style={styles.label}>Address</Text>
-  <TextInput
-    value={userDetails.address}
-    onChangeText={setAddress}
-    placeholder="Street, City, Postcode"
-    placeholderTextColor="#9CA3AF"
-    style={styles.input}
-    multiline
-  />
-</View>
+
+        <Label title="Address" />
+        <TextInput
+          value={userDetails.address}
+          style={styles.input}
+          editable={isEditing}
+          onChangeText={(text) => handleChange("address", text)}
+          placeholder="Street, City, Postcode"
+          multiline
+        />
 
         <Label title="Email" />
         <TextInput
@@ -138,14 +178,22 @@ export default function ProfileDetails() {
           style={[styles.input, styles.disabled]}
           editable={false}
         />
+        {/* Save Button (Bottom Fixed) */}
+      {isEditing && (
+        <View style={styles.saveWrapper}>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+            <Text style={styles.saveText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       </View>
-
-      {/* Actions */}
+      {/* Delete */}
       <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
         <Trash2 size={18} color="#dc2626" />
         <Text style={styles.deleteText}>Delete Account</Text>
       </TouchableOpacity>
     </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -164,7 +212,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "700",
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+
+  editBtn: {
+    alignSelf: "flex-end",
+    marginBottom: 10,
+  },
+
+  editText: {
+    color: "#2563EB",
+    fontWeight: "600",
   },
 
   avatarWrapper: {
@@ -246,5 +304,28 @@ const styles = StyleSheet.create({
     color: "#dc2626",
     fontWeight: "600",
   },
-});
 
+  saveWrapper: {
+    position: "relative",
+    // bottom: 10,
+    // left: 20,
+    // right: 20,
+    flexDirection: "row-reverse",
+  },
+
+  saveBtn: {
+    justifyContent: "center",
+    backgroundColor: "#2563EB",
+    // padding: 18,
+    width: 100,
+    height: 50,
+    borderRadius: 18,
+    alignItems: "center",
+  },
+
+  saveText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+});

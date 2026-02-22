@@ -476,7 +476,33 @@ app.get("/getUserDetails/:userId", async (req, res) => {
     console.log("error occurd on getUserDetails",err);
   } )
 });
+app.post("/updateUser", authMiddleware, async (req, res) => {
+  try {
+    const allowedFields = ["name", "businessName", "businessId", "address", "logo"];
+    const updateData = {};
 
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
+
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      req.userId,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.log("error occurred on updateUser", err);
+    res.status(500).json({ message: "Server error" });
+  }
+})
 // JWT-protected route
 app.get("/getUser", authMiddleware, async (req, res) => {
   try {

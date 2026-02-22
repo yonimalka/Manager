@@ -55,6 +55,7 @@ export default function ReceiptDownloadByDate() {
 
   const downloadReceiptsZip = async ({ from, to } = {}) => {
     try {
+      
       const token = await AsyncStorage.getItem("token");
       const fileUri = FileSystem.documentDirectory + "Receipts.zip";
 

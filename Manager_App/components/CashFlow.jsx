@@ -189,7 +189,7 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
       radius={110}
       padAngle={3}
       labels={({ datum }) =>
-        `£${datum.y.toLocaleString()}`
+        `$${datum.y.toLocaleString()}`
       }
       colorScale={["#34C759", "#FF3B30"]}
       style={{
@@ -210,7 +210,7 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
           { color: netCashFlow >= 0 ? "#34C759" : "#FF3B30" },
         ]}
       >
-        £{netCashFlow.toLocaleString()}
+        ${netCashFlow.toLocaleString()}
       </Text>
     </View>
   </View>
@@ -249,7 +249,7 @@ const SummaryCard = ({ title, value, icon, color }) => (
         <MaterialIcons name={icon} size={18} color={color} />
       </View>
     </View>
-    <Text style={styles.summaryValue}>£{value.toLocaleString()}</Text>
+    <Text style={styles.summaryValue}>${value.toLocaleString()}</Text>
   </View>
 );
 
@@ -291,7 +291,7 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
             </View>
 
             <Text style={[styles.transactionAmount, { color }]}>
-              £{amount.toLocaleString()}
+              ${amount.toLocaleString()}
             </Text>
           </View>
         );
@@ -406,7 +406,9 @@ donutValue: {
     alignItems: "center",
     marginBottom: 18,
   },
-  sectionTitle: { fontSize: 20, fontWeight: "700" },
+  sectionTitle: { fontSize: 20, 
+    fontWeight: "700" 
+  },
 
   addBtn: {
     width: 32,
