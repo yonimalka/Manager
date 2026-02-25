@@ -38,14 +38,43 @@ export default function ProfileDetails() {
 
   const fetchData = async () => {
     try {
-      const res = await api.get(`/getUserDetails/${userId}`);
-      setUserDetails(res.data);
+      const res = await api.get(`/getUserDetails`);
+      const data = res.data;
+      let addressObj = {
+       street: "",
+       state: "",
+       country: "",
+       zip: "",
+     };
+
+    if (typeof data.address === "string") {
+      const parts = data.address.split(",");
+      addressObj.street = parts[0]?.trim() || "";
+      addressObj.state = parts[1]?.trim() || "";
+      addressObj.zip = parts[2]?.trim() || "";
+    } else if (typeof data.address === "object") {
+      addressObj = data.address;
+    }
+
+    setUserDetails({
+      ...data,
+      address: addressObj,
+    });
+
       setImage(res.data.logo);
     } catch (err) {
       console.error(err);
     }
   };
-
+  const handleAddressChange = (field, value) => {
+  setUserDetails((prev) => ({
+    ...prev,
+    address: {
+      ...prev.address,
+      [field]: value,
+    },
+  }));
+};
   const handleChange = (field, value) => {
     setUserDetails((prev) => ({
       ...prev,
@@ -82,7 +111,10 @@ export default function ProfileDetails() {
       userDetails.logo = logoUrl;
       await api.post("/updateUser", userDetails);
       setIsEditing(false);
-      // Alert.alert("Success", "Profile updated successfully");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "HomeScreen" }],
+      });
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "Something went wrong");
@@ -193,7 +225,7 @@ export default function ProfileDetails() {
           value={userDetails.businessName}
           style={styles.input}
           editable={isEditing}
-          onChangeText={(text) => handleChange("bussinessName", text)}
+          onChangeText={(text) => handleChange("businessName", text)}
           placeholder="Business name"
         />
 
@@ -208,14 +240,56 @@ export default function ProfileDetails() {
         />
 
         <Label title="Address" />
-        <TextInput
-          value={userDetails.address}
-          style={styles.input}
-          editable={isEditing}
-          onChangeText={(text) => handleChange("address", text)}
-          placeholder="Street, City, Postcode"
-          multiline
-        />
+
+{isEditing ? (
+  <>
+    <Label title="Street" />
+    <TextInput
+      value={userDetails.address?.street || ""}
+      style={styles.input}
+      onChangeText={(text) => handleAddressChange("street", text)}
+      placeholder="Street address"
+    />
+
+    <Label title="State" />
+    <TextInput
+      value={userDetails.address?.state || ""}
+      style={styles.input}
+      onChangeText={(text) => handleAddressChange("state", text)}
+      placeholder="State"
+    />
+
+    <Label title="ZIP Code" />
+    <TextInput
+      value={userDetails.address?.zip || ""}
+      style={styles.input}
+      keyboardType="numeric"
+      onChangeText={(text) => handleAddressChange("zip", text)}
+      placeholder="ZIP Code"
+    />
+
+    <Label title="Country" />
+    <TextInput
+      value={userDetails.address?.country || ""}
+      style={styles.input}
+      onChangeText={(text) => handleAddressChange("country", text)}
+      placeholder="Country"
+    />
+  </>
+) : (
+  <View style={styles.input}>
+    <Text>
+      {[
+        userDetails.address?.street,
+        userDetails.address?.state,
+        userDetails.address?.zip,
+        userDetails.address?.country,
+      ]
+        .filter(Boolean)
+        .join(", ") || "No address provided"}
+    </Text>
+  </View>
+)}
 
         <Label title="Email" />
         <TextInput

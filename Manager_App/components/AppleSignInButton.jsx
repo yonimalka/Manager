@@ -5,6 +5,7 @@ import {
   Text,
   Image,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as AppleAuthentication from "expo-apple-authentication";
@@ -53,9 +54,14 @@ const signInWithApple = async () => {
     // Save tokens locally
     await AsyncStorage.setItem("token", token);
     await AsyncStorage.setItem("refreshToken", refreshToken);
+
     const res =  await api.get(`/getUserDetails`);
-    console.log(res.data);
+   
     
+    if (!res.data.businessName || !res.data.businessId || !res.data.address) {
+      Alert.alert("Hi, please fill all required fields")
+      navigation.navigate("ProfileDetails");
+    } else {
      // Navigate to home
         navigation.reset({
         index: 0,
@@ -66,7 +72,7 @@ const signInWithApple = async () => {
       token,
       refreshToken,
     };
-    
+  }
   } catch (error) {
 
     if (error.code === "ERR_CANCELED") {

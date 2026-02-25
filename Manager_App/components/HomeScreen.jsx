@@ -15,20 +15,20 @@ import {
   Modal
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
-import { SERVER_URL } from "@env";
-import axios from "axios";
+// import { SERVER_URL } from "@env";
+// import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
 import Receipts from "./Receipts";
 import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
-import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
+// import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 import Incomes from "./Incomes";
 import Expenses from "./Expenses";
 import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
-import BottomNavBar from "../components/BottomNavBar";
+// import BottomNavBar from "../components/BottomNavBar";
 import { useAuth } from "./useAuth";
 import api from "../services/api";
 import { signInAnonymously } from "firebase/auth";
@@ -120,7 +120,7 @@ const HomeScreen = () => {
   const submitIncomeReceipt = async (data) => {
     try {
       await api.post("/incomeReceipt", data);
-      await api.get(`/getUserDetails/${userId}`);
+      await api.get(`/getUserDetails`);
       
     } catch (err) {
       console.error(err);
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    borderWidth: 3,
+    borderWidth: 1,
     borderColor: "#fff",
   },
   avatarPlaceholder: {

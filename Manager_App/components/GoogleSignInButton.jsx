@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import axios from "axios";
 import {SERVER_URL} from "@env";
+import api from "../services/api";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -57,7 +58,7 @@ export default function GoogleSignInButton() {
 
       // Send user to backend
       
-      const res = await axios.post(`${SERVER_URL}/GoogleSignIn`, {
+      const response = await axios.post(`${SERVER_URL}/GoogleSignIn`, {
         googleId: googleUser.id,
         email: googleUser.email,
         name: googleUser.name,
@@ -65,16 +66,23 @@ export default function GoogleSignInButton() {
       },
     { headers: { "Content-Type": "application/json" } });
 
-      const { token } = res.data;
+      const { token } = response.data;
       
       // Save login token locally
       await AsyncStorage.setItem("token", token);
-      
-      // Navigate to home
+      const res = await api.get("/getUserDetails");
+       console.log(res.data);
+      if (!res.data.businessName || !res.data.businessId || !res.data.address) {
+            Alert.alert("Hi, please fill all required fields")
+            navigation.navigate("ProfileDetails");
+          } else {
+           // Navigate to home
         navigation.reset({
         index: 0,
         routes: [{ name: "HomeScreen" }],
       });
+          }
+      
 
     } catch (error) {
       console.log("Google login error:", error);
