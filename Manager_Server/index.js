@@ -226,7 +226,12 @@ const ProjectSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
   name: String,
   businessName: String,
-  address: String,
+  address: {
+    street: { type: String, trim: true },
+    state: { type: String, uppercase: true, trim: true },
+    country: { type: String, uppercase: true, trim: true },
+    zip: { type: String, trim: true },
+  },
   businessId: Number,
   email: String,
   logo: String,
@@ -486,13 +491,15 @@ app.post("/updateUser", authMiddleware, async (req, res) => {
         updateData[field] = req.body[field];
       }
     });
-
+    console.log("update data: ", updateData);
+    
     const updatedUser = await UserModel.findByIdAndUpdate(
       req.userId,
       updateData,
       { new: true }
-    );
-
+    ); 
+    console.log("updated User: ", updatedUser);
+    
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
     }
