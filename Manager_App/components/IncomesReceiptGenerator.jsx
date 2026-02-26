@@ -40,6 +40,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   zip: "",
   country: "US",
 });
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [payerTaxId, setPayerTaxId] = useState("");
   const [category, setCategory] = useState("");
   const [receiptNumber, setReceiptNumber] = useState(
@@ -50,36 +51,14 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const [description, setDescription] = useState("");
   const [image, setImage] = useState(null);
   const [errors, setErrors] = useState({});
-  const [taxPreview, setTaxPreview] = useState(null);
-  const [taxLoading, setTaxLoading] = useState(false);
+  const [taxRate, setTaxRate] = useState("0");
+  const numericAmount = Number(amount) || 0;
+  const numericRate = Number(taxRate) || 0;
   
-  useEffect(() => {
-  const fetchTax = async () => {
-    if (!amount || !payerAddress.zip) {
-      setTaxPreview(null);
-      return;
-    }
+  const subtotal = numericAmount;
+  const tax = +(subtotal * (numericRate / 100)).toFixed(2);
+  const total = +(subtotal + tax).toFixed(2);
 
-    try {
-      setTaxLoading(true);
-
-      const response = await api.post("/calculate-tax", {
-        amount: Number(amount),
-        to_zip: payerAddress.zip,
-      });
-      console.log(response.data);
-      
-      setTaxPreview(response.data);
-
-    } catch (err) {
-      setTaxPreview(null);
-    } finally {
-      setTaxLoading(false);
-    }
-  };
-
-  fetchTax();
-}, [amount, payerAddress.zip]);
   // Validation
   const validateForm = () => {
     const newErrors = {};
@@ -132,7 +111,9 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
     }
     return cleaned;
   };
-
+  const handlePaymentMethodSelect = (method) => {
+  setPaymentMethod(method);
+};
   const handleAmountChange = (value) => {
     const formatted = formatAmount(value);
     setAmount(formatted);
@@ -189,30 +170,10 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
     [field]: value,
   }));
 };
-  const handleSubmit = async () => {
+ const handleSubmit = async () => {
   if (!validateForm()) {
     Alert.alert("Validation Error", "Please fill in all required fields correctly.");
     return;
-  }
-
-  let subtotal = Number(amount);
-  let tax = 0;
-  let total = Number(amount);
-  let rate = 0;
-
-  try {
-    const taxResponse = await api.post("/calculate-tax", {
-      amount: Number(amount),
-      to_zip: payerAddress.zip,
-    });
-
-    subtotal = taxResponse.data.subtotal;
-    tax = taxResponse.data.tax;
-    total = taxResponse.data.total;
-    rate = taxResponse.data.rate;
-
-  } catch (err) {
-    console.log("Tax calculation failed, continuing without tax");
   }
 
   try {
@@ -220,9 +181,9 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       receiptNumber,
       subtotal,
       tax,
-      taxRate: rate,
+      taxRate: numericRate,
       total,
-      amount: Number(amount),
+      amount: numericAmount,
       payer: payer.trim(),
       payerAddress,
       payerTaxId: payerTaxId.trim() || null,
@@ -231,14 +192,18 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       date: date.toISOString(),
       description: description.trim(),
       image,
+      paymentMethod,
       createdAt: new Date().toISOString(),
     };
 
-    const response = await api.get(`/getUserDetails/${userId}`);
+    const savedReceipt = await api.post("/incomeReceipt", receiptData);
+
+
+    const response = await api.get("/getUserDetails");
     const userDetails = response.data;
 
-    const pdfUrl = await generateIncomeReceiptPDF(
-      receiptData,
+    const pdfResult = await generateIncomeReceiptPDF(
+      savedReceipt.data,
       userDetails,
       {
         userId,
@@ -247,11 +212,14 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       }
     );
 
-    receiptData.pdfUrl = pdfUrl.downloadURL;
-    onSubmit(receiptData);
+    await api.put(`/incomeReceipt/${savedReceipt.data._id}`, {
+      pdfUrl: pdfResult.downloadURL,
+    });
+
+    onSubmit(savedReceipt.data);
 
   } catch (err) {
-    console.error("Receipt generation error:", err);
+    console.error("Receipt generation error:", err.response?.data || err);
     Alert.alert("Error", "Failed to generate receipt");
   }
 };
@@ -287,100 +255,6 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
 
           {/* Form Card */}
           <View style={styles.card}>
-            {/* Amount */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Payment Details</Text>
-              
-              <FormInput
-                icon={<DollarSign size={20} color="#16a34a" />}
-                value={amount}
-                onChange={handleAmountChange}
-                placeholder="0.00"
-                keyboardType="decimal-pad"
-                error={errors.amount}
-                label="Amount (USD)"
-                required
-              />
-              {taxLoading && (
-  <Text style={{ marginTop: 10, fontSize: 13, color: "#6B7280" }}>
-    Calculating tax...
-  </Text>
-)}
-
-{taxPreview && (
-  <View style={{
-    marginTop: 16,
-    padding: 14,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12
-  }}>
-    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-      <Text>Subtotal</Text>
-      <Text>${taxPreview.subtotal.toFixed(2)}</Text>
-    </View>
-
-    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-      <Text>
-        Sales Tax {taxPreview.rate ? `(${(taxPreview.rate * 100).toFixed(2)}%)` : ""}
-      </Text>
-      <Text>${taxPreview.tax.toFixed(2)}</Text>
-    </View>
-
-    <View style={{
-      height: 1,
-      backgroundColor: "#E5E7EB",
-      marginVertical: 8
-    }} />
-
-    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-      <Text style={{ fontWeight: "700" }}>Total</Text>
-      <Text style={{ fontWeight: "700" }}>
-        ${taxPreview.total.toFixed(2)}
-      </Text>
-    </View>
-
-    {!taxPreview.applied && (
-      <Text style={{ marginTop: 6, fontSize: 12, color: "#6B7280" }}>
-        No Sales Tax applied
-      </Text>
-    )}
-  </View>
-)}
-              {/* Date */}
-              <TouchableOpacity
-                style={[styles.inputRow, errors.date && styles.inputError]}
-                onPress={() => setShowDate(true)}
-              >
-                <Calendar size={20} color="#6B7280" />
-                <View style={styles.dateContent}>
-                  <Text style={styles.inputLabel}>Payment Date *</Text>
-                  <Text style={styles.dateText}>
-                    {date.toLocaleDateString("en-US", {
-                      weekday: "short",
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {showDate && (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={(event, selectedDate) => {
-                    setShowDate(Platform.OS === "ios");
-                    if (selectedDate) {
-                      setDate(selectedDate);
-                    }
-                  }}
-                  maximumDate={new Date()}
-                />
-              )}
-            </View>
-
             {/* Payer Information */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Payer Information</Text>
@@ -479,6 +353,123 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                   Required for IRS documentation. Be specific about services provided.
                 </Text>
               </View>
+            </View>
+            {/* Payment Method */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Payment Method</Text>
+              <View style={styles.paymentToggleContainer}>
+              {[
+                { key: "cash", label: "Cash" },
+                { key: "card", label: "Credit Card" },
+                { key: "bank", label: "Bank Transfer" },
+                { key: "check", label: "Check" },
+                { key: "other", label: "Other" },
+              ].map((method) => (
+                <TouchableOpacity
+                  key={method.key}
+                  style={[
+                    styles.paymentOption,
+                    paymentMethod === method.key && styles.paymentOptionActive,
+                  ]}
+                  onPress={() => handlePaymentMethodSelect(method.key)}
+                >
+                  <Text
+                    style={[
+                      styles.paymentOptionText,
+                      paymentMethod === method.key && styles.paymentOptionTextActive,
+                    ]}
+                  >
+                    {method.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            </View>
+            {/* Amount */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Payment Details</Text>
+              
+              <FormInput
+                icon={<DollarSign size={20} color="#16a34a" />}
+                value={amount}
+                onChange={handleAmountChange}
+                placeholder="0.00"
+                keyboardType="decimal-pad"
+                error={errors.amount}
+                label="Amount (USD)"
+                required
+              />
+              <FormInput
+                icon={<Hash size={20} color="#6B7280" />}
+                value={taxRate}
+                onChange={(val) => setTaxRate(val.replace(/[^0-9.]/g, ""))}
+                placeholder="Tax Rate (%)"
+                keyboardType="decimal-pad"
+                label="Tax Rate (%)"
+                optional
+              />
+              <View style={{
+                marginVertical: 16,
+                padding: 14,
+                backgroundColor: "#F3F4F6",
+                borderRadius: 12
+              }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text>Subtotal</Text>
+                  <Text>${subtotal.toFixed(2)}</Text>
+                </View>
+
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                  <Text>Sales Tax ({numericRate.toFixed(2)}%)</Text>
+                  <Text>${tax.toFixed(2)}</Text>
+                </View>
+
+                <View style={{
+                  height: 1,
+                  backgroundColor: "#E5E7EB",
+                  marginVertical: 8
+                }} />
+
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontWeight: "700" }}>Total</Text>
+                  <Text style={{ fontWeight: "700" }}>
+                    ${total.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+              {/* Date */}
+              <TouchableOpacity
+                style={[styles.inputRow, errors.date && styles.inputError]}
+                onPress={() => setShowDate(true)}
+              >
+                <Calendar size={20} color="#6B7280" />
+                <View style={styles.dateContent}>
+                  <Text style={styles.inputLabel}>Payment Date *</Text>
+                  <Text style={styles.dateText}>
+                    {date.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {showDate && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  onChange={(event, selectedDate) => {
+                    setShowDate(Platform.OS === "ios");
+                    if (selectedDate) {
+                      setDate(selectedDate);
+                    }
+                  }}
+                  maximumDate={new Date()}
+                />
+              )}
             </View>
 
             {/* Attachment */}
@@ -680,6 +671,35 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     color: "#111827",
+  },
+  paymentToggleContainer: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 10,
+  },
+  
+  paymentOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+  },
+  
+  paymentOptionActive: {
+    backgroundColor: "#16a34a",
+    borderColor: "#16a34a",
+  },
+  
+  paymentOptionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  
+  paymentOptionTextActive: {
+    color: "#ffffff",
   },
   dateContent: {
     flex: 1,

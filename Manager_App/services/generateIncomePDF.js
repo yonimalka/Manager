@@ -25,7 +25,10 @@ export async function generateIncomeReceiptPDF(
       includeFooter = true,
       colorScheme = "blue", // blue, green, purple, gray
     } = options;
-
+    const subtotal = Number(receipt.subtotal ?? receipt.amount ?? 0);
+    const tax = Number(receipt.tax ?? 0);
+    const taxRate = Number(receipt.taxRate ?? 0);
+    const total = Number(receipt.total ?? subtotal + tax);
     // Format date
     const date = new Date(receipt.date || receipt.createdAt);
     const formattedDate = date.toLocaleDateString("en-US", {
@@ -449,7 +452,11 @@ export async function generateIncomeReceiptPDF(
             </div>
             <div class="info-box">
               <div class="info-label">Payment Method</div>
-              <div class="info-value">${receipt.paymentMethod || "Not specified"}</div>
+              <div class="info-value">
+  ${(receipt.paymentMethod || "cash")
+    .replace("_", " ")
+    .replace(/\b\w/g, c => c.toUpperCase())}
+</div>
             </div>
             <div class="info-box">
               <div class="info-label">Status</div>
@@ -464,7 +471,14 @@ export async function generateIncomeReceiptPDF(
             <div class="section-title">Received From</div>
             <div class="payer-details">
               <p><strong>Name:</strong> ${receipt.payer || "N/A"}</p>
-              ${receipt.payerAddress ? `<p><strong>Address:</strong> ${receipt.payerAddress}</p>` : ""}
+              ${receipt.payerAddress ? `
+<p>
+  <strong>Address:</strong>
+  ${receipt.payerAddress.street || ""} 
+  ${receipt.payerAddress.state || ""} 
+  ${receipt.payerAddress.zip || ""}
+</p>
+` : ""}
               ${receipt.payerTaxId ? `<p><strong>Tax ID:</strong> ${receipt.payerTaxId}</p>` : ""}
               ${receipt.payerEmail ? `<p><strong>Email:</strong> ${receipt.payerEmail}</p>` : ""}
             </div>
@@ -482,15 +496,29 @@ export async function generateIncomeReceiptPDF(
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>${receipt.description || receipt.notes || "Payment received"}</td>
-                  <td>${receipt.category || "Income"}</td>
-                  <td>${currencySymbol}${Number(receipt.amount).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}</td>
-                </tr>
-              </tbody>
+  <tr>
+    <td>${receipt.description || receipt.notes || "Payment received"}</td>
+    <td>${receipt.category || "Income"}</td>
+    <td>${currencySymbol}${subtotal.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}</td>
+  </tr>
+
+  ${taxRate > 0 ? `
+  <tr>
+    <td colspan="2" style="text-align:right; font-weight:600;">
+      Sales Tax (${taxRate.toFixed(2)}%)
+    </td>
+    <td>
+      ${currencySymbol}${tax.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}
+    </td>
+  </tr>
+  ` : ""}
+</tbody>
             </table>
           </div>
 
@@ -498,10 +526,12 @@ export async function generateIncomeReceiptPDF(
           <div class="total-section">
             <div class="total-row">
               <div class="total-label">Total Amount Received</div>
-              <div class="total-amount">${currencySymbol}${Number(receipt.amount).toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })} ${currency}</div>
+              <div class="total-amount">
+  ${currencySymbol}${total.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} ${currency}
+</div>
             </div>
           </div>
 
