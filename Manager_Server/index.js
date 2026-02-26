@@ -19,6 +19,9 @@ const puppeteer = require('puppeteer');
 const archiver = require("archiver");
 const { ObjectId } = require("mongodb");
 const fetch = require("node-fetch");
+const UserModel = require("./models/User");
+const FixedExpenseModel = require("./models/FixedExpense");
+const ReceiptModel = require ("./models/Receipt");
 const IncomeReceipt = require('./models/IncomeReceipt');
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
 
@@ -42,6 +45,8 @@ const { ref } = require('process');
 const { auth } = require('google-auth-library');
 app.use(express.static(path.join(__dirname, 'public')));
 
+const taxRoutes = require("./routes/tax");
+app.use(taxRoutes);
 
 app.use((req, res, next) => {
   const allowedOrigins = [
@@ -76,208 +81,6 @@ async function init() {
 
 init();
 
-const EmployeeSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  role: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  phone: {
-    type: String,
-  },
-  email: {
-    type: String,
-  },
-  startDate: {
-    type: Date,
-    default: Date.now,
-  },
-  // 👇 Salary Info
-  salaryType: {
-    type: String,
-    enum: ["hourly", "daily"],
-    required: true,
-  },
-  salaryRate: {
-    type: Number,
-    required: true, // e.g. 50 (₪50 per hour or day)
-  },
-  // track work hours or days
-  totalHoursWorked: {
-    type: Number,
-    default: 0,
-  },
-  totalDaysWorked: {
-    type: Number,
-    default: 0,
-  },
-  // auto-calc or store total pay
-  totalPay: {
-    type: Number,
-    default: 0,
-  },
-  status: {
-    type: String,
-    enum: ["active", "inactive", "on_leave"],
-    default: "active",
-  },
-});
-
-const ReceiptSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: String,
-      ref: "User",
-      // required: true,
-    },
-    projectId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Project",
-    default: null,
-    // required: true,
-    },
-    imageUrl: {
-      type: String,
-      // required: true, // Firebase download URL
-    },
-
-    sumOfReceipt: {
-      type: Number,
-      // required: true,
-    },
-
-    category: {
-      type: String,
-      default: "General",
-    },
-
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { timestamps: true });
-ReceiptSchema.index({ userId: 1, createdAt: 1 });
-
-const MaterialsSchema = new mongoose.Schema({
-  items: {type: Array, default: []}
-})
-
-const toDoListSchema = new mongoose.Schema({
-  task: String,
-  details: String,
-  checked: {type: Boolean, default: false}
-}, { _id: true });
-
-const paymentDetailsSchema = new mongoose.Schema({
-  amount: Number,
-  method: String,
-  date: { type: Date, default: Date.now },
-})
-const FixedExpenseSchema = new mongoose.Schema({
-  userId: {type: String, ref: "User"},
-  title: String,              // "Office Rent"
-  category: String,           // "Rent", "Software", "Car"
-  amount: Number,
-
-  frequency: {
-    type: String,
-    enum: ["monthly", "weekly", "yearly", "custom"],
-    default: "monthly",
-  },
-
-  startDate: Date,
-  endDate: Date,              // optional
-  dayOfMonth: Number,         // for monthly (e.g. 10th)
-  dayOfWeek: Number,          // for weekly (0–6)
-
-  projectId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "projects",
-    required: false,
-  },
-
-  isActive: { type: Boolean, default: true },
-}, { timestamps: true });
-FixedExpenseSchema.index({ userId: 1, isActive: 1, createdAt: 1 });
-
-const ProjectSchema = new mongoose.Schema({
-  userId: {type: String, ref: "User",},
-  name: {type: String, required: true},
-  payment: {type: Number, required: true},
-  paid: {type: Number, default: 0},
-  paymentDetails: [paymentDetailsSchema],
-  days: {type: Number, required: true},
-  materials: [MaterialsSchema],
-  expenses: {type: Number},
-  toDoList: [toDoListSchema],
-   createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { timestamps: true })
-
-const UserSchema = new mongoose.Schema({
-  name: String,
-  businessName: String,
-  address: {
-    street: { type: String, trim: true },
-    state: { type: String, uppercase: true, trim: true },
-    country: { type: String, uppercase: true, trim: true },
-    zip: { type: String, trim: true },
-  },
-  businessId: Number,
-  email: String,
-  logo: String,
-  password: { type: String, default: null },
-  googleId: {
-    type: String,
-    unique: true,
-    sparse: true,
-  },
-
-  appleId: {
-    type: String,
-    unique: true,
-    sparse: true,
-  },
-  projects: [ProjectSchema],
-  totalExpenses: Number,
-  totalIncomes: {type: Number},
-  employees: [EmployeeSchema],  
-})
-const FixedExpenseModel = mongoose.model("FiexedExpense", FixedExpenseSchema);
-const ReceiptModel = mongoose.model("Receipt", ReceiptSchema);
-const ProjectModel = mongoose.model("Project", ProjectSchema);
-const UserModel = mongoose.model("User", UserSchema);
-
-const createNewUser = async () =>{
-  const user = new UserModel({
-    name: "Yonatan",
-    email: "y.yonatanmalka@gmail.com",
-    projects: [
-      {
-        name: "Ariel",
-        payment: 100000,
-        days: 45
-      }
-    ],
-    totalExpenses: 0
-  });
-  try {
-    // const result = await user.save();
-    // console.log("User with projects created:", result);
-  } catch (err) {
-    console.error("Error creating user with projects:", err.message);
-  }
-}
-// createNewUser();
 
 const generateAccessToken = (user) => {
   return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "15m" });
@@ -483,7 +286,15 @@ app.get("/getUserDetails", authMiddleware, async (req, res) => {
 });
 app.post("/updateUser", authMiddleware, async (req, res) => {
   try {
-    const allowedFields = ["name", "businessName", "businessId", "address", "logo"];
+    const allowedFields = [
+      "name",
+      "businessName",
+      "businessId",
+      "address",
+      "logo",
+      "taxSettings",
+    ];
+
     const updateData = {};
 
     allowedFields.forEach((field) => {
@@ -491,25 +302,32 @@ app.post("/updateUser", authMiddleware, async (req, res) => {
         updateData[field] = req.body[field];
       }
     });
-    console.log("update data: ", updateData);
-    
+
+    // 🔹 Auto-sync businessState from address if taxSettings exists
+    if (updateData.address?.state) {
+      updateData.taxSettings = {
+        ...updateData.taxSettings,
+        businessState: updateData.address.state,
+      };
+    }
+
     const updatedUser = await UserModel.findByIdAndUpdate(
       req.userId,
-      updateData,
+      { $set: updateData },
       { new: true }
-    ); 
-    console.log("updated User: ", updatedUser);
-    
+    );
+
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
     res.json(updatedUser);
+
   } catch (err) {
     console.log("error occurred on updateUser", err);
     res.status(500).json({ message: "Server error" });
   }
-})
+});
 // JWT-protected route
 app.get("/getUser", authMiddleware, async (req, res) => {
   try {

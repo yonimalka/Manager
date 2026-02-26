@@ -33,7 +33,12 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const { userId } = useAuth();
   const [amount, setAmount] = useState("");
   const [payer, setPayer] = useState("");
-  const [payerAddress, setPayerAddress] = useState("");
+  const [payerAddress, setPayerAddress] = useState({
+  street: "",
+  state: "",
+  zip: "",
+  country: "US",
+});
   const [payerTaxId, setPayerTaxId] = useState("");
   const [category, setCategory] = useState("");
   const [receiptNumber, setReceiptNumber] = useState(
@@ -44,6 +49,8 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const [description, setDescription] = useState("");
   const [image, setImage] = useState(null);
   const [errors, setErrors] = useState({});
+  const [taxPreview, setTaxPreview] = useState(null);
+  const [taxLoading, setTaxLoading] = useState(false);
 
   // Validation
   const validateForm = () => {
@@ -56,7 +63,13 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
     if (!payer.trim()) {
       newErrors.payer = "Payer name is required";
     }
+    if (!payerAddress.state.trim()) {
+      newErrors.state = "State is required for tax calculation";
+    }
 
+    if (!payerAddress.zip.trim()) {
+     newErrors.zip = "ZIP Code is required for tax calculation";
+    }
     if (!category.trim()) {
       newErrors.category = "Category/Service is required";
     }
@@ -142,19 +155,48 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       setImage(result.assets[0].uri);
     }
   };
-
+  const handlePayerAddressChange = (field, value) => {
+  setPayerAddress((prev) => ({
+    ...prev,
+    [field]: value,
+  }));
+};
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      Alert.alert("Validation Error", "Please fill in all required fields correctly.");
-      return;
-    }
-    
-    try {
-      const receiptData = {
+  if (!validateForm()) {
+    Alert.alert("Validation Error", "Please fill in all required fields correctly.");
+    return;
+  }
+
+  let subtotal = Number(amount);
+  let tax = 0;
+  let total = Number(amount);
+  let rate = 0;
+
+  try {
+    const taxResponse = await api.post("/calculate-tax", {
+      amount: Number(amount),
+      to_zip: payerAddress.zip,
+    });
+
+    subtotal = taxResponse.data.subtotal;
+    tax = taxResponse.data.tax;
+    total = taxResponse.data.total;
+    rate = taxResponse.data.rate;
+
+  } catch (err) {
+    console.log("Tax calculation failed, continuing without tax");
+  }
+
+  try {
+    const receiptData = {
       receiptNumber,
+      subtotal,
+      tax,
+      taxRate: rate,
+      total,
       amount: Number(amount),
       payer: payer.trim(),
-      payerAddress: payerAddress.trim() || null,
+      payerAddress,
       payerTaxId: payerTaxId.trim() || null,
       category: category.trim(),
       currency: "USD",
@@ -163,30 +205,28 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       image,
       createdAt: new Date().toISOString(),
     };
+
     const response = await api.get(`/getUserDetails/${userId}`);
     const userDetails = response.data;
-     const pdfUrl = await generateIncomeReceiptPDF(
+
+    const pdfUrl = await generateIncomeReceiptPDF(
       receiptData,
       userDetails,
       {
         userId,
         projectId,
         allowSharing: true,
-        // onProgress: (progress) => {
-        //   setProgress(progress);
-        // },
       }
     );
 
     receiptData.pdfUrl = pdfUrl.downloadURL;
     onSubmit(receiptData);
-    } catch (err) {
-      console.error("error occurd on Receipt Generator", err);
-      
-    }
-    
-  };
 
+  } catch (err) {
+    console.error("Receipt generation error:", err);
+    Alert.alert("Error", "Failed to generate receipt");
+  }
+};
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -286,13 +326,28 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                 required
               />
 
+              <Text style={styles.inputLabel}>Payer Address *</Text>
+
               <FormInput
                 icon={<Building2 size={20} color="#6B7280" />}
-                value={payerAddress}
-                onChange={setPayerAddress}
-                placeholder="123 Main St, City, State ZIP"
-                label="Payer Address"
-                optional
+                value={payerAddress.street}
+                onChange={(val) => handlePayerAddressChange("street", val)}
+                placeholder="Street"
+              />
+                            
+              <FormInput
+                icon={<Hash size={20} color="#6B7280" />}
+                value={payerAddress.state}
+                onChange={(val) => handlePayerAddressChange("state", val)}
+                placeholder="State (NY)"
+              />
+                            
+              <FormInput
+                icon={<Hash size={20} color="#6B7280" />}
+                value={payerAddress.zip}
+                onChange={(val) => handlePayerAddressChange("zip", val)}
+                placeholder="ZIP Code"
+                keyboardType="numeric"
               />
 
               <FormInput

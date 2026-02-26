@@ -31,6 +31,7 @@ export default function ProfileDetails() {
   const [userDetails, setUserDetails] = useState({});
   const [image, setImage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [collectTax, setCollectTax] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -62,6 +63,7 @@ export default function ProfileDetails() {
     });
 
       setImage(res.data.logo);
+      setCollectTax(res.data?.taxSettings?.collectTax || false);
     } catch (err) {
       console.error(err);
     }
@@ -109,7 +111,13 @@ export default function ProfileDetails() {
 
       // Also update local variable before sending
       userDetails.logo = logoUrl;
-      await api.post("/updateUser", userDetails);
+      await api.post("/updateUser", {
+  ...userDetails,
+  taxSettings: {
+    collectTax,
+    businessState: userDetails.address?.state,
+  },
+});
       setIsEditing(false);
       navigation.reset({
         index: 0,
@@ -259,6 +267,14 @@ export default function ProfileDetails() {
       placeholder="State"
     />
 
+    <Label title="Country" />
+    <TextInput
+      value={userDetails.address?.country || ""}
+      style={styles.input}
+      onChangeText={(text) => handleAddressChange("country", text)}
+      placeholder="Country"
+    />
+
     <Label title="ZIP Code" />
     <TextInput
       value={userDetails.address?.zip || ""}
@@ -267,14 +283,6 @@ export default function ProfileDetails() {
       onChangeText={(text) => handleAddressChange("zip", text)}
       placeholder="ZIP Code"
     />
-
-    <Label title="Country" />
-    <TextInput
-      value={userDetails.address?.country || ""}
-      style={styles.input}
-      onChangeText={(text) => handleAddressChange("country", text)}
-      placeholder="Country"
-    />
   </>
 ) : (
   <View style={styles.input}>
@@ -282,14 +290,38 @@ export default function ProfileDetails() {
       {[
         userDetails.address?.street,
         userDetails.address?.state,
-        userDetails.address?.zip,
         userDetails.address?.country,
+        userDetails.address?.zip,
       ]
         .filter(Boolean)
-        .join(", ") || "No address provided"}
+        .join(" ") || "No address provided"}
     </Text>
   </View>
 )}
+<View style={styles.taxSection}>
+  <Text style={styles.label}>Sales Tax</Text>
+
+  <TouchableOpacity
+    style={styles.taxToggleRow}
+    onPress={() => setCollectTax(!collectTax)}
+  >
+    <View
+      style={[
+        styles.checkbox,
+        collectTax && styles.checkboxActive,
+      ]}
+    />
+    <Text style={styles.taxToggleText}>
+      Automatically calculate Sales Tax
+    </Text>
+  </TouchableOpacity>
+
+  {collectTax && (
+    <Text style={styles.taxHelper}>
+      Sales tax will be applied only for in-state transactions.
+    </Text>
+  )}
+</View>
 
         <Label title="Email" />
         <TextInput
@@ -417,6 +449,40 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.6,
   },
+  
+  taxSection: {
+  marginTop: 20,
+},
+
+taxToggleRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 8,
+},
+
+checkbox: {
+  width: 18,
+  height: 18,
+  borderWidth: 1.5,
+  borderColor: "#2563EB",
+  borderRadius: 4,
+  marginRight: 10,
+},
+
+checkboxActive: {
+  backgroundColor: "#2563EB",
+},
+
+taxToggleText: {
+  fontSize: 14,
+  color: "#111827",
+},
+
+taxHelper: {
+  fontSize: 12,
+  color: "#6B7280",
+  marginTop: 6,
+},
 
   deleteBtn: {
     flexDirection: "row",
