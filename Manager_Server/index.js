@@ -374,29 +374,38 @@ app.post("/newProject", authMiddleware, async (req, res) => {
 });
 
 app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  const projectId = req.params.projectId;
-  const updatedTask = req.body;
-  // console.log(updatedTask);
-  
-  UserModel.findById(userId)
-  .then(user => { 
-    const project = user.projects.find((p) => p._id.toString() == projectId);
-    if(!project){
-      throw new Error('Project not found');
-    }
-    const task = project.toDoList.find((t) => t._id.toString() == updatedTask._id);
-    if(!task){
-      throw new Error('Task not found');
-    }
-    task.checked = updatedTask.checked;
-    project.toDoList.sort((a,b) => {
-      return (a.checked - b.checked);
+  try {
+    const userId = req.userId;
+    const projectId = req.params.projectId;
+    const updatedTask = req.body;
+
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      userId: userId
     });
-    user.save();
-  })
-  
-})
+
+    if (!project)
+      return res.status(404).json({ message: "Project not found" });
+
+    const task = project.toDoList.id(updatedTask._id);
+
+    if (!task)
+      return res.status(404).json({ message: "Task not found" });
+
+    task.checked = updatedTask.checked;
+
+    // Sort unchecked first
+    project.toDoList.sort((a, b) => a.checked - b.checked);
+
+    await project.save();
+
+    res.json({ message: "Task updated successfully" });
+
+  } catch (err) {
+    console.error("updateTasks error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
   try {
     const project = await ProjectModel.findOne({
@@ -704,49 +713,83 @@ app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   // })
 })
 app.post('/AddTask/:projectId', authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  const Id = req.params.projectId;
-  const addTask = req.body;
-  await UserModel.findById(userId)
-    .then(user => {
-      const project = user.projects.find((p) => p._id.toString() === Id)
-      project.toDoList.push(addTask);
-      return user.save();
+  try {
+    const userId = req.userId;
+    const projectId = req.params.projectId;
+    const addTask = req.body;
+
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      userId
     });
-})
+
+    if (!project)
+      return res.status(404).json({ message: "Project not found" });
+
+    project.toDoList.push(addTask);
+
+    await project.save();
+
+    res.json({ message: "Task added successfully", project });
+
+  } catch (err) {
+    console.error("AddTask error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 app.post('/AddItem/:projectId', authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  const Id = req.params.projectId;
-  const addItem = req.body;
-  // console.log(addItem);
-  
-  UserModel.findById(userId)
-    .then(user => {
-      const project = user.projects.find((p) => p._id.toString() == Id)
-      project.materials[0].items.push(addItem)
-      return user.save();
-    });
-})
+  try {
+    const userId = req.userId;
+    const projectId = req.params.projectId;
+    const addItem = req.body;
 
-app.get('/GetMaterialsList/:projectId', async (req, res) => {
-  const Id = req.params.projectId;
-  // console.log(Id);
-  
-    await UserModel.findOne({email: "y.yonatanmalka@gmail.com"})
-    .then(function(user){
-      const project = user.projects.find((p)=> p._id.toString() === Id);
-      // console.log(project.materials[0].items);
-      
-      const materialsList = project.materials[0].items;
-      
-      res.send(materialsList)
-    }).catch((err) =>{
-      console.log(err);
-      
-    })
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      userId
+    });
+
+    if (!project)
+      return res.status(404).json({ message: "Project not found" });
+
+    if (!project.materials || !project.materials.length) {
+      project.materials = [{ items: [] }];
+    }
+
+    project.materials[0].items.push(addItem);
+
+    await project.save();
+
+    res.json({ message: "Item added successfully", project });
+
+  } catch (err) {
+    console.error("AddItem error:", err);
+    res.status(500).json({ message: "Server error" });
   }
-)
+});
+
+app.get('/GetMaterialsList/:projectId', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const projectId = req.params.projectId;
+
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      userId
+    }).lean();
+
+    if (!project)
+      return res.status(404).json({ message: "Project not found" });
+
+    const materialsList = project.materials?.[0]?.items || [];
+
+    res.json(materialsList);
+
+  } catch (err) {
+    console.error("GetMaterialsList error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 app.post('/uploadLogo', authMiddleware, async (req, res) => {
   const userId = req.userId;
   const {imageUrl} = req.params;
