@@ -334,34 +334,43 @@ app.get("/getUser", authMiddleware, async (req, res) => {
   try {
     // console.log(req.userId);
     
-    const user = await UserModel.findById(req.userId).populate("projects").select("-password");
+   const user = await UserModel.findById(req.userId)
+  .select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
+   const projects = await ProjectModel.find({ userId: req.userId });
+
+res.json({
+  ...user.toObject(),
+  projects
+});
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-app.post("/newProject", authMiddleware, async (req, res) =>{
-    const userId = req.userId;
-    const {name, payment, days, materialsList, toDoList} = req.body;
-    
-    const user = await UserModel.findById(userId);
-    
-    const newProjectData = {
-      name: name,
-      payment: payment,
-      days: days,
-      materials: [{items: materialsList}],
-      toDoList: toDoList,
+app.post("/newProject", authMiddleware, async (req, res) => {
+  try {
+    const { name, payment, days, materialsList, toDoList } = req.body;
+
+    const project = await ProjectModel.create({
+      userId: req.userId,
+      name,
+      payment,
+      days,
+      materials: [{ items: materialsList || [] }],
+      toDoList: toDoList || [],
       expenses: 0,
-    }
-    //[{task: {type: String}}, {length: {type: Number}}]
-    user.projects.push(newProjectData);
-    const result = await user.save();
-    console.log("Updated user with new project:", result);
-    res.status(200).json({ message: "Success" });
+      paid: 0,
+      paymentDetails: [],
+    });
+
+    res.status(201).json(project);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to create project" });
+  }
 });
 
 app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
@@ -388,17 +397,20 @@ app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
   })
   
 })
-app.get("/getProject/:Id", authMiddleware, async (req, res) => {
-  
-   UserModel.findById(req.userId)
-  .then(user => { 
-    const project = user.projects.find((p) => p._id.toString() == req.params.Id);
-    if(!project){
-      throw new Error('Project not found');
-    }
+app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
+  try {
+    const project = await ProjectModel.findOne({
+      _id: req.params.projectId,
+      userId: req.userId
+    });
+
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
     res.json(project);
-  });
-  
+
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
    
   app.post("/fixedExpense", authMiddleware, async (req, res) => {
@@ -429,57 +441,30 @@ app.get("/getProject/:Id", authMiddleware, async (req, res) => {
   });
   app.post("/uploadReceipt", authMiddleware, async (req, res) => {
   try {
-    const userId = req.userId;
     const { sumOfReceipt, category, projectId, imageUrl } = req.body;
-    // console.log(sumOfReceipt, category, projectId, imageUrl);
-    
-    if (!imageUrl || !sumOfReceipt) {
-      console.log("Missing required fields");
-      return res.status(400).json({ message: "Missing required fields" });
-    }
 
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    let project = null;
-
-    // Receipt object (Firebase-based)
     const receipt = await ReceiptModel.create({
-    userId: req.userId,
-    projectId: projectId || null,
-    imageUrl,
-    sumOfReceipt,
-    category,
-  });
-//   if (projectId) {
-//   receipt.projectId = projectId;
-// }
-
-    console.log(receipt);
-    // project.receipts.push(receipt);
-
-if (projectId) {
-     project = user.projects.id(projectId);
-
-  if (!project) {
-    return res.status(404).json({ message: "Project not found" });
-  }
-   project.expenses += Number(sumOfReceipt);
-   await user.save();
- }
-   
-    user.totalExpenses += Number(sumOfReceipt);
-
-    await user.save();
-
-    res.status(201).json({
-      message: "Receipt saved successfully",
-      receipt,
+      userId: req.userId,
+      projectId: projectId || null,
+      imageUrl,
+      sumOfReceipt,
+      category,
     });
-  } catch (error) {
-    console.error("Upload receipt error:", error);
+
+    if (projectId) {
+      await ProjectModel.findOneAndUpdate(
+        { _id: projectId, userId: req.userId },
+        { $inc: { expenses: Number(sumOfReceipt) } }
+      );
+    }
+
+    await UserModel.findByIdAndUpdate(req.userId, {
+      $inc: { totalExpenses: Number(sumOfReceipt) }
+    });
+
+    res.status(201).json(receipt);
+
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -772,28 +757,37 @@ app.post('/uploadLogo', authMiddleware, async (req, res) => {
   })
   return user.save();
 })
-app.post('/UpdatePayment/:projectId', authMiddleware, async (req, res) =>{
-  const userId = req.userId;
-  const Id = req.params.projectId;
-  const {paidAmount} = req.body;
-  // console.log(paidAmount);
-  const now = new Date();
-  const time = now.toLocaleTimeString();
-  UserModel.findById(userId)
-  .then(user => {
-    const project = user.projects.find((p) => p._id.toString() == Id)
-    // console.log(project);
-    // console.log(typeof(project.paid));
-    project.paid += Number(paidAmount);
+app.post("/UpdatePayment/:projectId", authMiddleware, async (req, res) => {
+  try {
+    const { paidAmount } = req.body;
+    const amount = Number(paidAmount);
+
+    const project = await ProjectModel.findOne({
+      _id: req.params.projectId,
+      userId: req.userId
+    });
+
+    if (!project)
+      return res.status(404).json({ message: "Project not found" });
+
+    project.paid += amount;
     project.paymentDetails.push({
-      amount: Number(paidAmount),
-      date: now,
-    })
-    user.totalIncomes += paidAmount; 
-    res.json(user.totalIncomes);
-    return user.save();
-    
-  });
+      amount,
+      date: new Date()
+    });
+
+    await project.save();
+
+    await UserModel.findByIdAndUpdate(req.userId, {
+      $inc: { totalIncomes: amount }
+    });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update payment" });
+  }
 });
 
 // GET /getCashFlowIncomes/:userId?period=month|quarter|year
@@ -879,33 +873,23 @@ const occurredFixedExpenses = fixedExpenses.filter(fe => {
   return true;
 });
 
-const sample = await FixedExpenseModel.findOne({ userId });
+// const sample = await FixedExpenseModel.findOne({ userId });
 // console.log(sample);
-    const receipts = await ReceiptModel.find({ userId: req.userId });
-    if (!receipts.length) return res.status(404).json({ message: "No receipts found" });
-    const user = await UserModel.findById(userId);
-    // if (!user) return res.status(404).json({ message: "User not found" });
-    // console.log("receipts ", receipts)
-// Get all unique projectIds from receipts
-const projectIds = [...new Set((receipts || []).map(r => r.projectId))];
-console.log("projectIds ", projectIds);
-
-const projectMap = user.projects.reduce((acc, project) => {
-  acc[project._id.toString()] = project.name;
-  return acc;
-}, {});
-    const expenses = (receipts || []).filter((receipt) => {
-       const d = new Date(receipt.createdAt);
-      return !isNaN(d) && d >= startDate && d <= now;
-    })
-    .map((receipt) => ({
-      payments: {
-    sumOfReceipt: receipt.sumOfReceipt,
-    category: receipt.category,
-    date: receipt.createdAt,
-  },
-  projectName: projectMap[receipt.projectId] || "General",
-    }))
+   const receipts = await ReceiptModel.find({ userId })
+  .populate("projectId", "name");
+  const expenses = receipts
+  .filter((receipt) => {
+    const d = new Date(receipt.createdAt);
+    return !isNaN(d) && d >= startDate && d <= now;
+  })
+  .map((receipt) => ({
+    payments: {
+      sumOfReceipt: receipt.sumOfReceipt,
+      category: receipt.category,
+      date: receipt.createdAt,
+    },
+    projectName: receipt.projectId?.name || "General",
+  }));
     
 // console.log(expenses);
     const fixedExpenseItems = occurredFixedExpenses.map(fe => ({
@@ -923,7 +907,7 @@ const projectMap = user.projects.reduce((acc, project) => {
   projectName: "Fixed Expense",
 }));
 
-    expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    // expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));  
    const combinedExpenses = [...expenses, ...fixedExpenseItems];
 
 // Sort by date (important for cash flow UI)
@@ -1054,33 +1038,22 @@ app.post("/addEmployee", authMiddleware, async (req, res) =>{
 })
 
 
-app.delete("/deleteProject/:projectId", authMiddleware, async (req, res) =>{
-  const userId = req.userId;
-  const projectId = req.params.projectId;
-
+app.delete("/deleteProject/:projectId", authMiddleware, async (req, res) => {
   try {
-    const result = await UserModel.updateOne(
-      {
-        _id: userId,
-      },
-      {
-        $pull: {
-          projects: { _id: projectId },
-        },
-      }
-    );
+    const result = await ProjectModel.deleteOne({
+      _id: req.params.projectId,
+      userId: req.userId
+    });
 
-    if (result.modifiedCount === 0) {
-      return res.status(404).json({ message: "Project not found or already deleted." });
-    }
+    if (!result.deletedCount)
+      return res.status(404).json({ message: "Project not found" });
 
-    res.status(200).json({ message: "Project deleted successfully." });
-  } catch (error) {
-    console.error("Error deleting nested project:", error);
-    res.status(500).json({ message: "Internal server error." });
+    res.json({ message: "Project deleted successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
   }
-  
-})
+});
 
 app.delete("/deleteUser/:userId", async (req, res) => {
  const userId = req.params.userId;
