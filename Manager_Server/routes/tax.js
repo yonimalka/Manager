@@ -51,7 +51,7 @@ router.post("/calculate-tax", authMiddleware, async (req, res) => {
 
     let rate;
     let destinationState;
-
+    console.log("API Key exists:", !!process.env.API_NINJAS_KEY);
     // 🔹 Check cache first
     if (zipCache[to_zip]) {
       rate = zipCache[to_zip].rate;
