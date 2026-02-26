@@ -512,13 +512,11 @@ app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
 
 app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = new mongoose.Types.ObjectId(req.userId);
 
     const startOfYear = new Date(new Date().getFullYear(), 0, 1);
     const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
     const receiptsResult = await ReceiptModel.aggregate([
       {
         $match: {
@@ -539,27 +537,27 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
     const receiptsTotal = receiptsResult[0]?.total || 0;
 
-   const fixedResult = await FixedExpenseModel.aggregate([
-  {
-    $match: {
-      userId,
-      isActive: true,
-      createdAt: {
+    const fixedResult = await FixedExpenseModel.aggregate([
+      {
+        $match: {
+          userId: userId,
+          isActive: true,
+          createdAt: {
             $gte: startOfYear,
             $lt: startOfNextYear,
           },
-    },
-  },
-  {
-    $group: {
-      _id: null,
-      total: { $sum: "$amount" },
-    },
-  },
-]);
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+        },
+      },
+    ]);
+
     const fixedTotal = fixedResult[0]?.total || 0;
 
-    // 3️⃣ Combined
     const totalExpenses = receiptsTotal + fixedTotal;
 
     res.json({
@@ -569,6 +567,7 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
         fixed: fixedTotal,
       },
     });
+
   } catch (error) {
     console.error("getTotalExpenses error:", error);
     res.status(500).json({ message: "Failed to get total expenses" });
