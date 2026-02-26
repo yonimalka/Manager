@@ -22,6 +22,7 @@ const fetch = require("node-fetch");
 const UserModel = require("./models/User");
 const FixedExpenseModel = require("./models/FixedExpense");
 const ReceiptModel = require ("./models/Receipt");
+const ProjectModel = require("./models/Project");
 const IncomeReceipt = require('./models/IncomeReceipt');
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
 
@@ -815,20 +816,19 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
       startDate = new Date(now.getFullYear(), 0, 1); // start of year
     }
 
-    const user = await UserModel.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+   const projects = await ProjectModel.find({ userId });
 
-    const incomes = (user.projects || []).flatMap((project) =>
-      (project.paymentDetails || [])
-        .filter((p) => {
-          const d = new Date(p.date);
-          return !isNaN(d) && d >= startDate && d <= now;
-        })
-        .map((p) => ({
-          payments: p, // keep full object
-          projectName: project.name,
-        }))
-    );
+const incomes = projects.flatMap((project) =>
+  (project.paymentDetails || [])
+    .filter((p) => {
+      const d = new Date(p.date);
+      return !isNaN(d) && d >= startDate && d <= now;
+    })
+    .map((p) => ({
+      payments: p,
+      projectName: project.name,
+    }))
+);
 
  
 

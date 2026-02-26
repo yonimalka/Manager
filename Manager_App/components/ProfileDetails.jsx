@@ -298,30 +298,7 @@ export default function ProfileDetails() {
     </Text>
   </View>
 )}
-<View style={styles.taxSection}>
-  <Text style={styles.label}>Sales Tax</Text>
 
-  <TouchableOpacity
-    style={styles.taxToggleRow}
-    onPress={() => setCollectTax(!collectTax)}
-  >
-    <View
-      style={[
-        styles.checkbox,
-        collectTax && styles.checkboxActive,
-      ]}
-    />
-    <Text style={styles.taxToggleText}>
-      Automatically calculate Sales Tax
-    </Text>
-  </TouchableOpacity>
-
-  {collectTax && (
-    <Text style={styles.taxHelper}>
-      Sales tax will be applied only for in-state transactions.
-    </Text>
-  )}
-</View>
 
         <Label title="Email" />
         <TextInput

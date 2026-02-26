@@ -1,9 +1,3 @@
-// models/User.js
-
-const mongoose = require("mongoose");
-const ProjectSchema = require("./Project")
-const EmployeeSchema = require("./Employee");
-
 const UserSchema = new mongoose.Schema({
   name: String,
   businessName: String,
@@ -25,10 +19,9 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, default: null },
   googleId: { type: String, unique: true, sparse: true },
   appleId: { type: String, unique: true, sparse: true },
-  projects: [ProjectSchema],
-  totalExpenses: Number,
-  totalIncomes: { type: Number },
-  employees: [EmployeeSchema],
-});
 
-module.exports = mongoose.model("User", UserSchema);
+  totalExpenses: Number,
+  totalIncomes: Number,
+
+  employees: [EmployeeSchema],
+}, { timestamps: true });

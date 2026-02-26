@@ -195,7 +195,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       paymentMethod,
       createdAt: new Date().toISOString(),
     };
-
+    
     const savedReceipt = await api.post("/incomeReceipt", receiptData);
 
 
@@ -203,7 +203,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
     const userDetails = response.data;
 
     const pdfResult = await generateIncomeReceiptPDF(
-      savedReceipt.data,
+      receiptData,
       userDetails,
       {
         userId,
