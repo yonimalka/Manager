@@ -709,8 +709,7 @@ app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
         },
       },
     ]);
-    console.log("receipt result: ",receiptsResult);
-    
+   
      const receiptsTotal = receiptsResult[0]?.total || 0;
      res.json(receiptsTotal)
   // UserModel.findById(userId)

@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Alert,
 } from "react-native";
+import { useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import {
@@ -51,7 +52,34 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const [errors, setErrors] = useState({});
   const [taxPreview, setTaxPreview] = useState(null);
   const [taxLoading, setTaxLoading] = useState(false);
+  
+  useEffect(() => {
+  const fetchTax = async () => {
+    if (!amount || !payerAddress.zip) {
+      setTaxPreview(null);
+      return;
+    }
 
+    try {
+      setTaxLoading(true);
+
+      const response = await api.post("/calculate-tax", {
+        amount: Number(amount),
+        to_zip: payerAddress.zip,
+      });
+      console.log(response.data);
+      
+      setTaxPreview(response.data);
+
+    } catch (err) {
+      setTaxPreview(null);
+    } finally {
+      setTaxLoading(false);
+    }
+  };
+
+  fetchTax();
+}, [amount, payerAddress.zip]);
   // Validation
   const validateForm = () => {
     const newErrors = {};
@@ -273,7 +301,51 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                 label="Amount (USD)"
                 required
               />
+              {taxLoading && (
+  <Text style={{ marginTop: 10, fontSize: 13, color: "#6B7280" }}>
+    Calculating tax...
+  </Text>
+)}
 
+{taxPreview && (
+  <View style={{
+    marginTop: 16,
+    padding: 14,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12
+  }}>
+    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+      <Text>Subtotal</Text>
+      <Text>${taxPreview.subtotal.toFixed(2)}</Text>
+    </View>
+
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+      <Text>
+        Sales Tax {taxPreview.rate ? `(${(taxPreview.rate * 100).toFixed(2)}%)` : ""}
+      </Text>
+      <Text>${taxPreview.tax.toFixed(2)}</Text>
+    </View>
+
+    <View style={{
+      height: 1,
+      backgroundColor: "#E5E7EB",
+      marginVertical: 8
+    }} />
+
+    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+      <Text style={{ fontWeight: "700" }}>Total</Text>
+      <Text style={{ fontWeight: "700" }}>
+        ${taxPreview.total.toFixed(2)}
+      </Text>
+    </View>
+
+    {!taxPreview.applied && (
+      <Text style={{ marginTop: 6, fontSize: 12, color: "#6B7280" }}>
+        No Sales Tax applied
+      </Text>
+    )}
+  </View>
+)}
               {/* Date */}
               <TouchableOpacity
                 style={[styles.inputRow, errors.date && styles.inputError]}

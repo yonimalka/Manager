@@ -70,13 +70,14 @@ router.post("/calculate-tax", authMiddleware, async (req, res) => {
       );
 
       const data = response.data;
-
+      console.log( "ninjaApi data ",data);
+      
       if (!data || !data.length) {
         return res.json(zeroTax(numericAmount, "No tax data found"));
       }
 
       rate = data[0].total_rate || 0;
-      destinationState = data[0].state;
+      destinationState = data[0].state_code;
 
       // Save in cache
       zipCache[to_zip] = {
@@ -84,16 +85,19 @@ router.post("/calculate-tax", authMiddleware, async (req, res) => {
         state: destinationState,
       };
     }
+// Normalize state codes before comparing
+const normalizedBusinessState = businessState?.toUpperCase().trim();
+const normalizedDestinationState = destinationState?.toUpperCase().trim();
 
-    // Same-state only
-    if (destinationState !== businessState) {
-      return res.json(
-        zeroTax(numericAmount, "Out-of-state transaction")
-      );
-    }
+// Same-state only
+if (normalizedDestinationState !== normalizedBusinessState) {
+  return res.json(
+    zeroTax(numericAmount, "Out-of-state transaction")
+  );
+}
 
-    const tax = +(numericAmount * rate).toFixed(2);
-    const total = +(numericAmount + tax).toFixed(2);
+const tax = +(numericAmount * rate).toFixed(2);
+const total = +(numericAmount + tax).toFixed(2);
 
     return res.json({
       subtotal: numericAmount,
