@@ -1,3 +1,9 @@
+// models/User.js
+
+const mongoose = require("mongoose");
+const ProjectSchema = require("./Project")
+const EmployeeSchema = require("./Employee");
+
 const UserSchema = new mongoose.Schema({
   name: String,
   businessName: String,
@@ -25,3 +31,5 @@ const UserSchema = new mongoose.Schema({
 
   employees: [EmployeeSchema],
 }, { timestamps: true });
+
+module.exports = mongoose.model("User", UserSchema);
