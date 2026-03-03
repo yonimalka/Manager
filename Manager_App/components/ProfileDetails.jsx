@@ -18,6 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "./useAuth";
 import api from "../services/api";
+import { Ionicons } from "@expo/vector-icons";
 import { Camera, Trash2, Pencil  } from "lucide-react-native";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
@@ -186,7 +187,9 @@ export default function ProfileDetails() {
     >
     <View style={styles.container}>
       {/* <Text style={styles.title}>Profile</Text> */}
-
+    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
       {/* Avatar */}
       <View style={styles.avatarWrapper}>
         {image || userDetails.logo ? (
@@ -298,8 +301,6 @@ export default function ProfileDetails() {
     </Text>
   </View>
 )}
-
-
         <Label title="Email" />
         <TextInput
           value={userDetails.email}
@@ -338,7 +339,18 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 100,
   },
-
+    backButton: {
+    width: 40,
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: "rgba(35, 31, 31, 0.2)", 
+    alignItems: "center", 
+    justifyContent: "center",
+    position: "absolute",
+  top: 60,
+  left: 20,
+  zIndex: 10,
+},
   title: {
     fontSize: 28,
     fontWeight: "700",
@@ -346,7 +358,7 @@ const styles = StyleSheet.create({
   },
 
   editBtn: {
-    alignSelf: "flex-end",
+  alignSelf: "flex-end",
   marginBottom: 10,
   backgroundColor: "#E0E7FF",
   padding: 8,

@@ -84,7 +84,7 @@ init();
 
 
 const generateAccessToken = (user) => {
-  return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "15m" });
+  return jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "2d" });
 };
 
 const generateRefreshToken = (user) => {

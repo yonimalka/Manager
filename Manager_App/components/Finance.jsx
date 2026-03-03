@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload, BanknoteArrowUp, Calendar, DollarSign, Tag } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import api from "../services/api";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
 import IncomesDownloadByDate from "./IncomesDownloadByDate";
@@ -110,6 +111,9 @@ export default function FinanceFixedExpenses() {
   return (
     <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
         <Text style={styles.headerTitle}>Finance</Text>
         <Text style={styles.headerSubtitle}>Manage your recurring expenses and income receipts</Text>
       </View>
@@ -365,7 +369,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
    
   },
-
+  backButton: {
+    width: 40,
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: "rgba(35, 31, 31, 0.2)", 
+    alignItems: "center", 
+    justifyContent: "center",
+    marginBottom: 15,
+},
   header: {
     paddingHorizontal: 20,
     paddingTop: 60,

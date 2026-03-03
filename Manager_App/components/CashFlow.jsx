@@ -107,11 +107,11 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 140 }}>
-    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
       {/* HEADER */}
       <View style={styles.header}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
         <Text style={styles.title}>Cash Flow</Text>
         <Text style={styles.subtitle}>
           Track your income and expenses over time
@@ -254,7 +254,7 @@ const SummaryCard = ({ title, value, icon, color }) => (
 );
 
 const TransactionSection = ({ title, data, amountKey, color, icon }) => (
-  <View style={{ marginTop: 28 }}>
+  <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {/* <TouchableOpacity style={[styles.addBtn, { backgroundColor: color }]}>
@@ -302,9 +302,10 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
 
 const styles = StyleSheet.create({
   screen: {
+    flex: 1,
     backgroundColor: "#F5F6FA",
-    paddingHorizontal: 22,
-    paddingTop: 64,
+    // paddingHorizontal: 22,
+    // paddingTop: 64,
   },
   backButton: {
     width: 40,
@@ -315,17 +316,41 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 15,
 },
-  header: { marginBottom: 20 },
-  title: { fontSize: 38, fontWeight: "700", color: "#111" },
-  subtitle: { fontSize: 14, color: "#6B7280", marginTop: 4, marginBottom: 12, },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 24,
+    marginBottom: 25,
+    backgroundColor: "#FFFFFF",
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  title: {
+    fontSize: 38, 
+    fontWeight: "700", 
+    color: "#111" 
+  },
+  subtitle: { 
+    fontSize: 14, 
+    color: "#6B7280", 
+    marginTop: 4, 
+    marginBottom: 12, 
+  },
 
   summaryRow: {
     flexDirection: "column",
     gap: 12,
     marginBottom: 29,
+    paddingHorizontal: 20,
   },
   summaryCard: {
     flex: 1,
+    paddingHorizontal: 20,
     backgroundColor: "#fff",
     borderRadius: 18,
     padding: 16,
@@ -339,10 +364,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     // marginBottom: 12,
   },
-  summaryTitle: { fontSize: 15, color: "#6B7280", fontWeight: "500", marginLeft: 15,
-    marginTop: 10 },
-  summaryValue: { fontSize: 29, fontWeight: "700", color: "#111", marginLeft: 10,
-    marginTop: 10},
+  summaryTitle: { 
+    fontSize: 15, 
+    color: "#6B7280", 
+    fontWeight: "500", 
+    marginLeft: 15,
+    marginTop: 10 
+  },
+  summaryValue: { 
+    fontSize: 29, 
+    fontWeight: "700", 
+    color: "#111", 
+    marginLeft: 10,
+    marginTop: 10
+  },
 
   iconCircle: {
     width: 32,
@@ -359,6 +394,7 @@ const styles = StyleSheet.create({
     // backgroundColor: "#fff",
     borderRadius: 20,
     padding: 16,
+    // paddingHorizontal: 20,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -371,7 +407,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  cardTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16,},
+  cardTitle: { 
+    fontSize: 18, 
+    fontWeight: "700", 
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
 
   periodRow: { flexDirection: "row", gap: 6, justifyContent: "flex-end", alignItems: "flex-start"},
   periodBtn: {
@@ -400,7 +441,12 @@ donutValue: {
   fontSize: 22,
   fontWeight: "800",
 },
+section : { 
+  marginTop: 28, 
+  paddingHorizontal: 20, 
+},
   sectionHeader: {
+    paddingHorizontal: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",

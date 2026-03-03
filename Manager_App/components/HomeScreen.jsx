@@ -337,7 +337,7 @@ const HomeScreen = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
-                Active Projects ({projectDetails.length})
+                Active Projects | {projectDetails.length}
               </Text>
               {/* {projectDetails.length > 0 && (
                 <TouchableOpacity
