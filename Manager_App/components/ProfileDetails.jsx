@@ -372,7 +372,7 @@ export default function ProfileDetails() {
     </View>
   </View>
 ) : (
-  <>
+  <>  
     <Label title="Currency" />
     <View style={styles.input}>
       <Text>{userDetails?.currency || "USD"}</Text>

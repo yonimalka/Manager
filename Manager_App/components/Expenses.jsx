@@ -14,10 +14,14 @@ import { useAuth } from "./useAuth";
 const Expenses = ({ userId, refresh }) => {
   const navigation = useNavigation();
   const { userDetails } = useAuth();
-
+  if (!userDetails) {
+  return <ActivityIndicator size="large" />;
+}
   const [totalExpenses, setTotalExpenses] = useState(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    console.log(userDetails.currency);
+    
     fetchExpenses();
   }, [refresh, totalExpenses]);
 
@@ -48,9 +52,13 @@ const Expenses = ({ userId, refresh }) => {
               {!loading ? (
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
-                <Text style={styles.summaryAmount}> 
-               {totalExpenses ? `${formatCurrency(totalExpenses, userDetails.currency, userDetails.locale)}` : "0$"}
-                </Text>
+                <Text style={styles.summaryAmount}>
+                {formatCurrency(
+                  totalExpenses || 0,
+                  userDetails?.currency || "USD",
+                  userDetails?.locale || "en-US"
+                )}
+              </Text>
               )}
               <MaterialIcons
                 name="shopping-cart"

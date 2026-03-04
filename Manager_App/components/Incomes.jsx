@@ -7,12 +7,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import api from "../services/api";
+import { useAuth } from "./useAuth";
+import { formatCurrency } from "../services/formatCurrency";
 
 const Incomes = (refresh) => {
   const { value } = useValue();
   const [totalIncomes, setTotalIncomes] = useState(null);
   const [loading, setLoading] = useState(false);
   const [shouldRefresh, setShouldRefresh] = useState(false);
+  const { userDetails } = useAuth();
+  if (!userDetails){
+    return <ActivityIndicator size="large" />;
+  }
 
   const fetchIncomes = async () => {
     
@@ -58,7 +64,11 @@ const Incomes = (refresh) => {
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
                 <Text style={styles.summaryAmount}>
-                {value ? `${value}£` : totalIncomes ? `${totalIncomes}$` : "0$"}
+                {formatCurrency(
+                  totalIncomes || 0,
+                  userDetails?.currency || "USD",
+                  userDetails?.locale || "en-US"
+                )}
                 </Text>
               )}
               <MaterialIcons

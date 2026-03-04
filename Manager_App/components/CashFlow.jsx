@@ -29,9 +29,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
 import api from "../services/api";
 import { useAuth } from "./useAuth";
+import { formatCurrency } from "../services/formatCurrency";
 
 export default function CashFlow() {
-  const { userId } = useAuth();
+  const { userId, userDetails } = useAuth();
+  if (!userDetails){
+    return <ActivityIndicator size="large"/>
+  }
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState("month");
@@ -125,6 +129,7 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
           value={totalIncome}
           icon="trending-up"
           color="#34C759"
+          userDetails={userDetails}
           // style={{width: 40, backgroundColor: "#34C759"}}
         />
         <SummaryCard
@@ -241,7 +246,7 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
 
 /* ---------------- SUB COMPONENTS ---------------- */
 
-const SummaryCard = ({ title, value, icon, color }) => (
+const SummaryCard = ({ title, value, icon, color, userDetails }) => (
   <View style={styles.summaryCard}>
     <View style={styles.summaryTop}>
       <Text style={styles.summaryTitle}>{title}</Text>
@@ -249,7 +254,13 @@ const SummaryCard = ({ title, value, icon, color }) => (
         <MaterialIcons name={icon} size={18} color={color} />
       </View>
     </View>
-    <Text style={styles.summaryValue}>${value.toLocaleString()}</Text>
+    <Text style={styles.summaryValue}>{
+      formatCurrency(
+       value || 0,
+       userDetails?.currency || "USD",
+       userDetails?.locale || "en-US"
+      )
+    }</Text>
   </View>
 );
 

@@ -875,9 +875,9 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
       startDate = new Date(now.getFullYear(), 0, 1); // start of year
     }
 
-   const projects = await ProjectModel.find({ userId });
+  const projects = await ProjectModel.find({ userId });
 
-const incomes = projects.flatMap((project) =>
+  const incomes = projects.flatMap((project) =>
   (project.paymentDetails || [])
     .filter((p) => {
       const d = new Date(p.date);
@@ -889,8 +889,8 @@ const incomes = projects.flatMap((project) =>
     }))
 );
 
- 
-
+   console.log("Projects:", projects.length);
+   console.log("Incomes:", incomes);
     incomes.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
     res.json(incomes);
   } catch (err) {

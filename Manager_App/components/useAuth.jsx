@@ -13,7 +13,7 @@ export const useAuth = () => {
     authLoading: true,
   });
 
-  const [userDetails, setUserDetails] = useState(null);
+  const [userDetails, setUserDetails] = useState({});
 
   const navigation = useNavigation();
 
