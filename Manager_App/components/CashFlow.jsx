@@ -297,7 +297,7 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
     day: "numeric",
   })?? ''}</Text>
               <Tag size={12} color="#94A3B8"/>
-              <Text style={styles.transactionAbout}>{item?.payments?.category || "Project Payment"}</Text>
+              <Text style={styles.transactionAbout}>{item?.type == "project" ? "Project Payment": item?.category}</Text>
               </View>
             </View>
 
