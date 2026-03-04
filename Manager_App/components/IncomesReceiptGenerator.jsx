@@ -212,9 +212,9 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       }
     );
 
-    await api.put(`/incomeReceipt/${savedReceipt.data._id}`, {
-      pdfUrl: pdfResult.downloadURL,
-    });
+    // await api.post(`/incomeReceipt/${savedReceipt.data._id}`, {
+    //   pdfUrl: pdfResult.downloadURL,
+    // });
 
     onSubmit(savedReceipt.data);
 

@@ -108,8 +108,8 @@ const AboutProject = () => {
   const submitIncomeReceipt = async (data) => {
     try {
       
-      await api.post("/incomeReceipt", data);
-      await api.post(`/updatePayment/${projectId}`, { paidAmount: data.amount });
+      // await api.post("/incomeReceipt", data);
+      await api.post(`/updatePayment/${projectId}`, { paidAmount: data.amount, paymentMethod: data.paymentMethod });
       
       fetchProject();
     } catch (err) {
