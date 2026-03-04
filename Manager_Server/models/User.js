@@ -28,7 +28,14 @@ const UserSchema = new mongoose.Schema({
 
   totalExpenses: Number,
   totalIncomes: Number,
-
+  currency: {
+  type: String,
+  default: "USD"
+},
+locale: {
+  type: String,
+  default: "en-US"
+},
   employees: [EmployeeSchema],
 }, { timestamps: true });
 

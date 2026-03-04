@@ -8,10 +8,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import {SERVER_URL} from "@env";
 import api from "../services/api";
-
+import { formatCurrency } from "../services/formatCurrency";
+import { useAuth } from "./useAuth";
 
 const Expenses = ({ userId, refresh }) => {
   const navigation = useNavigation();
+  const { userDetails } = useAuth();
 
   const [totalExpenses, setTotalExpenses] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ const Expenses = ({ userId, refresh }) => {
                 <ActivityIndicator size="small" color="#fff" style={{ marginTop: 12 }} />
               ) : (
                 <Text style={styles.summaryAmount}> 
-               {totalExpenses ? `${totalExpenses}$` : "0$"}
+               {totalExpenses ? `${formatCurrency(totalExpenses, userDetails.currency, userDetails.locale)}` : "0$"}
                 </Text>
               )}
               <MaterialIcons

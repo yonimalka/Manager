@@ -10,61 +10,68 @@ export const useAuth = () => {
     userId: null,
     role: null,
     isAuthenticated: false,
-    authLoading: true, // new: track loading state
+    authLoading: true,
   });
+
+  const [userDetails, setUserDetails] = useState(null);
 
   const navigation = useNavigation();
 
-  // Load token from storage and validate
   const loadAuth = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      if (token) {
-        const decoded = jwtDecode(token);
-        const now = Date.now() / 1000; // current time in seconds
-
-        if (decoded.exp && decoded.exp < now) {
-          console.log("Access token expired");
-          await AsyncStorage.removeItem("token");
-          await AsyncStorage.removeItem("refreshToken");
-          setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
-          navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
-          return;
-        }
-        
-        setAuth({
-          userId: decoded.userId,
-          role: decoded.role || null,
-          isAuthenticated: true,
-          authLoading: false,
-        });
-      } else {
+      if (!token) {
         setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
         navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
+        return;
       }
+
+      const decoded = jwtDecode(token);
+      const now = Date.now() / 1000;
+
+      if (decoded.exp && decoded.exp < now) {
+        await AsyncStorage.removeItem("token");
+        await AsyncStorage.removeItem("refreshToken");
+
+        setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
+        navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
+        return;
+      }
+
+      // ✅ Set basic auth
+      setAuth({
+        userId: decoded.userId,
+        role: decoded.role || null,
+        isAuthenticated: true,
+        authLoading: false,
+      });
+
+      // ✅ Fetch full user profile (INCLUDING currency)
+      const res = await api.get(`/getUserDetails`);
+      setUserDetails(res.data);
+
     } catch (err) {
-      console.error("Failed to decode token", err);
-      setAuth({ userId: null, role: null, isAuthenticated: false, loading: false });
+      console.error("Auth failed:", err);
+      setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
       navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
     }
   }, [navigation]);
 
   useEffect(() => {
     loadAuth();
-    // console.log("auth:",auth);
-    
   }, [loadAuth]);
 
-  // Logout function
   const logout = async () => {
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("refreshToken");
-    setAuth({ userId: null, role: null, isAuthenticated: false, loading: false });
+
+    setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
+    setUserDetails(null);
+
     navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
   };
 
-  // Optional: helper to make authenticated API calls
   const fetchWithAuth = async (requestCallback) => {
     if (!auth.isAuthenticated) throw new Error("User not authenticated");
     try {
@@ -76,5 +83,11 @@ export const useAuth = () => {
     }
   };
 
-  return { ...auth, logout, fetchWithAuth };
+  return {
+    ...auth,
+    userDetails,
+    setUserDetails,
+    logout,
+    fetchWithAuth,
+  };
 };

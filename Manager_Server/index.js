@@ -293,6 +293,7 @@ app.post("/updateUser", authMiddleware, async (req, res) => {
       "businessId",
       "address",
       "logo",
+      "currency",
       "taxSettings",
     ];
 
@@ -326,6 +327,27 @@ app.post("/updateUser", authMiddleware, async (req, res) => {
 
   } catch (err) {
     console.log("error occurred on updateUser", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+app.put("/updateCurrency", authMiddleware, async (req, res) => {
+  try {
+    const { currency, locale } = req.body;
+
+    if (!currency || !locale) {
+      return res.status(400).json({ message: "Currency and locale required" });
+    }
+
+    const user = await UserModel.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.currency = currency;
+    user.locale = locale;
+
+    await user.save();
+
+    res.json({ message: "Currency updated", currency, locale });
+  } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 });

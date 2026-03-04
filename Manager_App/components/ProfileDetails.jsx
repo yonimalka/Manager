@@ -15,6 +15,7 @@ import {
   ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "./useAuth";
 import api from "../services/api";
@@ -22,6 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Camera, Trash2, Pencil  } from "lucide-react-native";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
+import CurrencySelectorModal from "./CurrencySelectorModal";
 
 const isRTL = I18nManager.isRTL;
 
@@ -33,7 +35,16 @@ export default function ProfileDetails() {
   const [image, setImage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [collectTax, setCollectTax] = useState(false);
-
+  const [selectedCurrency, setSelectedCurrency] = useState(
+  userDetails?.currency || "USD"
+);
+  const currencies = [
+  { code: "USD", locale: "en-US", label: "🇺🇸 USD - US Dollar" },
+  { code: "GBP", locale: "en-GB", label: "🇬🇧 GBP - British Pound" },
+  { code: "EUR", locale: "de-DE", label: "🇪🇺 EUR - Euro" },
+  { code: "ILS", locale: "he-IL", label: "🇮🇱 ILS - Israeli Shekel" },
+];
+  
   useEffect(() => {
     fetchData();
   }, [userId]);
@@ -62,7 +73,7 @@ export default function ProfileDetails() {
       ...data,
       address: addressObj,
     });
-
+      setSelectedCurrency(data.currency || "USD");
       setImage(res.data.logo);
       setCollectTax(res.data?.taxSettings?.collectTax || false);
     } catch (err) {
@@ -84,7 +95,28 @@ export default function ProfileDetails() {
       [field]: value,
     }));
   };
+  const handleCurrencyChange = async (value) => {
+  const selected = currencies.find((c) => c.code === value);
 
+  setSelectedCurrency(value);
+
+  try {
+    await api.put("/updateCurrency", {
+      currency: selected.code,
+      locale: selected.locale,
+    });
+
+    // update local state instantly
+    setUserDetails((prev) => ({
+      ...prev,
+      currency: selected.code,
+      locale: selected.locale,
+    }));
+
+  } catch (error) {
+    console.log("Currency update failed");
+  }
+};
   const handleSave = async () => {
     try {
       if (!auth.currentUser) {
@@ -113,8 +145,9 @@ export default function ProfileDetails() {
       // Also update local variable before sending
       userDetails.logo = logoUrl;
       await api.post("/updateUser", {
-  ...userDetails,
-  taxSettings: {
+    ...userDetails,
+    currency: selectedCurrency,
+    taxSettings: {
     collectTax,
     businessState: userDetails.address?.state,
   },
@@ -307,6 +340,44 @@ export default function ProfileDetails() {
           style={[styles.input, styles.disabled]}
           editable={false}
         />
+        {isEditing ? (
+  <>
+    <Label title="Currency" />
+
+    <View style={{
+      borderWidth: 1,
+      borderColor: "#E5E7EB",
+      borderRadius: 14,
+      marginBottom: 16,
+      overflow: "hidden",
+      backgroundColor: "#F3F4F6",
+    }}>
+      <Picker
+        selectedValue={selectedCurrency}
+        onValueChange={handleCurrencyChange}
+        style={{
+          height: 50,
+          textAlign: I18nManager.isRTL ? "right" : "left"
+        }}
+      >
+        {currencies.map((item) => (
+          <Picker.Item
+            key={item.code}
+            label={item.label}
+            value={item.code}
+          />
+        ))}
+      </Picker>
+    </View>
+  </>
+) : (
+  <>
+    <Label title="Currency" />
+    <View style={styles.input}>
+      <Text>{userDetails?.currency || "USD"}</Text>
+    </View>
+  </>
+)}
         {/* Save Button (Bottom Fixed) */}
       {isEditing && (
         <View style={styles.saveWrapper}>
@@ -347,9 +418,9 @@ const styles = StyleSheet.create({
     alignItems: "center", 
     justifyContent: "center",
     position: "absolute",
-  top: 60,
-  left: 20,
-  zIndex: 10,
+    top: 60,
+    left: 20,
+    zIndex: 10,
 },
   title: {
     fontSize: 28,
