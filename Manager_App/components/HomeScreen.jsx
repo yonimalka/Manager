@@ -33,6 +33,7 @@ import { useAuth } from "./useAuth";
 import api from "../services/api";
 import { signInAnonymously } from "firebase/auth";
 import { auth } from "./firebase";
+import { formatCurrency } from "../services/formatCurrency";
 
 const { width } = Dimensions.get("window");
 
@@ -45,7 +46,7 @@ export const firebaseLogin = async () => {
 const HomeScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { userId, authLoading, isAuthenticated } = useAuth();
+  const { userId, authLoading, isAuthenticated, userDetails } = useAuth();
   const isFocused = useIsFocused();
 
   const [loading, setLoading] = useState(false);
@@ -119,7 +120,7 @@ const HomeScreen = () => {
   }
   const submitIncomeReceipt = async (data) => {
     try {
-      await api.post("/incomeReceipt", data);
+      // await api.post("/incomeReceipt", data);
       await api.get(`/getUserDetails`);
       
     } catch (err) {

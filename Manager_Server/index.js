@@ -24,6 +24,7 @@ const FixedExpenseModel = require("./models/FixedExpense");
 const ReceiptModel = require ("./models/Receipt");
 const ProjectModel = require("./models/Project");
 const IncomeReceipt = require('./models/IncomeReceipt');
+const IncomeModel = require("./models/Incomes");
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
 
 const app = express();
@@ -503,28 +504,37 @@ app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
 
 app.post("/incomeReceipt", authMiddleware, async (req, res) => {
   try {
-    //  console.log("Request body:", req.body);
-    // console.log("UserId:", req.userId);
+    const { amount, tax, total, category, date } = req.body;
 
-    // Validate required fields
-    const { amount, payer } = req.body;
-    if (!amount || !payer) {
-      return res.status(400).json({ error: "Amount and payer are required" });
-    }
+    if (!amount)
+      return res.status(400).json({ error: "Amount is required" });
+
     const receipt = await IncomeReceipt.create({
       ...req.body,
       userId: req.userId,
       receiptNumber: generateReceiptNumber(),
-      // createdAt
     });
-    console.log("Created receipt:", receipt);
+
+    // 🔥 Create unified Income entry
+    await IncomeModel.create({
+      userId: req.userId,
+      projectId: null,
+      amount,
+      tax: tax || 0,
+      total: total || amount,
+      category,
+      source: "standalone",
+      referenceId: receipt._id,
+      date: new Date(date),
+    });
 
     res.status(201).json(receipt);
+
   } catch (err) {
-    console.error("Error creating receipt:", err); 
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
-})
+});
 app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
@@ -822,30 +832,35 @@ app.post('/uploadLogo', authMiddleware, async (req, res) => {
   })
   return user.save();
 })
-app.post("/UpdatePayment/:projectId", authMiddleware, async (req, res) => {
+app.post("/updatePayment/:projectId", authMiddleware, async (req, res) => {
   try {
     const { paidAmount } = req.body;
     const amount = Number(paidAmount);
 
     const project = await ProjectModel.findOne({
       _id: req.params.projectId,
-      userId: req.userId
+      userId: req.userId,
     });
 
     if (!project)
       return res.status(404).json({ message: "Project not found" });
 
-    project.paid += amount;
-    project.paymentDetails.push({
+    // 1️⃣ Create Income entry
+    await IncomeModel.create({
+      userId: req.userId,
+      projectId: project._id,
       amount,
-      date: new Date()
+      tax: 0,
+      total: amount,
+      category: project.name,
+      source: "project",
+      referenceId: null,
+      date: new Date(),
     });
 
+    // 2️⃣ Update project paid amount
+    project.paid += amount;
     await project.save();
-
-    await UserModel.findByIdAndUpdate(req.userId, {
-      $inc: { totalIncomes: amount }
-    });
 
     res.json({ success: true });
 
@@ -859,42 +874,43 @@ app.post("/UpdatePayment/:projectId", authMiddleware, async (req, res) => {
 app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
-    const raw = req.query.period || "month"; // default month
+    const raw = req.query.period || "month";
     const now = new Date();
 
-    // Only English values expected
-    const validPeriods = ["month", "quarter", "year"];
-    const period = validPeriods.includes(raw) ? raw : "month";
-
     let startDate;
-    if (period === "month") {
+
+    if (raw === "month") {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    } else if (period === "quarter") {
-      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // current + 2 months back
+    } else if (raw === "quarter") {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
     } else {
-      startDate = new Date(now.getFullYear(), 0, 1); // start of year
+      startDate = new Date(now.getFullYear(), 0, 1);
     }
 
-  const projects = await ProjectModel.find({ userId });
-
-  const incomes = projects.flatMap((project) =>
-  (project.paymentDetails || [])
-    .filter((p) => {
-      const d = new Date(p.date);
-      return !isNaN(d) && d >= startDate && d <= now;
+    const incomes = await IncomeModel.find({
+      userId,
+      date: { $gte: startDate, $lte: now },
     })
-    .map((p) => ({
-      payments: p,
-      projectName: project.name,
-    }))
-);
+      .populate("projectId", "name")
+      .lean();
 
-   console.log("Projects:", projects.length);
-   console.log("Incomes:", incomes);
-    incomes.sort((a, b) => new Date(a.payments.date) - new Date(b.payments.date));
-    res.json(incomes);
+    const formatted = incomes.map((inc) => ({
+      payments: {
+        amount: inc.total,
+        date: inc.date,
+      },
+      projectName: inc.projectId?.name || "General Income",
+      type: inc.source,
+    }));
+
+    formatted.sort(
+      (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
+    );
+
+    res.json(formatted);
+
   } catch (err) {
-    console.error("Error fetching cash flow incomes:", err);
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
