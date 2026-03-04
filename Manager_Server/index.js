@@ -279,6 +279,7 @@ app.get("/getUserDetails", authMiddleware, async (req, res) => {
       address: user.address,
       email: user.email,
       logo: user.logo,
+      currency: user.currency,
     }
     res.json(userDetails)
    }).catch((err) =>{

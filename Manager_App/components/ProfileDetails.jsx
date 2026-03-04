@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Pressable,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
@@ -23,7 +24,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Camera, Trash2, Pencil  } from "lucide-react-native";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
-import CurrencySelectorModal from "./CurrencySelectorModal";
+
 
 const isRTL = I18nManager.isRTL;
 
@@ -341,35 +342,35 @@ export default function ProfileDetails() {
           editable={false}
         />
         {isEditing ? (
-  <>
-    <Label title="Currency" />
+  <View style={styles.section}>
+    <Text style={styles.label}>Currency</Text>
 
-    <View style={{
-      borderWidth: 1,
-      borderColor: "#E5E7EB",
-      borderRadius: 14,
-      marginBottom: 16,
-      overflow: "hidden",
-      backgroundColor: "#F3F4F6",
-    }}>
-      <Picker
-        selectedValue={selectedCurrency}
-        onValueChange={handleCurrencyChange}
-        style={{
-          height: 50,
-          textAlign: I18nManager.isRTL ? "right" : "left"
-        }}
-      >
-        {currencies.map((item) => (
-          <Picker.Item
+    <View style={styles.suggestionsContainer}>
+      {currencies.map((item) => {
+        const isSelected = selectedCurrency === item.code;
+
+        return (
+          <Pressable
             key={item.code}
-            label={item.label}
-            value={item.code}
-          />
-        ))}
-      </Picker>
+            style={[
+              styles.currencyChip,
+              isSelected && styles.currencyChipActive,
+            ]}
+            onPress={() => handleCurrencyChange(item.code)}
+          >
+            <Text
+              style={[
+                styles.currencyText,
+                isSelected && styles.currencyTextActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
-  </>
+  </View>
 ) : (
   <>
     <Label title="Currency" />
@@ -542,6 +543,39 @@ taxHelper: {
   fontSize: 12,
   color: "#6B7280",
   marginTop: 6,
+},
+section: {
+  marginBottom: 16,
+},
+
+suggestionsContainer: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 10,
+},
+
+currencyChip: {
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  borderRadius: 20,
+  backgroundColor: "#F3F4F6",
+  borderWidth: 1,
+  borderColor: "#E5E7EB",
+},
+
+currencyChipActive: {
+  backgroundColor: "#2563EB",
+  borderColor: "#2563EB",
+},
+
+currencyText: {
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#374151",
+},
+
+currencyTextActive: {
+  color: "#fff",
 },
 
   deleteBtn: {
