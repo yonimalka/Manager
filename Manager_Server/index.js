@@ -504,8 +504,9 @@ app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
 
 app.post("/incomeReceipt", authMiddleware, async (req, res) => {
   try {
-    const { amount, tax, total, category, date } = req.body;
-
+    const { amount, tax, total, category, date, projectId } = req.body;
+    console.log("Type of projectId:", typeof projectId);
+console.log("Is valid ObjectId:", mongoose.Types.ObjectId.isValid(projectId));
     if (!amount)
       return res.status(400).json({ error: "Amount is required" });
 
@@ -515,18 +516,25 @@ app.post("/incomeReceipt", authMiddleware, async (req, res) => {
       receiptNumber: generateReceiptNumber(),
     });
 
-    // 🔥 Create unified Income entry
+    // 🔥 Create ONE unified income
     await IncomeModel.create({
       userId: req.userId,
-      projectId: null,
+      projectId: projectId || null,
       amount,
       tax: tax || 0,
       total: total || amount,
       category,
-      source: "standalone",
+      source: projectId ? "project" : "standalone",
       referenceId: receipt._id,
       date: new Date(date),
     });
+
+    // 🔥 If linked to project → update project paid
+    if (projectId) {
+      await ProjectModel.findByIdAndUpdate(projectId, {
+        $inc: { paid: total || amount },
+      });
+    }
 
     res.status(201).json(receipt);
 
@@ -845,20 +853,6 @@ app.post("/updatePayment/:projectId", authMiddleware, async (req, res) => {
     if (!project)
       return res.status(404).json({ message: "Project not found" });
 
-    // 1️⃣ Create Income entry
-    await IncomeModel.create({
-      userId: req.userId,
-      projectId: project._id,
-      amount,
-      tax: 0,
-      total: amount,
-      category: project.name,
-      source: "project",
-      referenceId: null,
-      date: new Date(),
-    });
-
-    // 2️⃣ Update project paid amount
     project.paid += amount;
     await project.save();
 

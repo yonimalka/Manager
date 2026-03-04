@@ -109,7 +109,10 @@ const AboutProject = () => {
     try {
       
       // await api.post("/incomeReceipt", data);
-      await api.post(`/updatePayment/${projectId}`, { paidAmount: data.amount, paymentMethod: data.paymentMethod });
+      // await api.post(`/updatePayment/${projectId}`, { 
+      //   paidAmount: data.amount, 
+      //   paymentMethod: data.paymentMethod 
+      // });
       
       fetchProject();
     } catch (err) {
