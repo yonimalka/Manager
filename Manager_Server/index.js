@@ -893,6 +893,7 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
         amount: inc.total,
         date: inc.date,
       },
+      payer: inc.payer,
       category: inc.category,
       projectName: inc.projectId?.name || "General Income",
       type: inc.source,
