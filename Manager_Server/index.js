@@ -525,21 +525,23 @@ app.post("/incomeReceipt", authMiddleware, async (req, res) => {
       date: date ? new Date(date) : new Date(),
     });
 
-    // ✅ Create unified income record
+   
     await IncomeModel.create({
-  userId: req.userId,
-  projectId: projectId || null,
-  services: normalizedServices,   // ← ADD THIS
-  amount: subtotal,
-  tax,
-  total,
-  payer,
-  source: projectId ? "project" : "standalone",
-  referenceId: receipt._id,
-  date: receipt.date,
-});
+      userId: req.userId,
+      projectId: projectId || null,
+      source: projectId ? "project" : "standalone",
+      services: normalizedServices,   
+      subtotal,                   
+      taxRate: numericTaxRate,
+      tax,
+      total,                         
+      currency: rest.currency || "USD",
+      payer,
+      referenceId: receipt._id,
+      date: date ? new Date(date) : new Date(),
+    });
 
-    // ✅ Update project paid
+    // Update project paid
     if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
       await ProjectModel.findByIdAndUpdate(projectId, {
         $inc: { paid: total },
