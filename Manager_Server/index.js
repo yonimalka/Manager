@@ -555,6 +555,30 @@ app.post("/incomeReceipt", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+app.patch("/incomeReceipt/:id/pdf", authMiddleware, async (req, res) => {
+  try {
+    const { pdfUrl } = req.body;
+
+    if (!pdfUrl) {
+      return res.status(400).json({ error: "pdfUrl is required" });
+    }
+
+    const receipt = await IncomeReceipt.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
+      { pdfUrl },
+      { new: true }
+    );
+
+    if (!receipt) {
+      return res.status(404).json({ error: "Receipt not found" });
+    }
+
+    res.json(receipt);
+  } catch (err) {
+    console.error("PDF update error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 app.get("/getReceipts/:projectId", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
