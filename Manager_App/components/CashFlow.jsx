@@ -65,7 +65,8 @@ export default function CashFlow() {
       
       setIncomes(inc);
       setExpenses(exp);
-
+      console.log(expenses);
+      
       const incTotal = inc.reduce(
         (s, i) => s + (Number(i?.payments?.amount) || 0),
         0
