@@ -31,7 +31,7 @@ const IncomeSchema = new mongoose.Schema(
       enum: ["project", "standalone"],
       required: true,
     },
-    payer: { String },
+    payer: { type: String },
     referenceId: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,

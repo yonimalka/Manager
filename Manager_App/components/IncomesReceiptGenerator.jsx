@@ -196,6 +196,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       createdAt: new Date().toISOString(),
     };
     console.log("Incoming projectId:", projectId);
+    
     const savedReceipt = await api.post("/incomeReceipt", {
       ...receiptData,
        projectId,
@@ -399,7 +400,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                 placeholder="0.00"
                 keyboardType="decimal-pad"
                 error={errors.amount}
-                label="Amount (USD)"
+                label="Amount"
                 required
               />
               <FormInput

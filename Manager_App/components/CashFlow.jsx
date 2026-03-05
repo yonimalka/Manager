@@ -278,6 +278,8 @@ const SummaryCard = ({ title, value, icon, color, userDetails }) => (
 
 const TransactionSection = ({ title, data, amountKey, color, icon, userDetails }) => {
   const handleTransactionType = (item) => {
+    console.log(item);
+    
     if (item.type == "income") {
       if(item.source == "project"){
         return "Project Payment"
