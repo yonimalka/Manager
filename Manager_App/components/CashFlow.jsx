@@ -65,7 +65,6 @@ export default function CashFlow() {
       
       setIncomes(inc);
       setExpenses(exp);
-      console.log(expenses);
       
       const incTotal = inc.reduce(
         (s, i) => s + (Number(i?.payments?.amount) || 0),
@@ -305,12 +304,12 @@ const TransactionSection = ({ title, data, amountKey, color, icon, userDetails }
                 {item?.payments?.date || ""}
               </Text> */}
               <Text style={styles.transactionDate}>{new Date(item.payments.date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })?? ''}</Text>
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })?? ''}</Text>
               <Tag size={12} color="#94A3B8"/>
-              <Text style={styles.transactionAbout}>{item?.type == "project" ? "Project Payment": console.log(item)}</Text>
+              <Text style={styles.transactionAbout}>{item?.type == "project" ? "Project Payment": item?.payments?.category}</Text>
               </View>
             </View>
 

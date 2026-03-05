@@ -521,6 +521,7 @@ console.log("Is valid ObjectId:", mongoose.Types.ObjectId.isValid(projectId));
       userId: req.userId,
       projectId: projectId || null,
       amount,
+      payer,
       tax: tax || 0,
       total: total || amount,
       category,
@@ -896,7 +897,8 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
       payer: inc.payer,
       category: inc.category,
       projectName: inc.projectId?.name || "General Income",
-      type: inc.source,
+      source: inc.source,
+      type: "income",
     }));
     console.log("formatted:", formatted);
     
@@ -967,6 +969,7 @@ const occurredFixedExpenses = fixedExpenses.filter(fe => {
       date: receipt.createdAt,
     },
     projectName: receipt.projectId?.name || "General",
+    type: "expense",
   }));
     
 // console.log(expenses);
@@ -983,6 +986,7 @@ const occurredFixedExpenses = fixedExpenses.filter(fe => {
     title: fe.title,
   },
   projectName: "Fixed Expense",
+  type: "expense",
 }));
 
     // expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));  
