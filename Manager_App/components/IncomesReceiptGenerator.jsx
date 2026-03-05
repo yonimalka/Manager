@@ -29,9 +29,10 @@ import {
 import api from "../services/api";
 import { useAuth } from "./useAuth";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
+import { formatCurrency } from "../services/formatCurrency";
 
 export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId }) {
-  const { userId } = useAuth();
+  const { userId, userDetails } = useAuth();
   const [amount, setAmount] = useState("");
   const [payer, setPayer] = useState("");
   const [payerAddress, setPayerAddress] = useState({
@@ -46,6 +47,14 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const [receiptNumber, setReceiptNumber] = useState(
     `REC-${Date.now().toString().slice(-8)}`
   );
+  const [services, setServices] = useState([
+  {
+    id: Date.now(),
+    description: "",
+    quantity: "1",
+    unitPrice: "",
+  },
+]);
   const [date, setDate] = useState(new Date());
   const [showDate, setShowDate] = useState(false);
   const [description, setDescription] = useState("");
@@ -53,20 +62,20 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const [errors, setErrors] = useState({});
   const [taxRate, setTaxRate] = useState("0");
   const numericAmount = Number(amount) || 0;
-  const numericRate = Number(taxRate) || 0;
+  // const numericRate = Number(taxRate) || 0;
   
-  const subtotal = numericAmount;
-  const tax = +(subtotal * (numericRate / 100)).toFixed(2);
-  const total = +(subtotal + tax).toFixed(2);
+  // const subtotal = numericAmount;
+  // const tax = +(subtotal * (numericRate / 100)).toFixed(2);
+  // const total = +(subtotal + tax).toFixed(2);
 
   // Validation
   const validateForm = () => {
     const newErrors = {};
 
-    if (!amount || isNaN(amount) || Number(amount) <= 0) {
-      newErrors.amount = "Please enter a valid amount";
-    }
-
+    // if (!amount || isNaN(amount) || Number(amount) <= 0) {
+    //   newErrors.amount = "Please enter a valid amount";
+    // }
+    
     if (!payer.trim()) {
       newErrors.payer = "Payer name is required";
     }
@@ -77,12 +86,15 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
     if (!payerAddress.zip.trim()) {
      newErrors.zip = "ZIP Code is required for tax calculation";
     }
-    if (!category.trim()) {
-      newErrors.category = "Category/Service is required";
-    }
+    // if (!category.trim()) {
+    //   newErrors.category = "Category/Service is required";
+    // }
 
-    if (!description.trim()) {
-      newErrors.description = "Description is required for tax purposes";
+    if (services.some(s => !s.description.trim())) {
+     newErrors.services = "All services must have a description";
+    }
+    if (services.some(s => Number(s.quantity) <= 0)) {
+      newErrors.services = "Quantity must be greater than 0";
     }
 
     // Optional EIN/SSN validation (basic format check)
@@ -93,7 +105,41 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+  const subtotal = services.reduce((sum, service) => {
+  const qty = Number(service.quantity) || 0;
+  const price = Number(service.unitPrice) || 0;
+  return sum + qty * price;
+}, 0);
 
+const numericRate = Number(taxRate) || 0;
+const tax = +(subtotal * (numericRate / 100)).toFixed(2);
+const total = +(subtotal + tax).toFixed(2);
+
+const addService = () => {
+  setServices((prev) => [
+    ...prev,
+    {
+      id: Date.now(),
+      description: "",
+      quantity: "1",
+      unitPrice: "",
+    },
+  ]);
+};
+
+const removeService = (id) => {
+  setServices((prev) => prev.filter((s) => s.id !== id));
+};
+
+const updateService = (id, field, value) => {
+  setServices((prev) =>
+    prev.map((service) =>
+      service.id === id
+        ? { ...service, [field]: value }
+        : service
+    )
+  );
+};
   const validateTaxId = (id) => {
     // Basic EIN (XX-XXXXXXX) or SSN (XXX-XX-XXXX) format
     const einPattern = /^\d{2}-\d{7}$/;
@@ -180,6 +226,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
     const receiptData = {
       receiptNumber,
       subtotal,
+      services,
       tax,
       taxRate: numericRate,
       total,
@@ -190,7 +237,6 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       category: category.trim(),
       currency: "USD",
       date: date.toISOString(),
-      description: description.trim(),
       image,
       paymentMethod,
       createdAt: new Date().toISOString(),
@@ -316,48 +362,92 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
 
             {/* Service Details */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Service Details</Text>
-              
-              <FormInput
-                icon={<Tag size={20} color="#6B7280" />}
-                value={category}
-                onChange={(val) => {
-                  setCategory(val);
-                  if (errors.category) setErrors({ ...errors, category: null });
-                }}
-                placeholder="Consulting, Design, Development, etc."
-                error={errors.category}
-                label="Category/Type of Service"
-                required
-              />
+  <Text style={styles.sectionLabel}>Services</Text>
 
-              <View style={styles.textAreaContainer}>
-                <Text style={styles.inputLabel}>
-                  Description of Services *
-                </Text>
-                <TextInput
-                  placeholder="Detailed description of work performed or services rendered..."
-                  value={description}
-                  onChangeText={(val) => {
-                    setDescription(val);
-                    if (errors.description) setErrors({ ...errors, description: null });
-                  }}
-                  style={[
-                    styles.textArea,
-                    errors.description && styles.inputError,
-                  ]}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-                {errors.description && (
-                  <Text style={styles.errorText}>{errors.description}</Text>
-                )}
-                <Text style={styles.helperText}>
-                  Required for IRS documentation. Be specific about services provided.
-                </Text>
-              </View>
-            </View>
+  {/* Table Header */}
+  <View style={styles.tableHeader}>
+    <Text style={[styles.colDescription, styles.headerText]}>
+      Description
+    </Text>
+    <Text style={[styles.colQty, styles.headerText]}>
+      Qty
+    </Text>
+    <Text style={[styles.colUnit, styles.headerText]}>
+      Unit
+    </Text>
+    <Text style={[styles.colTotal, styles.headerText]}>
+      Total
+    </Text>
+    <View style={styles.colAction} />
+  </View>
+
+  {/* Table Rows */}
+  {services.map((service) => {
+    const lineTotal =
+      (Number(service.quantity) || 0) *
+      (Number(service.unitPrice) || 0);
+
+    return (
+      <View key={service.id} style={styles.tableRow}>
+        <TextInput
+          style={[styles.colDescription, styles.inputCell]}
+          placeholder="Service description"
+          value={service.description}
+          onChangeText={(val) =>
+            updateService(service.id, "description", val)
+          }
+        />
+
+        <TextInput
+          style={[styles.colQty, styles.inputCell]}
+          value={service.quantity}
+          keyboardType="numeric"
+          onChangeText={(val) =>
+            updateService(
+              service.id,
+              "quantity",
+              val.replace(/[^0-9]/g, "")
+            )
+          }
+        />
+
+        <TextInput
+          style={[styles.colUnit, styles.inputCell]}
+          value={service.unitPrice}
+          keyboardType="decimal-pad"
+          onChangeText={(val) =>
+            updateService(
+              service.id,
+              "unitPrice",
+              val.replace(/[^0-9.]/g, "")
+            )
+          }
+        />
+
+        <View style={styles.colTotal}>
+          <Text style={styles.totalText}>
+            {formatCurrency(
+              lineTotal,
+              userDetails?.currency || "USD",
+              userDetails?.locale || "en-US"
+            )}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.colAction}
+          onPress={() => removeService(service.id)}
+        >
+          <X size={18} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
+    );
+  })}
+
+  <TouchableOpacity onPress={addService} style={styles.addRowButton}>
+    <Text style={styles.addRowText}>+ Add Line Item</Text>
+  </TouchableOpacity>
+</View>
             {/* Payment Method */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Payment Method</Text>
@@ -393,16 +483,16 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Payment Details</Text>
               
-              <FormInput
+              {/* <FormInput
                 icon={<DollarSign size={20} color="#16a34a" />}
                 value={amount}
                 onChange={handleAmountChange}
                 placeholder="0.00"
                 keyboardType="decimal-pad"
                 error={errors.amount}
-                label="Amount"
+                label= "Amount" 
                 required
-              />
+              /> */}
               <FormInput
                 icon={<Hash size={20} color="#6B7280" />}
                 value={taxRate}
@@ -420,12 +510,20 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
               }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text>Subtotal</Text>
-                  <Text>${subtotal.toFixed(2)}</Text>
+                  <Text>{formatCurrency(
+                                            subtotal.toFixed(2) || 0,
+                                            userDetails?.currency || "USD",
+                                            userDetails?.locale || "en-US"
+                                          )}</Text>
                 </View>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
                   <Text>Sales Tax ({numericRate.toFixed(2)}%)</Text>
-                  <Text>${tax.toFixed(2)}</Text>
+                  <Text>{formatCurrency(
+                                            tax.toFixed(2) || 0,
+                                            userDetails?.currency || "USD",
+                                            userDetails?.locale || "en-US"
+                                          )}</Text>
                 </View>
 
                 <View style={{
@@ -437,7 +535,11 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ fontWeight: "700" }}>Total</Text>
                   <Text style={{ fontWeight: "700" }}>
-                    ${total.toFixed(2)}
+                    {formatCurrency(
+                                            total.toFixed(2) || 0,
+                                            userDetails?.currency || "USD",
+                                            userDetails?.locale || "en-US"
+                                          )}
                   </Text>
                 </View>
               </View>
@@ -825,4 +927,71 @@ const styles = StyleSheet.create({
     color: "#1E40AF",
     lineHeight: 18,
   },
+  tableHeader: {
+  flexDirection: "row",
+  paddingVertical: 8,
+  borderBottomWidth: 1,
+  borderColor: "#E5E7EB",
+},
+
+tableRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 8,
+  borderBottomWidth: 1,
+  borderColor: "#F3F4F6",
+},
+
+headerText: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#6B7280",
+},
+
+colDescription: {
+  flex: 3,
+  paddingRight: 8,
+},
+
+colQty: {
+  flex: 1,
+  paddingHorizontal: 6,
+},
+
+colUnit: {
+  flex: 1.5,
+  paddingHorizontal: 6,
+},
+
+colTotal: {
+  flex: 1.5,
+  paddingLeft: 6,
+  alignItems: "flex-end",
+},
+
+colAction: {
+  width: 30,
+  alignItems: "center",
+},
+
+inputCell: {
+  fontSize: 14,
+  paddingVertical: 6,
+  paddingHorizontal: 4,
+},
+
+totalText: {
+  fontWeight: "600",
+  fontSize: 14,
+},
+
+addRowButton: {
+  marginTop: 12,
+  paddingVertical: 10,
+},
+
+addRowText: {
+  color: "#16a34a",
+  fontWeight: "700",
+},
 });

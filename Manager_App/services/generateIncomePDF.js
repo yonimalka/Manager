@@ -12,6 +12,8 @@ export async function generateIncomeReceiptPDF(receipt, userDetails, options = {
     allowSharing = false,
     onProgress = () => {},
   } = options;
+  const userCurrency = userDetails?.currency || "USD";
+  const userLocale = userDetails?.locale || "en-US";
 
   try {
     const {
@@ -28,7 +30,7 @@ export async function generateIncomeReceiptPDF(receipt, userDetails, options = {
     const total = Number(receipt.total ?? subtotal + tax);
 
     const date = new Date(receipt.date || receipt.createdAt);
-    const formattedDate = date.toLocaleDateString("en-US", {
+    const formattedDate = date.toLocaleDateString(userLocale, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -63,8 +65,39 @@ export async function generateIncomeReceiptPDF(receipt, userDetails, options = {
     const theme = colors[colorScheme] || colors.blue;
 
     const fmt = (n) =>
-      Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      new Intl.NumberFormat(userLocale, {
+        style: "currency",
+        currency: userCurrency,
+      }).format(Number(n));
+    const services = receipt.services || [];
 
+const serviceRows = services.length
+  ? services
+      .map((item, index) => {
+        const qty = Number(item.quantity) || 0;
+        const unit = Number(item.unitPrice) || 0;
+        const lineTotal = qty * unit;
+
+        return `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${item.description || ""}</td>
+            <td>${qty}</td>
+            <td>${fmt(unit)}</td>
+            <td>${fmt(lineTotal)}</td>
+          </tr>
+        `;
+      })
+      .join("")
+  : `
+      <tr>
+        <td>1</td>
+        <td>${receipt.description || "Payment received"}</td>
+        <td>1</td>
+        <td>${fmt(subtotal)}</td>
+        <td>${fmt(subtotal)}</td>
+      </tr>
+    `;
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -302,23 +335,23 @@ export async function generateIncomeReceiptPDF(receipt, userDetails, options = {
       <div class="section-header">Payment Details</div>
       <table>
         <thead>
-          <tr>
-            <th>Category</th>
-            <th>Description</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>${receipt.category || "Income"}</td>
-            <td>${receipt.description || receipt.notes || "Payment received"}</td>
-            <td>${currencySymbol}${fmt(subtotal)}</td>
-          </tr>
+  <tr>
+    <th>#</th>
+    <th>Description</th>
+    <th>Qty</th>
+    <th>Unit Price</th>
+    <th>Total</th>
+  </tr>
+</thead>
+<tbody>
+  ${serviceRows}
           ${taxRate > 0 ? `
           <tr class="tax-row">
-            <td colspan="2">Sales Tax (${taxRate.toFixed(2)}%)</td>
-            <td>${currencySymbol}${fmt(tax)}</td>
-          </tr>
+  <td colspan="4" style="text-align:right;">
+    Sales Tax (${taxRate.toFixed(2)}%)
+  </td>
+  <td>${fmt(tax)}</td>
+</tr>
           ` : ""}
         </tbody>
       </table>
@@ -328,8 +361,8 @@ export async function generateIncomeReceiptPDF(receipt, userDetails, options = {
     <div class="total-box">
       <div class="total-label">Total Amount Received</div>
       <div class="total-right">
-        <div class="total-amount">${currencySymbol}${fmt(total)}</div>
-        <div class="total-currency">${currency}</div>
+        <div class="total-amount">${fmt(total)}</div>
+        <div class="total-currency">${userCurrency}</div>
       </div>
     </div>
 
@@ -367,7 +400,7 @@ export async function generateIncomeReceiptPDF(receipt, userDetails, options = {
   ${includeFooter ? `
   <div class="footer">
     Thank you for your payment &bull;
-    This is an official receipt generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+    This is an official receipt generated on ${new Date().toLocaleDateString(userLocale, { year: "numeric", month: "long", day: "numeric" })}
     ${userDetails.website ? ` &bull; <a href="${userDetails.website}">${userDetails.website}</a>` : ""}
     &bull; For questions about this receipt, please contact ${userDetails.email || "us"}
   </div>

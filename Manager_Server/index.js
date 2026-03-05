@@ -397,39 +397,6 @@ app.post("/newProject", authMiddleware, async (req, res) => {
   }
 });
 
-app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
-  try {
-    const userId = req.userId;
-    const projectId = req.params.projectId;
-    const updatedTask = req.body;
-
-    const project = await ProjectModel.findOne({
-      _id: projectId,
-      userId: userId
-    });
-
-    if (!project)
-      return res.status(404).json({ message: "Project not found" });
-
-    const task = project.toDoList.id(updatedTask._id);
-
-    if (!task)
-      return res.status(404).json({ message: "Task not found" });
-
-    task.checked = updatedTask.checked;
-
-    // Sort unchecked first
-    project.toDoList.sort((a, b) => a.checked - b.checked);
-
-    await project.save();
-
-    res.json({ message: "Task updated successfully" });
-
-  } catch (err) {
-    console.error("updateTasks error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
 app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
   try {
     const project = await ProjectModel.findOne({
@@ -504,43 +471,85 @@ app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
 
 app.post("/incomeReceipt", authMiddleware, async (req, res) => {
   try {
-    const { amount, tax, total, category, date, projectId, payer } = req.body;
-    console.log("Type of projectId:", typeof projectId);
-console.log("Is valid ObjectId:", mongoose.Types.ObjectId.isValid(projectId));
-    if (!amount)
-      return res.status(400).json({ error: "Amount is required" });
+    const {
+      services = [],
+      taxRate = 0,
+      date,
+      projectId,
+      payer,
+      ...rest
+    } = req.body;
 
+    if (!services.length) {
+      return res.status(400).json({ error: "At least one service is required" });
+    }
+
+    // ✅ Validate + Calculate safely on backend
+    let subtotal = 0;
+
+    const normalizedServices = services.map((item) => {
+      const quantity = Number(item.quantity);
+      const unitPrice = Number(item.unitPrice);
+
+      if (!item.description || quantity <= 0 || unitPrice < 0) {
+        throw new Error("Invalid service line item");
+      }
+
+      const lineTotal = quantity * unitPrice;
+      subtotal += lineTotal;
+
+      return {
+        description: item.description,
+        quantity,
+        unitPrice,
+        lineTotal,
+      };
+    });
+
+    const numericTaxRate = Number(taxRate) || 0;
+    const tax = +(subtotal * (numericTaxRate / 100)).toFixed(2);
+    const total = +(subtotal + tax).toFixed(2);
+
+    // ✅ Create receipt (trusted values only)
     const receipt = await IncomeReceipt.create({
-      ...req.body,
+      ...rest,
+      services: normalizedServices,
+      subtotal,
+      taxRate: numericTaxRate,
+      tax,
+      total,
       userId: req.userId,
       receiptNumber: generateReceiptNumber(),
-    });
-
-    // 🔥 Create ONE unified income
-    await IncomeModel.create({
-      userId: req.userId,
       projectId: projectId || null,
-      amount,
       payer,
-      tax: tax || 0,
-      total: total || amount,
-      category,
-      source: projectId ? "project" : "standalone",
-      referenceId: receipt._id,
-      date: new Date(date),
+      date: date ? new Date(date) : new Date(),
     });
 
-    // 🔥 If linked to project → update project paid
-    if (projectId) {
+    // ✅ Create unified income record
+    await IncomeModel.create({
+  userId: req.userId,
+  projectId: projectId || null,
+  services: normalizedServices,   // ← ADD THIS
+  amount: subtotal,
+  tax,
+  total,
+  payer,
+  source: projectId ? "project" : "standalone",
+  referenceId: receipt._id,
+  date: receipt.date,
+});
+
+    // ✅ Update project paid
+    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
       await ProjectModel.findByIdAndUpdate(projectId, {
-        $inc: { paid: total || amount },
+        $inc: { paid: total },
       });
     }
 
     res.status(201).json(receipt);
 
   } catch (err) {
-    console.error(err);
+    console.error("Income receipt error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -779,7 +788,39 @@ app.post('/AddTask/:projectId', authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const projectId = req.params.projectId;
+    const updatedTask = req.body;
 
+    const project = await ProjectModel.findOne({
+      _id: projectId,
+      userId: userId
+    });
+
+    if (!project)
+      return res.status(404).json({ message: "Project not found" });
+
+    const task = project.toDoList.id(updatedTask._id);
+
+    if (!task)
+      return res.status(404).json({ message: "Task not found" });
+
+    task.checked = updatedTask.checked;
+
+    // Sort unchecked first
+    project.toDoList.sort((a, b) => a.checked - b.checked);
+
+    await project.save();
+
+    res.json({ message: "Task updated successfully" });
+
+  } catch (err) {
+    console.error("updateTasks error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 app.post('/AddItem/:projectId', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;

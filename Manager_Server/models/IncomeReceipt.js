@@ -1,5 +1,27 @@
 const mongoose = require('mongoose');
 
+const lineItemSchema = new mongoose.Schema({
+  description: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+  unitPrice: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  lineTotal: {
+    type: Number,
+    required: true,
+  },
+});
+
 const IncomeReceiptSchema = new mongoose.Schema(
   {
     userId: {
@@ -12,22 +34,25 @@ const IncomeReceiptSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
     },
-
+     services: {
+    type: [lineItemSchema],
+    validate: [(val) => val.length > 0, "At least one line item required"],
+  },
     receiptNumber: {
       type: String,
       unique: true,
       index: true,
     },
 
-    amount: {
-      type: Number,
-      required: true,
-    },
+    // amount: {
+    //   type: Number,
+    //   required: true,
+    // },
     subtotal: Number,
     tax: { type: Number, default: 0 },
     taxRate: { type: Number, default: 0 },
     total: Number,
-    
+
     currency: {
       type: String,
       default: "ILS",
@@ -38,7 +63,7 @@ const IncomeReceiptSchema = new mongoose.Schema(
       required: true,
     },
 
-    category: String,
+    // category: String,
     notes: String,
 
     pdfUrl: String,

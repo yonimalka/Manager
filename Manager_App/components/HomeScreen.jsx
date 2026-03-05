@@ -429,13 +429,17 @@ const styles = StyleSheet.create({
   },
   profileButton: {
     marginLeft: 16,
+    width: 58,
+    height: 58,
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: "#fff",
+    justifyContent: "center"
   },
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#fff",
+    alignSelf: "center"
   },
   avatarPlaceholder: {
     width: 48,
