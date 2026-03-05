@@ -414,6 +414,7 @@ const updateService = (id, field, value) => {
         <TextInput
           style={[styles.colUnit, styles.inputCell]}
           value={service.unitPrice}
+          placeholder="Price"
           keyboardType="decimal-pad"
           onChangeText={(val) =>
             updateService(
