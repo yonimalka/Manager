@@ -504,7 +504,7 @@ app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
 
 app.post("/incomeReceipt", authMiddleware, async (req, res) => {
   try {
-    const { amount, tax, total, category, date, projectId } = req.body;
+    const { amount, tax, total, category, date, projectId, payer } = req.body;
     console.log("Type of projectId:", typeof projectId);
 console.log("Is valid ObjectId:", mongoose.Types.ObjectId.isValid(projectId));
     if (!amount)

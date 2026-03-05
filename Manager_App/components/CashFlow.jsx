@@ -86,7 +86,7 @@ export default function CashFlow() {
   };
 
   const netCashFlow = totalIncome - totalExpenses;
-
+   
   /* ---------------- CHART DATA ---------------- */
 
   const donutData = useMemo(() => [
@@ -276,7 +276,19 @@ const SummaryCard = ({ title, value, icon, color, userDetails }) => (
   </View>
 );
 
-const TransactionSection = ({ title, data, amountKey, color, icon, userDetails }) => (
+const TransactionSection = ({ title, data, amountKey, color, icon, userDetails }) => {
+  const handleTransactionType = (item) => {
+    if (item.type == "income") {
+      if(item.source == "project"){
+        return "Project Payment"
+      } else {
+        return item.payer
+      }
+    } else {
+      return item.payments.category
+    }
+  }
+  return (
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -309,25 +321,26 @@ const TransactionSection = ({ title, data, amountKey, color, icon, userDetails }
                   day: "numeric",
                 })?? ''}</Text>
               <Tag size={12} color="#94A3B8"/>
-              <Text style={styles.transactionAbout}>{item?.type == "project" ? "Project Payment": item?.payments?.category}</Text>
+              <Text style={styles.transactionAbout}>{handleTransactionType(item)}</Text>
               </View>
             </View>
 
             <Text style={[styles.transactionAmount, { color }]}>
               {
-      formatCurrency(
-       amount || 0,
-       userDetails?.currency || "USD",
-       userDetails?.locale || "en-US"
-      )
-    }
-            </Text>
+                formatCurrency(
+                 amount || 0,
+                 userDetails?.currency || "USD",
+                 userDetails?.locale || "en-US"
+                )
+              }
+                      </Text>
           </View>
         );
       })}
     </View>
   </View>
-);
+  )
+};
 
 const styles = StyleSheet.create({
   screen: {
