@@ -663,7 +663,7 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
 app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
   try {
-    console.log("enter route on downloadReceiptsZip");
+  
     const { from, to } = req.query;
 
     const fromDate = from ? new Date(from) : null;
@@ -671,16 +671,14 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
 
     // Build query
     let query = {
-  userId: new mongoose.Types.ObjectId(req.userId)
+  userId: req.userId
 };
     if (fromDate && toDate) {
       query.createdAt = { $gte: fromDate, $lte: toDate };
     }
-console.log("userId:", req.userId);
 
-console.log("Before Mongo query");
     const receipts = await ReceiptModel.find(query);
-    console.log("After Mongo query");
+    
     if (!receipts.length) return res.status(404).json({ message: "No receipts found for this date range" });
 
     res.setHeader("Content-Disposition", "attachment; filename=receipts.zip");
@@ -690,20 +688,14 @@ console.log("Before Mongo query");
     archive.pipe(res);
 
     for (const r of receipts) {
-       console.log("Processing receipt:", r._id);
 
-  console.log("Fetching URL:", r.imageUrl);
-
-  const response = await fetch(r.imageUrl);
-
-  console.log("Fetch response status:", response.status);
+      const response = await fetch(r.imageUrl);
 
       const buffer = await response.buffer();
-      console.log("Buffer size:", buffer.length);
 
       const fileName = `${r.category}_${Date.now()}.jpg`;
       archive.append(buffer, { name: fileName });
-      console.log("Appended:", fileName);
+      // console.log("Appended:", fileName);
     }
 
     await archive.finalize();
@@ -776,7 +768,7 @@ app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
       {
         $group: {
           _id: null,
-          total: { $sum: "$amount" },
+          total: { $sum: "$total" },
         },
       },
     ]);

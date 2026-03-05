@@ -160,13 +160,13 @@ const updateService = (id, field, value) => {
   const handlePaymentMethodSelect = (method) => {
   setPaymentMethod(method);
 };
-  const handleAmountChange = (value) => {
-    const formatted = formatAmount(value);
-    setAmount(formatted);
-    if (errors.amount) {
-      setErrors({ ...errors, amount: null });
-    }
-  };
+  // const handleAmountChange = (value) => {
+  //   const formatted = formatAmount(value);
+  //   setAmount(formatted);
+  //   if (errors.amount) {
+  //     setErrors({ ...errors, amount: null });
+  //   }
+  // };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -248,10 +248,10 @@ const updateService = (id, field, value) => {
        projectId,
     });
 
-
+    
     const response = await api.get("/getUserDetails");
     const userDetails = response.data;
-
+    
     const pdfResult = await generateIncomeReceiptPDF(
       receiptData,
       userDetails,
@@ -261,10 +261,11 @@ const updateService = (id, field, value) => {
         allowSharing: true,
       }
     );
-
-    // await api.post(`/incomeReceipt/${savedReceipt.data._id}`, {
-    //   pdfUrl: pdfResult.downloadURL,
-    // });
+    console.log(pdfResult.downloadURL);
+    
+   await api.patch(`/incomeReceipt/${savedReceipt.data._id}/pdf`, {
+     pdfUrl: pdfResult.downloadURL,
+});
 
     onSubmit(savedReceipt.data);
 
