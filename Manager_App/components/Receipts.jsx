@@ -51,7 +51,7 @@ export default function Receipts({ onClose, projectId }) {
   const navigation = useNavigation();
   const route = useRoute();
   // const projectId = route.params?.projectId;
-  const { userId } = useAuth();
+  const { userId, userDetails } = useAuth();
 
   const [image, setImage] = useState(null);
   const [category, setCategory] = useState("");
@@ -185,7 +185,7 @@ export default function Receipts({ onClose, projectId }) {
       const blob = await (await fetch(image)).blob();
       const fileRef = ref(
         storage,
-        `users/${userId}/receipts/${projectId ? projectId : `General`}/${Date.now()}.jpg`
+        `users/${userId}/receipts/${projectId || "General"}/${Date.now()}.jpg`
       );
 
       const uploadTask = uploadBytesResumable(fileRef, blob);
@@ -336,7 +336,7 @@ export default function Receipts({ onClose, projectId }) {
             {/* Amount Section */}
             <View style={styles.section}>
               <Text style={styles.label}>
-                Amount (USD) <Text style={styles.required}>*</Text>
+                Amount ({userDetails.currency}) <Text style={styles.required}>*</Text>
               </Text>
 
               <View style={[styles.inputRow, errors.sum && styles.inputError]}>

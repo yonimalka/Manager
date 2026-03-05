@@ -898,7 +898,8 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
       projectName: inc.projectId?.name || "General Income",
       type: inc.source,
     }));
-
+    console.log("formatted:", formatted);
+    
     formatted.sort(
       (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
     );

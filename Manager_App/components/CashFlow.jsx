@@ -137,12 +137,14 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
           value={totalExpenses}
           icon="trending-down"
           color="#FF3B30"
+          userDetails={userDetails}
         />
         <SummaryCard
           title="Net Cash Flow"
           value={netCashFlow}
           icon="attach-money"
           color="#0A84FF"
+          userDetails={userDetails}
         />
       </View>
 
@@ -194,7 +196,11 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
       radius={110}
       padAngle={3}
       labels={({ datum }) =>
-        `$${datum.y.toLocaleString()}`
+         formatCurrency(
+       datum.y || 0,
+       userDetails?.currency || "USD",
+       userDetails?.locale || "en-US"
+      )
       }
       colorScale={["#34C759", "#FF3B30"]}
       style={{
@@ -215,7 +221,11 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
           { color: netCashFlow >= 0 ? "#34C759" : "#FF3B30" },
         ]}
       >
-        ${netCashFlow.toLocaleString()}
+        {formatCurrency(
+       netCashFlow || 0,
+       userDetails?.currency || "USD",
+       userDetails?.locale || "en-US"
+      )}
       </Text>
     </View>
   </View>
@@ -230,6 +240,7 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
         amountKey="amount"
         color="#34C759"
         icon="trending-up"
+        userDetails={userDetails}
       />
 
       {/* EXPENSE LIST */}
@@ -239,6 +250,7 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
         amountKey="sumOfReceipt"
         color="#FF3B30"
         icon="trending-down"
+        userDetails={userDetails}
       />
     </ScrollView>
   );
@@ -264,7 +276,7 @@ const SummaryCard = ({ title, value, icon, color, userDetails }) => (
   </View>
 );
 
-const TransactionSection = ({ title, data, amountKey, color, icon }) => (
+const TransactionSection = ({ title, data, amountKey, color, icon, userDetails }) => (
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -297,12 +309,18 @@ const TransactionSection = ({ title, data, amountKey, color, icon }) => (
     day: "numeric",
   })?? ''}</Text>
               <Tag size={12} color="#94A3B8"/>
-              <Text style={styles.transactionAbout}>{item?.type == "project" ? "Project Payment": item?.category}</Text>
+              <Text style={styles.transactionAbout}>{item?.type == "project" ? "Project Payment": console.log(item)}</Text>
               </View>
             </View>
 
             <Text style={[styles.transactionAmount, { color }]}>
-              ${amount.toLocaleString()}
+              {
+      formatCurrency(
+       amount || 0,
+       userDetails?.currency || "USD",
+       userDetails?.locale || "en-US"
+      )
+    }
             </Text>
           </View>
         );

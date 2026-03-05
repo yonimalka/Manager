@@ -16,10 +16,13 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import api from "../services/api";
+import { formatCurrency } from "../services/formatCurrency";
+import { useAuth } from "./useAuth";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const Project = ({ projectName, totalAmount, id }) => {
+  const { userDetails } = useAuth();
   const [paidAmount, setPaidAmount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -179,8 +182,16 @@ const Project = ({ projectName, totalAmount, id }) => {
         )}
 
         <View style={styles.amountRow}>
-          <Text style={styles.paid}>${paidAmount.toLocaleString()}</Text>
-          <Text style={styles.total}>/ ${totalAmount.toLocaleString()}</Text>
+          <Text style={styles.paid}>{formatCurrency(
+                            paidAmount || 0,
+                            userDetails?.currency || "USD",
+                            userDetails?.locale || "en-US"
+                          )}</Text>
+          <Text style={styles.total}>/ {formatCurrency(
+                            totalAmount || 0,
+                            userDetails?.currency || "USD",
+                            userDetails?.locale || "en-US"
+                          )}</Text>
         </View>
       </View>
       <View style={styles.projectArrow}>

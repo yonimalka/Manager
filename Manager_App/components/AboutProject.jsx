@@ -13,7 +13,7 @@ import { useAuth } from "./useAuth";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 import Receipts from "./Receipts";
-
+import { formatCurrency } from "../services/formatCurrency";
 const { width } = Dimensions.get("window");
 
 const AboutProject = () => {
@@ -22,7 +22,7 @@ const AboutProject = () => {
   const project = route.params?.project;
   const projectId = project?._id;
   const shouldRefresh = route.params?.shouldRefresh;
-  const { userId } = useAuth();
+  const { userDetails } = useAuth();
 
   const [projectDetails, setProjectDetails] = useState(null);
   const [expenses, setExpenses] = useState(0);
@@ -186,7 +186,11 @@ const AboutProject = () => {
                 <View style={s.statIconContainer}>
                   <Ionicons name="cash-outline" size={24} color="#fff" />
                 </View>
-                <Text style={s.statValue}>${projectDetails?.paid}</Text>
+                <Text style={s.statValue}>{formatCurrency(
+                       projectDetails?.paid || 0,
+                       userDetails?.currency || "USD",
+                       userDetails?.locale || "en-US"
+                      )}</Text>
                 <Text style={s.statLabel}>Total Payment</Text>
               </LinearGradient>
             </View>
@@ -195,7 +199,11 @@ const AboutProject = () => {
                 <View style={s.statIconContainer}>
                   <Ionicons name="card-outline" size={24} color="#fff" />
                 </View>
-                <Text style={s.statValue}>${expenses}</Text>
+                <Text style={s.statValue}>{formatCurrency(
+                       expenses || 0,
+                       userDetails?.currency || "USD",
+                       userDetails?.locale || "en-US"
+                      )}</Text>
                 <Text style={s.statLabel}>Expenses</Text>
               </LinearGradient>
             </View>
@@ -205,7 +213,11 @@ const AboutProject = () => {
               <View style={s.profitContent}>
                 <View>
                   <Text style={s.profitLabel}>Net Profit</Text>
-                  <Text style={s.profitValue}>${profit}</Text>
+                  <Text style={s.profitValue}>{formatCurrency(
+                       profit || 0,
+                       userDetails?.currency || "USD",
+                       userDetails?.locale || "en-US"
+                      )}</Text>
                 </View>
                 <View style={s.profitBadge}>
                   <Ionicons name={profit >= 0 ? "trending-up" : "trending-down"} size={20} color="#fff" />

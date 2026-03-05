@@ -20,8 +20,6 @@ const Expenses = ({ userId, refresh }) => {
   const [totalExpenses, setTotalExpenses] = useState(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    console.log(userDetails.currency);
-    
     fetchExpenses();
   }, [refresh, totalExpenses]);
 
