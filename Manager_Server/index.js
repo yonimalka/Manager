@@ -721,7 +721,7 @@ const receipts = await IncomeReceipt.find(query);
 
   const buffer = await response.buffer();
 
-  const fileName = `${r.category}.pdf`;
+  const fileName = `${r.receiptNumber}.pdf`;
 
   archive.append(buffer, { name: fileName });
 }
