@@ -413,32 +413,91 @@ app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
   }
 });
    
-  app.post("/fixedExpense", authMiddleware, async (req, res) => {
-    try {
-      const { title, amount, category, frequency, dayOfMonth, dayOfWeek, month } = req.body;
-      // console.log(title, amount, category, frequency, dayOfMonth, dayOfWeek, month);
-      
-      const newFixedExpense =  await FixedExpenseModel.create({
-        userId: req.userId,
-        title, 
-        amount: Number(amount), 
-        category, 
-        frequency, 
-        dayOfMonth, 
-        dayOfWeek, 
-        month,
-        isActive: true,
-      });
-      
-      res.status(201).json({
-      message: "fixed expense saved successfully",
+app.post("/fixedExpense", authMiddleware, async (req, res) => {
+  try {
+    const {
+      title,
+      amount,
+      category,
+      frequency = "monthly",
+      dayOfMonth,
+      dayOfWeek,
+      projectId,
+    } = req.body;
+
+    if (!title || !amount) {
+      return res.status(400).json({ message: "Title and amount are required" });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let calculatedStartDate = new Date(today);
+
+    if (frequency === "monthly") {
+      const day = dayOfMonth || today.getDate();
+
+      calculatedStartDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        day
+      );
+
+      if (calculatedStartDate < today) {
+        calculatedStartDate = new Date(
+          today.getFullYear(),
+          today.getMonth() + 1,
+          day
+        );
+      }
+    }
+
+    else if (frequency === "weekly") {
+      const targetDay =
+        typeof dayOfWeek === "number" ? dayOfWeek : today.getDay();
+
+      const diff = (targetDay - today.getDay() + 7) % 7;
+
+      calculatedStartDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() + diff
+      );
+    }
+
+    else if (frequency === "yearly") {
+      calculatedStartDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+    }
+
+    calculatedStartDate.setHours(0, 0, 0, 0);
+
+    const newFixedExpense = await FixedExpenseModel.create({
+      userId: req.userId,
+      title,
+      amount: Number(amount),
+      category,
+      frequency,
+      dayOfMonth,
+      dayOfWeek,
+      startDate: calculatedStartDate,
+      isActive: true,
+      projectId: projectId || null,
+    });
+
+    res.status(201).json({
+      message: "Fixed expense saved successfully",
       newFixedExpense,
     });
-    } catch (error){
-      console.error("Upload fixed expense error:", error);
-    res.status(500).json({ message: "Server error on fiexed expense" });
-    }
-  });
+
+  } catch (error) {
+    console.error("Upload fixed expense error:", error);
+    res.status(500).json({ message: "Server error on fixed expense" });
+  }
+});
   app.post("/uploadReceipt", authMiddleware, async (req, res) => {
   try {
     const { sumOfReceipt, category, projectId, imageUrl } = req.body;
