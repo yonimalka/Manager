@@ -1058,7 +1058,7 @@ const occurredFixedExpenses = fixedExpenses.filter(fe => {
   }));
     
 // console.log(expenses);
-    const fixedExpenseItems = [];
+ const fixedExpenseItems = [];
 
 for (const fe of fixedExpenses) {
   if (!fe.startDate) continue;
@@ -1066,7 +1066,8 @@ for (const fe of fixedExpenses) {
   let occurrenceDate = new Date(fe.startDate);
 
   while (occurrenceDate <= now) {
-    if (occurrenceDate >= startDate) {
+
+    if (occurrenceDate >= startDate && occurrenceDate <= now) {
       fixedExpenseItems.push({
         payments: {
           sumOfReceipt: fe.amount,
@@ -1080,14 +1081,29 @@ for (const fe of fixedExpenses) {
       });
     }
 
-    // move to next occurrence
+    // Create NEW date instead of mutating
     if (fe.frequency === "monthly") {
-      occurrenceDate.setMonth(occurrenceDate.getMonth() + 1);
-    } else if (fe.frequency === "weekly") {
-      occurrenceDate.setDate(occurrenceDate.getDate() + 7);
-    } else if (fe.frequency === "yearly") {
-      occurrenceDate.setFullYear(occurrenceDate.getFullYear() + 1);
-    } else {
+      occurrenceDate = new Date(
+        occurrenceDate.getFullYear(),
+        occurrenceDate.getMonth() + 1,
+        fe.dayOfMonth || occurrenceDate.getDate()
+      );
+    } 
+    else if (fe.frequency === "weekly") {
+      occurrenceDate = new Date(
+        occurrenceDate.getFullYear(),
+        occurrenceDate.getMonth(),
+        occurrenceDate.getDate() + 7
+      );
+    } 
+    else if (fe.frequency === "yearly") {
+      occurrenceDate = new Date(
+        occurrenceDate.getFullYear() + 1,
+        occurrenceDate.getMonth(),
+        occurrenceDate.getDate()
+      );
+    } 
+    else {
       break;
     }
   }
