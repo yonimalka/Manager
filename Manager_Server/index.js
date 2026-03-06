@@ -600,9 +600,56 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
   try {
     const userId = new mongoose.Types.ObjectId(req.userId);
 
-    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-    const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
-    const today = new Date();
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const startOfNextYear = new Date(now.getFullYear() + 1, 0, 1);
+
+    const fixedExpenses = await FixedExpenseModel.find({
+      userId,
+      isActive: true,
+      startDate: { $lte: now },
+    });
+
+    let fixedTotal = 0;
+
+    for (const expense of fixedExpenses) {
+      const start = new Date(
+        Math.max(expense.startDate, startOfYear)
+      );
+
+      const end =
+        expense.endDate && expense.endDate < now
+          ? expense.endDate
+          : now;
+
+      if (start > end) continue;
+
+      let occurrences = 0;
+
+      if (expense.frequency === "monthly") {
+        const months =
+          (end.getFullYear() - start.getFullYear()) * 12 +
+          (end.getMonth() - start.getMonth());
+
+        occurrences = months + 1;
+      }
+
+      if (expense.frequency === "weekly") {
+        const diffTime = end - start;
+        const weeks = Math.floor(
+          diffTime / (1000 * 60 * 60 * 24 * 7)
+        );
+        occurrences = weeks + 1;
+      }
+
+      if (expense.frequency === "yearly") {
+        const years =
+          end.getFullYear() - start.getFullYear();
+        occurrences = years + 1;
+      }
+
+      fixedTotal += occurrences * expense.amount;
+    }
     const receiptsResult = await ReceiptModel.aggregate([
       {
         $match: {
@@ -622,27 +669,6 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     ]);
 
     const receiptsTotal = receiptsResult[0]?.total || 0;
-
-    const fixedResult = await FixedExpenseModel.aggregate([
-      {
-        $match: {
-          userId: userId,
-          isActive: true,
-          createdAt: {
-            $gte: startOfYear,
-            $lt: today,
-          },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$amount" },
-        },
-      },
-    ]);
-
-    const fixedTotal = fixedResult[0]?.total || 0;
 
     const totalExpenses = receiptsTotal + fixedTotal;
 
@@ -1032,21 +1058,40 @@ const occurredFixedExpenses = fixedExpenses.filter(fe => {
   }));
     
 // console.log(expenses);
-    const fixedExpenseItems = occurredFixedExpenses.map(fe => ({
-  payments: {
-    sumOfReceipt: fe.amount,
-    category: fe.title,
-    date: new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      fe.dayOfMonth || todayDay
-    ),
-    isFixed: true,
-    title: fe.title,
-  },
-  projectName: "Fixed Expense",
-  type: "expense",
-}));
+    const fixedExpenseItems = [];
+
+for (const fe of fixedExpenses) {
+  if (!fe.startDate) continue;
+
+  let occurrenceDate = new Date(fe.startDate);
+
+  while (occurrenceDate <= now) {
+    if (occurrenceDate >= startDate) {
+      fixedExpenseItems.push({
+        payments: {
+          sumOfReceipt: fe.amount,
+          category: fe.title,
+          date: new Date(occurrenceDate),
+          isFixed: true,
+          title: fe.title,
+        },
+        projectName: "Fixed Expense",
+        type: "expense",
+      });
+    }
+
+    // move to next occurrence
+    if (fe.frequency === "monthly") {
+      occurrenceDate.setMonth(occurrenceDate.getMonth() + 1);
+    } else if (fe.frequency === "weekly") {
+      occurrenceDate.setDate(occurrenceDate.getDate() + 7);
+    } else if (fe.frequency === "yearly") {
+      occurrenceDate.setFullYear(occurrenceDate.getFullYear() + 1);
+    } else {
+      break;
+    }
+  }
+}
 
     // expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));  
    const combinedExpenses = [...expenses, ...fixedExpenseItems];
