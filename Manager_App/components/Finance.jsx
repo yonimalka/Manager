@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -41,6 +41,7 @@ export default function FinanceFixedExpenses() {
   const [month, setMonth] = useState(null);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [fixedExpenses, setFixedExpenses] = useState([]);
 
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -93,7 +94,17 @@ export default function FinanceFixedExpenses() {
     setMonth(null);
     setExpanded(false);
   };
-
+  const fetchFixedExpenses = async () => {
+  const res = await api.get("/fixedExpenses"); // create GET route if needed
+  setFixedExpenses(res.data);
+  };
+  useEffect(() => {
+  fetchFixedExpenses();
+  }, []);
+  const toggleActive = async (id) => {
+  await api.patch(`/fixedExpense/${id}/toggle`);
+  fetchFixedExpenses();
+  };
   const submitIncomeReceipt = async (data) => {
     try {
       const res = await api.post("/incomeReceipt", data);
@@ -283,6 +294,58 @@ export default function FinanceFixedExpenses() {
             </View>
           )}
         </View>
+        <View style={styles.card}>
+  <View style={styles.cardHeader}>
+    <View style={styles.cardHeaderLeft}>
+      <View style={styles.iconContainer}>
+        <Repeat size={20} color="#0A7AFF" />
+      </View>
+      <View>
+        <Text style={styles.cardTitle}>All Fixed Expenses</Text>
+        <Text style={styles.cardSubtitle}>
+          Manage recurring payments
+        </Text>
+      </View>
+    </View>
+  </View>
+
+  <View style={{ paddingHorizontal: 18, paddingBottom: 18 }}>
+    {fixedExpenses.length === 0 ? (
+      <Text style={{ color: "#94A3B8", fontSize: 14 }}>
+        No recurring expenses yet
+      </Text>
+    ) : (
+      fixedExpenses.map((item) => (
+        <TouchableOpacity
+          key={item._id}
+          style={styles.fixedItem}
+          onPress={() => toggleActive(item._id)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.checkbox}>
+            {item.isActive && (
+              <View style={styles.checkboxInner} />
+            )}
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                styles.fixedTitle,
+                !item.isActive && styles.fixedTitleInactive,
+              ]}
+            >
+              {item.title}
+            </Text>
+            <Text style={styles.fixedAmount}>
+              ₪ {item.amount} • {item.frequency}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      ))
+    )}
+  </View>
+</View>
       </View>
 
       {/* Receipts Section */}
@@ -649,4 +712,43 @@ const styles = StyleSheet.create({
     elevation: 12,
     overflow: "hidden",
   },
+  fixedItem: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 14,
+  gap: 12,
+},
+
+checkbox: {
+  width: 22,
+  height: 22,
+  borderRadius: 6,
+  borderWidth: 2,
+  borderColor: "#0A7AFF",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+checkboxInner: {
+  width: 12,
+  height: 12,
+  backgroundColor: "#0A7AFF",
+  borderRadius: 3,
+},
+
+fixedTitle: {
+  fontSize: 15,
+  fontWeight: "600",
+  color: "#0F172A",
+},
+
+fixedTitleInactive: {
+  textDecorationLine: "line-through",
+  color: "#9CA3AF",
+},
+
+fixedAmount: {
+  fontSize: 13,
+  color: "#64748B",
+},
 });

@@ -498,6 +498,20 @@ app.post("/fixedExpense", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error on fixed expense" });
   }
 });
+app.get("/fixedExpenses", authMiddleware, async (req, res) => {
+  try {
+    const expenses = await FixedExpenseModel.find({
+      userId: req.userId,
+    })
+      .sort({ createdAt: -1 }); // newest first
+
+    res.json(expenses);
+
+  } catch (error) {
+    console.error("Get fixed expenses error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 app.patch("/fixedExpense/:id/toggle", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
