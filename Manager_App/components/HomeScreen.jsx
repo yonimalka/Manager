@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 17,
     paddingHorizontal: 20,
     zIndex: 10,
   },

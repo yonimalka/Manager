@@ -602,11 +602,7 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
     const startOfYear = new Date(new Date().getFullYear(), 0, 1);
     const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
+    const today = new Date();
     const receiptsResult = await ReceiptModel.aggregate([
       {
         $match: {
@@ -634,7 +630,7 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
           isActive: true,
           createdAt: {
             $gte: startOfYear,
-            $lt: startOfToday,
+            $lt: today,
           },
         },
       },
