@@ -498,6 +498,29 @@ app.post("/fixedExpense", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error on fixed expense" });
   }
 });
+app.patch("/fixedExpense/:id/toggle", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const expense = await FixedExpenseModel.findOne({
+      _id: id,
+      userId: req.userId,
+    });
+
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    expense.isActive = !expense.isActive;
+    await expense.save();
+
+    res.json({ message: "Updated", expense });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
   app.post("/uploadReceipt", authMiddleware, async (req, res) => {
   try {
     const { sumOfReceipt, category, projectId, imageUrl } = req.body;
