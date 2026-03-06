@@ -1004,7 +1004,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     const userId = req.userId;
     const raw = req.query.period || "month";
     const now = new Date();
-
+    now.setHours(23, 59, 59, 999);
     const validPeriods = ["month", "quarter", "year"];
     const period = validPeriods.includes(raw) ? raw : "month";
 
@@ -1020,23 +1020,24 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 const fixedExpenses = await FixedExpenseModel.find({
   userId,
   isActive: true,
-  createdAt: { $lte: new Date() },
+  startDate: { $lte: now },
 }).lean();
-const today = new Date();
-const todayDay = today.getDate();
+// const today = new Date();
+// const todayDay = today.getDate();
+console.log("NOW:", now);
 
-const occurredFixedExpenses = fixedExpenses.filter(fe => {
-  if (fe.frequency === "monthly") {
-    // if dayOfMonth is not set, show it immediately
-    if (!fe.dayOfMonth) return true;
+// const occurredFixedExpenses = fixedExpenses.filter(fe => {
+//   if (fe.frequency === "monthly") {
+//     // if dayOfMonth is not set, show it immediately
+//     if (!fe.dayOfMonth) return true;
 
-    // show ONLY when its day has arrived
-    return todayDay >= fe.dayOfMonth;
-  }
+//     // show ONLY when its day has arrived
+//     return todayDay >= fe.dayOfMonth;
+//   }
 
-  // for now: weekly / yearly always included
-  return true;
-});
+//   // for now: weekly / yearly always included
+//   return true;
+// });
 
 // const sample = await FixedExpenseModel.findOne({ userId });
 // console.log(sample);
@@ -1064,9 +1065,9 @@ for (const fe of fixedExpenses) {
   if (!fe.startDate) continue;
 
   let occurrenceDate = new Date(fe.startDate);
-
+  
   while (occurrenceDate <= now) {
-
+    
     if (occurrenceDate >= startDate && occurrenceDate <= now) {
       fixedExpenseItems.push({
         payments: {
