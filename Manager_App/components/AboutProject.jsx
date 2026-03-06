@@ -362,20 +362,52 @@ const AboutProject = () => {
           </View>
         )}
 
-        <View style={s.actionButtons}>
-          <TouchableOpacity style={s.actionButton} onPress={() => setIncomeModalVisible(true)}>
-            <LinearGradient colors={["#10B981", "#059669"]} style={s.actionButtonGradient}>
-              <Ionicons name="add-circle-outline" size={22} color="#fff" />
-              <Text style={s.actionButtonText}>New Income Receipt</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.actionButton} onPress={() => setReceiptModalVisible(true)}>
-            <LinearGradient colors={["#3B82F6", "#2563EB"]} style={s.actionButtonGradient}>
-              <Ionicons name="cloud-upload-outline" size={22} color="#fff" />
-              <Text style={s.actionButtonText}>Upload Receipt</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+        {/* ACTION BUTTONS */}
+<View style={s.actionButtons}>
+  <TouchableOpacity
+    style={s.actionButton}
+    onPress={() => setIncomeModalVisible(true)}
+    activeOpacity={0.85}
+  >
+    <LinearGradient
+      colors={["#10B981", "#059669"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.actionButtonGradient}
+    >
+      <View style={s.actionIconWrapper}>
+        <Ionicons name="add-circle-outline" size={26} color="#fff" />
+      </View>
+      <View style={s.actionTextBlock}>
+        <Text style={s.actionButtonLabel}>Income Receipt</Text>
+        <Text style={s.actionButtonSub}>Log a payment</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
+    </LinearGradient>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={s.actionButton}
+    onPress={() => setReceiptModalVisible(true)}
+    activeOpacity={0.85}
+  >
+    <LinearGradient
+      colors={["#3B82F6", "#2563EB"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.actionButtonGradient}
+    >
+      <View style={s.actionIconWrapper}>
+        <Ionicons name="cloud-upload-outline" size={26} color="#fff" />
+      </View>
+      <View style={s.actionTextBlock}>
+        <Text style={s.actionButtonLabel}>Upload Receipt</Text>
+        <Text style={s.actionButtonSub}>Attach an image</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
+    </LinearGradient>
+  </TouchableOpacity>
+</View>
 
         <TouchableOpacity style={s.deleteButton} onPress={handleProjectDelete}>
           <Ionicons name="trash-outline" size={20} color="#EF4444" />
@@ -462,10 +494,49 @@ const s = StyleSheet.create({
   addButton: { backgroundColor: "#3B82F6", borderRadius: 12, padding: 14, alignItems: "center" },
   addButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   fab: { marginTop: 16, backgroundColor: "#3B82F6", borderRadius: 28, width: 56, height: 56, justifyContent: "center", alignItems: "center", alignSelf: "flex-end", shadowColor: "#3B82F6", shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
-  actionButtons: { paddingHorizontal: 10, gap: 12, marginBottom: 24, flexDirection: "row" },
-  actionButton: { borderRadius: 16, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
-  actionButtonGradient: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2, paddingVertical: 16, paddingHorizontal: 15 },
-  actionButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+ actionButtons: {
+  paddingHorizontal: 20,
+  gap: 12,
+  marginBottom: 24,
+},
+actionButton: {
+  borderRadius: 18,
+  overflow: "hidden",
+  shadowColor: "#000",
+  shadowOpacity: 0.12,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 5,
+},
+actionButtonGradient: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 18,
+  paddingHorizontal: 20,
+  gap: 14,
+},
+actionIconWrapper: {
+  width: 44,
+  height: 44,
+  borderRadius: 14,
+  backgroundColor: "rgba(255,255,255,0.2)",
+  alignItems: "center",
+  justifyContent: "center",
+},
+actionTextBlock: {
+  flex: 1,
+},
+actionButtonLabel: {
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: "700",
+  marginBottom: 2,
+},
+actionButtonSub: {
+  color: "rgba(255,255,255,0.75)",
+  fontSize: 12,
+  fontWeight: "500",
+},
   deleteButton: { marginHorizontal: 20, marginBottom: 30, backgroundColor: "#FEF2F2", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "#FEE2E2" },
   deleteText: { color: "#EF4444", fontSize: 16, fontWeight: "600" },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },

@@ -389,10 +389,12 @@ export default function ProfileDetails() {
       )}
       </View>
       {/* Delete */}
-      <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+      {!isEditing && (
+        <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
         <Trash2 size={18} color="#dc2626" />
         <Text style={styles.deleteText}>Delete Account</Text>
       </TouchableOpacity>
+      )}
     </View>
     </ScrollView>
     </KeyboardAvoidingView>

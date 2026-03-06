@@ -602,7 +602,11 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
 
     const startOfYear = new Date(new Date().getFullYear(), 0, 1);
     const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
-
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
     const receiptsResult = await ReceiptModel.aggregate([
       {
         $match: {
@@ -630,7 +634,7 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
           isActive: true,
           createdAt: {
             $gte: startOfYear,
-            $lt: startOfNextYear,
+            $lt: startOfToday,
           },
         },
       },
@@ -659,7 +663,39 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Failed to get total expenses" });
   }
 });
-
+app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+    const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const receiptsResult = await IncomeReceipt.aggregate([
+      {
+        $match: {
+          userId: userId,
+          createdAt: {
+            $gte: startOfYear,
+            $lt: startOfNextYear,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$total" },
+        },
+      },
+    ]);
+   
+     const receiptsTotal = receiptsResult[0]?.total || 0;
+     res.json(receiptsTotal)
+  // UserModel.findById(userId)
+  // .then((user) => {
+  //   const getIncomes = user.totalIncomes;
+  //   res.json(getIncomes)
+  // })
+})
 
 app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
   try {
@@ -748,39 +784,7 @@ const receipts = await IncomeReceipt.find(query);
     res.status(500).json({ message: "Server error while creating ZIP" });
   }
 });
-app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-    const startOfNextYear = new Date(new Date().getFullYear() + 1, 0, 1);
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const receiptsResult = await IncomeReceipt.aggregate([
-      {
-        $match: {
-          userId: userId,
-          createdAt: {
-            $gte: startOfYear,
-            $lt: startOfNextYear,
-          },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$total" },
-        },
-      },
-    ]);
-   
-     const receiptsTotal = receiptsResult[0]?.total || 0;
-     res.json(receiptsTotal)
-  // UserModel.findById(userId)
-  // .then((user) => {
-  //   const getIncomes = user.totalIncomes;
-  //   res.json(getIncomes)
-  // })
-})
+
 app.post('/AddTask/:projectId', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
