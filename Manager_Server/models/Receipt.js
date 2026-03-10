@@ -26,7 +26,16 @@ userId: {
       type: String,
       default: "General",
     },
+    fixedExpenseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "FixedExpense",
+    default: null
+  },
 
+  occurrenceDate: {
+    type: Date,
+    default: null
+  },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -34,5 +43,6 @@ userId: {
   },
   { timestamps: true })
 ReceiptSchema.index({ userId: 1, createdAt: 1 });
+ReceiptSchema.index({ fixedExpenseId: 1, occurrenceDate: 1 });
 
 module.exports = mongoose.model("Receipt", ReceiptSchema)

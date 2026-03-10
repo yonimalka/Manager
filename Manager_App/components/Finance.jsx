@@ -11,7 +11,7 @@ import {
   Modal,
   ScrollView,
 } from "react-native";
-import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload, BanknoteArrowUp, Calendar, DollarSign, Tag } from "lucide-react-native";
+import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload, BanknoteArrowUp, Calendar, DollarSign, Tag, ListChecks  } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import api from "../services/api";
@@ -20,6 +20,8 @@ import IncomesDownloadByDate from "./IncomesDownloadByDate";
 import Receipts from "./Receipts";
 import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
+import { useAuth } from "./useAuth";
+import { formatCurrency } from "../services/formatCurrency";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -30,6 +32,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 export default function FinanceFixedExpenses() {
   const navigation = useNavigation();
+  const { userDetails } = useAuth();
 
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState("");
@@ -42,12 +45,16 @@ export default function FinanceFixedExpenses() {
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
   const [visible, setVisible] = useState(false);
   const [fixedExpenses, setFixedExpenses] = useState([]);
+  const [listExpanded, setListExpanded] = useState(false);
 
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(!expanded);
   };
-
+  const toggleListExpand = () => {
+  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  setListExpanded(!listExpanded);
+};
   const nextOccurrence = useMemo(() => {
     const now = new Date();
 
@@ -72,7 +79,44 @@ export default function FinanceFixedExpenses() {
 
     return null;
   }, [frequency, dayOfMonth, dayOfWeek, month]);
+  const getNextBillingDate = (item) => {
+  if (!item.startDate) return null;
 
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  let next = new Date(item.startDate);
+  next.setHours(0, 0, 0, 0);
+
+  while (next < now) {
+    if (item.frequency === "monthly") {
+      next = new Date(
+        next.getFullYear(),
+        next.getMonth() + 1,
+        item.dayOfMonth || next.getDate(),
+      );
+    } 
+    else if (item.frequency === "weekly") {
+      next = new Date(
+        next.getFullYear(),
+        next.getMonth(),
+        next.getDate() + 7
+      );
+    } 
+    else if (item.frequency === "yearly") {
+      next = new Date(
+        next.getFullYear() + 1,
+        next.getMonth(),
+        next.getDate()
+      );
+    } 
+    else {
+      break;
+    }
+  }
+
+  return next;
+};
   const saveFixedExpense = async () => {
     const payload = {
       title,
@@ -95,7 +139,7 @@ export default function FinanceFixedExpenses() {
     setExpanded(false);
   };
   const fetchFixedExpenses = async () => {
-  const res = await api.get("/fixedExpenses"); // create GET route if needed
+  const res = await api.get("/fixedExpenses"); 
   setFixedExpenses(res.data);
   };
   useEffect(() => {
@@ -294,58 +338,81 @@ export default function FinanceFixedExpenses() {
             </View>
           )}
         </View>
-        <View style={styles.card}>
-  <View style={styles.cardHeader}>
-    <View style={styles.cardHeaderLeft}>
-      <View style={styles.iconContainer}>
-        <Repeat size={20} color="#0A7AFF" />
-      </View>
-      <View>
-        <Text style={styles.cardTitle}>All Fixed Expenses</Text>
-        <Text style={styles.cardSubtitle}>
-          Manage recurring payments
-        </Text>
-      </View>
-    </View>
-  </View>
+           <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.cardHeader}
+              onPress={toggleListExpand}
+              activeOpacity={0.7}
+            >
+              <View style={styles.cardHeaderLeft}>
+                <View style={styles.iconContainer}>
+                  <ListChecks size={20} color="#10B981" />
+                </View>
+                <View>
+                  <Text style={styles.cardTitle}>All Fixed Expenses</Text>
+                  <Text style={styles.cardSubtitle}>
+                    Manage recurring payments
+                  </Text>
+                </View>
+              </View>
 
-  <View style={{ paddingHorizontal: 18, paddingBottom: 18 }}>
-    {fixedExpenses.length === 0 ? (
-      <Text style={{ color: "#94A3B8", fontSize: 14 }}>
-        No recurring expenses yet
-      </Text>
-    ) : (
-      fixedExpenses.map((item) => (
-        <TouchableOpacity
-          key={item._id}
-          style={styles.fixedItem}
-          onPress={() => toggleActive(item._id)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.checkbox}>
-            {item.isActive && (
-              <View style={styles.checkboxInner} />
+              <View style={styles.chevronContainer}>
+                {listExpanded ? (
+                  <ChevronUp size={20} color="#6B7280" />
+                ) : (
+                  <ChevronDown size={20} color="#6B7280" />
+                )}
+              </View>
+            </TouchableOpacity>
+              
+            {listExpanded && (
+              <View style={{ paddingHorizontal: 18, paddingBottom: 18 }}>
+                {fixedExpenses.length === 0 ? (
+                  <Text style={{ color: "#94A3B8", fontSize: 14 }}>
+                    No recurring expenses yet
+                  </Text>
+                ) : (
+                  fixedExpenses.map((item) => (
+                    <TouchableOpacity
+                      key={item._id}
+                      style={styles.fixedItem}
+                      onPress={() => toggleActive(item._id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.checkbox}>
+                        {item.isActive && (
+                          <View style={styles.checkboxInner} />
+                        )}
+                      </View>
+                      
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text
+                          style={[
+                            styles.fixedTitle,
+                            !item.isActive && styles.fixedTitleInactive,
+                          ]}
+                        >
+                          {item.title}
+                        </Text>
+                        <Text style={styles.fixedAmount}>
+                          {formatCurrency(
+                            item.amount || 0,
+                            userDetails?.currency || "USD",
+                            userDetails?.locale || "en-US"
+                          )} • {item.frequency} • Next billing:{" "}
+                          {getNextBillingDate(item)
+                            ? new Date(getNextBillingDate(item)).toLocaleDateString(
+                                userDetails?.locale || "en-US"
+                              )
+                            : "—"}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
             )}
           </View>
-
-          <View style={{ flex: 1 }}>
-            <Text
-              style={[
-                styles.fixedTitle,
-                !item.isActive && styles.fixedTitleInactive,
-              ]}
-            >
-              {item.title}
-            </Text>
-            <Text style={styles.fixedAmount}>
-              ₪ {item.amount} • {item.frequency}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ))
-    )}
-  </View>
-</View>
       </View>
 
       {/* Receipts Section */}

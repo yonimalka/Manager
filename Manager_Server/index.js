@@ -535,16 +535,100 @@ app.patch("/fixedExpense/:id/toggle", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+app.get("/fixedExpenseOccurrences/:id", authMiddleware, async (req, res) => {
+  try {
+
+    const expense = await FixedExpenseModel.findOne({
+      _id: req.params.id,
+      userId: req.userId
+    });
+
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    const now = new Date();
+    const occurrences = [];
+
+    let occurrenceDate = new Date(expense.startDate);
+    occurrenceDate.setHours(0,0,0,0);
+
+    // fetch ALL receipts for this fixed expense once
+    const receipts = await ReceiptModel.find({
+      fixedExpenseId: expense._id
+    });
+
+    const receiptMap = new Map(
+      receipts.map(r => [
+        new Date(r.occurrenceDate).setHours(0,0,0,0),
+        r
+      ])
+    );
+
+    while (occurrenceDate <= now) {
+
+      const key = new Date(occurrenceDate).setHours(0,0,0,0);
+
+      const receipt = receiptMap.get(key);
+
+      occurrences.push({
+        date: new Date(occurrenceDate),
+        receiptId: receipt?._id || null,
+        hasReceipt: !!receipt
+      });
+
+      if (expense.frequency === "monthly") {
+        occurrenceDate = new Date(
+          occurrenceDate.getFullYear(),
+          occurrenceDate.getMonth() + 1,
+          expense.dayOfMonth || occurrenceDate.getDate()
+        );
+      } 
+      else if (expense.frequency === "weekly") {
+        occurrenceDate = new Date(
+          occurrenceDate.getFullYear(),
+          occurrenceDate.getMonth(),
+          occurrenceDate.getDate() + 7
+        );
+      } 
+      else if (expense.frequency === "yearly") {
+        occurrenceDate = new Date(
+          occurrenceDate.getFullYear() + 1,
+          occurrenceDate.getMonth(),
+          occurrenceDate.getDate()
+        );
+      }
+    }
+
+    res.json(occurrences.reverse());
+
+  } catch (err) {
+    console.error("fixedExpenseOccurrences error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
   app.post("/uploadReceipt", authMiddleware, async (req, res) => {
   try {
-    const { sumOfReceipt, category, projectId, imageUrl } = req.body;
+    const { sumOfReceipt, category, projectId, imageUrl, fixedExpenseId,
+      occurrenceDate } = req.body;
+    const existing = await ReceiptModel.findOne({
+        fixedExpenseId,
+        occurrenceDate
+      });
 
+      if (existing) {
+        return res.status(400).json({
+          message: "Receipt already uploaded for this occurrence"
+        });
+      }
     const receipt = await ReceiptModel.create({
       userId: req.userId,
       projectId: projectId || null,
       imageUrl,
       sumOfReceipt,
       category,
+      fixedExpenseId: fixedExpenseId || null,
+      occurrenceDate: occurrenceDate || null
     });
 
     if (projectId) {
