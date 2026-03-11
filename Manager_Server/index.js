@@ -1285,57 +1285,57 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req,res)=>{
     /* ---------- FIXED EXPENSE DEFINITIONS ---------- */
 
     const fixedExpenses = await FixedExpenseModel.find({
-      userId,
-      isActive:true
-    }).lean();
+  userId,
+  isActive: true
+}).lean();
 
-    const fixedExpenseItems = [];
+const fixedExpenseItems = [];
 
-    for(const fe of fixedExpenses){
+for (const fe of fixedExpenses) {
 
-      let occurrenceDate = new Date(startDate);
+  let occurrenceDate = new Date(fe.startDate || fe.createdAt);
+  occurrenceDate.setHours(0,0,0,0);
 
-      if(fe.frequency === "monthly" && fe.dayOfMonth){
-        occurrenceDate.setDate(fe.dayOfMonth);
+  while (occurrenceDate <= now) {
+
+    if (occurrenceDate >= startDate) {
+
+      const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
+
+      if (!receiptSet.has(key)) {
+        fixedExpenseItems.push({
+          payments: {
+            sumOfReceipt: fe.amount,
+            category: fe.title,
+            date: new Date(occurrenceDate),
+            isFixed: true
+          },
+          projectName: "Fixed Expense",
+          type: "expense"
+        });
       }
 
-      while(occurrenceDate <= now){
-
-        const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
-
-        if(!receiptSet.has(key) &&
-          normalizeDate(occurrenceDate) >= normalizeDate(fe.startDate || fe.createdAt)
-        ){
-          fixedExpenseItems.push({
-            payments:{
-              sumOfReceipt:fe.amount,
-              category:fe.title,
-              date:new Date(occurrenceDate),
-              isFixed:true
-            },
-            projectName:"Fixed Expense",
-            type:"expense"
-          });
-
-        }
-
-        if(fe.frequency === "monthly"){
-          occurrenceDate.setMonth(occurrenceDate.getMonth()+1);
-        }
-        else if(fe.frequency === "weekly"){
-          occurrenceDate.setDate(occurrenceDate.getDate()+7);
-        }
-        else if(fe.frequency === "yearly"){
-          occurrenceDate.setFullYear(occurrenceDate.getFullYear()+1);
-        }
-        else{
-          break;
-        }
-      }
     }
 
+    if (fe.frequency === "monthly") {
+      occurrenceDate.setMonth(occurrenceDate.getMonth() + 1);
+    }
+    else if (fe.frequency === "weekly") {
+      occurrenceDate.setDate(occurrenceDate.getDate() + 7);
+    }
+    else if (fe.frequency === "yearly") {
+      occurrenceDate.setFullYear(occurrenceDate.getFullYear() + 1);
+    }
+    else {
+      break;
+    }
 
-    const combinedExpenses = [...expenses,...fixedExpenseItems];
+  }
+}
+console.log("fixedExpenseItems:", fixedExpenseItems);
+
+
+const combinedExpenses = [...expenses, ...fixedExpenseItems];
 
     combinedExpenses.sort(
       (a,b)=> new Date(a.payments.date) - new Date(b.payments.date)
