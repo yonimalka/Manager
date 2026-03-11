@@ -15,6 +15,7 @@ import {
   Animated,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -162,82 +163,96 @@ export default function Receipts({ onClose, projectId }) {
   // Upload Receipt
   // -------------------------------
   const uploadReceipt = async () => {
-    if (!validateForm()) {
-      Alert.alert("Validation Error", "Please fill in all required fields correctly.");
-      return;
+
+  if (!validateForm()) {
+    Alert.alert("Validation Error", "Please fill all fields");
+    return;
+  }
+
+  try {
+
+    setLoading(true);
+    setProgress(0);
+
+    if (!auth.currentUser) {
+      await signInFirebase();
     }
 
-    try {
-      setLoading(true);
-      setProgress(0);
+    // compress image
+    const compressed = await ImageManipulator.manipulateAsync(
+      image,
+      [{ resize: { width: 1200 } }],
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+    );
 
-      // Animate progress bar
-      Animated.timing(progressAnim, {
-        toValue: 0,
-        duration: 100,
-        useNativeDriver: false,
-      }).start();
+    // 1️⃣ create receipt first
+    const receiptRes = await api.post("/receipts/create", {
+      projectId,
+      category,
+      sumOfReceipt: Number(sum),
+      notes,
+    });
 
-      if (!auth.currentUser) {
-        await signInFirebase();
+    const receipt = receiptRes.data;
+
+    // 2️⃣ upload image
+    const blob = await (await fetch(compressed.uri)).blob();
+
+    const fileRef = ref(
+      storage,
+      `users/${userId}/receipts/${receipt._id}.jpg`
+    );
+
+    const uploadTask = uploadBytesResumable(fileRef, blob);
+
+    uploadTask.on(
+      "state_changed",
+
+      (snap) => {
+        const percent = Math.round(
+          (snap.bytesTransferred / snap.totalBytes) * 100
+        );
+
+        setProgress(percent);
+      },
+
+      (error) => {
+        console.log(error);
+        Alert.alert("Upload failed");
+        setLoading(false);
+      },
+
+      async () => {
+
+        const url = await getDownloadURL(fileRef);
+
+        // 3️⃣ save image URL
+        await api.patch(`/receipts/${receipt._id}/image`, {
+          imageUrl: url,
+        });
+
+        setLoading(false);
+        Alert.alert("Success", "Receipt uploaded");
+
+        onClose();
+
       }
+    );
 
-      const blob = await (await fetch(image)).blob();
-      const fileRef = ref(
-        storage,
-        `users/${userId}/receipts/${projectId || "General"}/${Date.now()}.jpg`
-      );
+  } catch (err) {
 
-      const uploadTask = uploadBytesResumable(fileRef, blob);
+    console.log("UPLOAD ERROR:", err?.response?.data || err);
 
-      uploadTask.on(
-        "state_changed",
-        (snap) => {
-          const progressPercent = Math.round(
-            (snap.bytesTransferred / snap.totalBytes) * 100
-          );
-          setProgress(progressPercent);
+    Alert.alert(
+      "Upload Error",
+      err?.response?.data?.message || "Failed to upload receipt"
+    );
 
-          // Animate progress
-          Animated.timing(progressAnim, {
-            toValue: progressPercent,
-            duration: 300,
-            useNativeDriver: false,
-          }).start();
-        },
-        (err) => {
-          Alert.alert("Upload Failed", err.message);
-          setLoading(false);
-        },
-        async () => {
-          const url = await getDownloadURL(fileRef);
-          await api.post("/uploadReceipt", {
-            projectId,
-            category,
-            sumOfReceipt: Number(sum),
-            imageUrl: url,
-            notes: notes.trim() || null,
-          });
+    setLoading(false);
 
-          // Show success animation
-          Animated.sequence([
-            Animated.timing(successAnim, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.delay(800),
-          ]).start(() => {
-            setLoading(false);
-            onClose();
-          });
-        }
-      );
-    } catch (error) {
-      Alert.alert("Error", "Failed to upload receipt. Please try again.");
-      setLoading(false);
-    }
-  };
+  }
+
+};
 
   // Progress bar width
   const progressWidth = progressAnim.interpolate({

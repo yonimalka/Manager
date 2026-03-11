@@ -36,6 +36,11 @@ userId: {
     type: Date,
     default: null
   },
+  status: {
+  type: String,
+  enum: ["pending", "uploaded"],
+  default: "pending"
+  },
     createdAt: {
       type: Date,
       default: Date.now,

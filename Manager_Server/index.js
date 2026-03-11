@@ -612,7 +612,58 @@ app.get("/fixedExpenseOccurrences/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-  app.post("/uploadReceipt", authMiddleware, async (req, res) => {
+app.post("/receipts/create", authMiddleware, async (req, res) => {
+
+  const {
+    projectId,
+    category,
+    sumOfReceipt,
+    fixedExpenseId,
+    occurrenceDate
+  } = req.body;
+
+  try {
+
+    const receipt = await ReceiptModel.create({
+      userId: req.userId,
+      projectId: projectId || null,
+      category,
+      sumOfReceipt,
+      fixedExpenseId: fixedExpenseId || null,
+      occurrenceDate: occurrenceDate || null,
+      status: "pending"
+    });
+
+    res.json(receipt);
+
+  } catch (err) {
+    res.status(500).json({ message: "Failed to create receipt" });
+  }
+
+});
+app.patch("/receipts/:id/image", authMiddleware, async (req, res) => {
+
+  const { imageUrl } = req.body;
+
+  try {
+
+    const receipt = await ReceiptModel.findByIdAndUpdate(
+      req.params.id,
+      {
+        imageUrl,
+        status: "uploaded"
+      },
+      { new: true }
+    );
+
+    res.json(receipt);
+
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update receipt" });
+  }
+
+});
+app.post("/uploadReceipt", authMiddleware, async (req, res) => {
   try {
     const { sumOfReceipt, category, projectId, imageUrl, fixedExpenseId,
       occurrenceDate } = req.body;
