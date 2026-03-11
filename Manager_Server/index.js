@@ -1218,26 +1218,29 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
 
 app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   try {
+
     const userId = req.userId;
     const raw = req.query.period || "month";
 
     const now = new Date();
-    now.setHours(23, 59, 59, 999);
+    now.setHours(23,59,59,999);
 
-    const validPeriods = ["month", "quarter", "year"];
+    const validPeriods = ["month","quarter","year"];
     const period = validPeriods.includes(raw) ? raw : "month";
 
     let startDate;
 
     if (period === "month") {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    } 
+    }
     else if (period === "quarter") {
       startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-    } 
+    }
     else {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
+
+    startDate.setHours(0,0,0,0);
 
     const receipts = await ReceiptModel.find({
       userId,
@@ -1245,21 +1248,21 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
         { fixedExpenseId: null },
         { fixedExpenseId: { $exists: false } }
       ]
-    }).populate("projectId", "name");
+    }).populate("projectId","name");
 
     const expenses = receipts
-      .filter((receipt) => {
-        const d = new Date(receipt.createdAt);
-        return !isNaN(d) && d >= startDate && d <= now;
+      .filter(r => {
+        const d = new Date(r.createdAt);
+        return d >= startDate && d <= now;
       })
-      .map((receipt) => ({
+      .map(r => ({
         payments: {
-          sumOfReceipt: receipt.sumOfReceipt,
-          category: receipt.category,
-          date: receipt.createdAt,
+          sumOfReceipt: r.sumOfReceipt,
+          category: r.category,
+          date: r.createdAt
         },
-        projectName: receipt.projectId?.name || "General",
-        type: "expense",
+        projectName: r.projectId?.name || "General",
+        type: "expense"
       }));
 
     const fixedReceipts = await ReceiptModel.find({
@@ -1275,46 +1278,64 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
     const fixedExpenses = await FixedExpenseModel.find({
       userId,
-      isActive: true,
-      $or: [
-    { startDate: { $lte: now } },
-    { startDate: null },
-    { startDate: { $exists: false } }
-  ]
-}).lean();
+      isActive: true
+    }).lean();
+
 
     const fixedExpenseItems = [];
 
     for (const fe of fixedExpenses) {
 
       let occurrenceDate = new Date(fe.startDate || fe.createdAt);
-
-        if (fe.frequency === "monthly" && fe.dayOfMonth) {
-          occurrenceDate.setDate(fe.dayOfMonth);
-        }
       occurrenceDate.setHours(0,0,0,0);
-       console.log("fixedExpenses:", fixedExpenses);
+
+      while (occurrenceDate < startDate) {
+
+        if (fe.frequency === "monthly") {
+          occurrenceDate = new Date(
+            occurrenceDate.getFullYear(),
+            occurrenceDate.getMonth() + 1,
+            fe.dayOfMonth || occurrenceDate.getDate()
+          );
+        }
+
+        else if (fe.frequency === "weekly") {
+          occurrenceDate = new Date(
+            occurrenceDate.getFullYear(),
+            occurrenceDate.getMonth(),
+            occurrenceDate.getDate() + 7
+          );
+        }
+
+        else if (fe.frequency === "yearly") {
+          occurrenceDate = new Date(
+            occurrenceDate.getFullYear() + 1,
+            occurrenceDate.getMonth(),
+            occurrenceDate.getDate()
+          );
+        }
+
+        else break;
+      }
+
       while (occurrenceDate <= now) {
-         console.log("Processing:", fe.title, fe.startDate);
-        if (occurrenceDate >= startDate && occurrenceDate <= now) {
 
-          const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
+        const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
 
-          if (!receiptSet.has(key)) {
+        if (!receiptSet.has(key)) {
 
-            fixedExpenseItems.push({
-              payments: {
-                sumOfReceipt: fe.amount,
-                category: fe.title,
-                date: new Date(occurrenceDate),
-                isFixed: true,
-                title: fe.title,
-              },
-              projectName: "Fixed Expense",
-              type: "expense",
-            });
+          fixedExpenseItems.push({
+            payments: {
+              sumOfReceipt: fe.amount,
+              category: fe.title,
+              date: new Date(occurrenceDate),
+              isFixed: true,
+              title: fe.title
+            },
+            projectName: "Fixed Expense",
+            type: "expense"
+          });
 
-          }
         }
 
         if (fe.frequency === "monthly") {
@@ -1323,38 +1344,39 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
             occurrenceDate.getMonth() + 1,
             fe.dayOfMonth || occurrenceDate.getDate()
           );
-        } 
+        }
+
         else if (fe.frequency === "weekly") {
           occurrenceDate = new Date(
             occurrenceDate.getFullYear(),
             occurrenceDate.getMonth(),
             occurrenceDate.getDate() + 7
           );
-        } 
+        }
+
         else if (fe.frequency === "yearly") {
           occurrenceDate = new Date(
             occurrenceDate.getFullYear() + 1,
             occurrenceDate.getMonth(),
             occurrenceDate.getDate()
           );
-        } 
-        else {
-          break;
         }
+
+        else break;
       }
     }
 
     const combinedExpenses = [...expenses, ...fixedExpenseItems];
 
     combinedExpenses.sort(
-      (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
+      (a,b) => new Date(a.payments.date) - new Date(b.payments.date)
     );
-    console.log("combinedExpenses:", combinedExpenses);
+
     res.json(combinedExpenses);
 
   } catch (err) {
     console.error("Error fetching cash flow expenses:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message:"Server error" });
   }
 });
 
