@@ -1276,8 +1276,12 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     const fixedExpenses = await FixedExpenseModel.find({
       userId,
       isActive: true,
-      startDate: { $lte: now },
-    }).lean();
+      $or: [
+    { startDate: { $lte: now } },
+    { startDate: null },
+    { startDate: { $exists: false } }
+  ]
+}).lean();
 
     const fixedExpenseItems = [];
 
@@ -1285,7 +1289,8 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
       if (!fe.startDate) continue;
 
-      let occurrenceDate = new Date(fe.startDate);
+      let occurrenceDate = new Date(fe.startDate || fe.createdAt);
+       occurrenceDate.setHours(0,0,0,0);
 
       while (occurrenceDate <= now) {
 
