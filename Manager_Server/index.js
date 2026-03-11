@@ -1215,124 +1215,131 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const raw = req.query.period || "month";
+
     const now = new Date();
     now.setHours(23, 59, 59, 999);
+
     const validPeriods = ["month", "quarter", "year"];
     const period = validPeriods.includes(raw) ? raw : "month";
 
     let startDate;
+
     if (period === "month") {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    } else if (period === "quarter") {
+    } 
+    else if (period === "quarter") {
       startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-    } else {
-      startDate = new Date(now.getFullYear(), 0, 1);
-    }
-   
-const fixedExpenses = await FixedExpenseModel.find({
-  userId,
-  isActive: true,
-  startDate: { $lte: now },
-}).lean();
-// const today = new Date();
-// const todayDay = today.getDate();
-console.log("NOW:", now);
-
-// const occurredFixedExpenses = fixedExpenses.filter(fe => {
-//   if (fe.frequency === "monthly") {
-//     // if dayOfMonth is not set, show it immediately
-//     if (!fe.dayOfMonth) return true;
-
-//     // show ONLY when its day has arrived
-//     return todayDay >= fe.dayOfMonth;
-//   }
-
-//   // for now: weekly / yearly always included
-//   return true;
-// });
-
-// const sample = await FixedExpenseModel.findOne({ userId });
-// console.log(sample);
-   const receipts = await ReceiptModel.find({
-  userId,
-  fixedExpenseId: null
-  }).populate("projectId", "name");
-  const expenses = receipts
-  .filter((receipt) => {
-    const d = new Date(receipt.createdAt);
-    return !isNaN(d) && d >= startDate && d <= now;
-  })
-  .map((receipt) => ({
-    payments: {
-      sumOfReceipt: receipt.sumOfReceipt,
-      category: receipt.category,
-      date: receipt.createdAt,
-    },
-    projectName: receipt.projectId?.name || "General",
-    type: "expense",
-  }));
-    
-// console.log(expenses);
- const fixedExpenseItems = [];
-
-for (const fe of fixedExpenses) {
-  if (!fe.startDate) continue;
-
-  let occurrenceDate = new Date(fe.startDate);
-  
-  while (occurrenceDate <= now) {
-    
-    if (occurrenceDate >= startDate && occurrenceDate <= now) {
-      fixedExpenseItems.push({
-        payments: {
-          sumOfReceipt: fe.amount,
-          category: fe.title,
-          date: new Date(occurrenceDate),
-          isFixed: true,
-          title: fe.title,
-        },
-        projectName: "Fixed Expense",
-        type: "expense",
-      });
-    }
-
-    // Create NEW date instead of mutating
-    if (fe.frequency === "monthly") {
-      occurrenceDate = new Date(
-        occurrenceDate.getFullYear(),
-        occurrenceDate.getMonth() + 1,
-        fe.dayOfMonth || occurrenceDate.getDate()
-      );
-    } 
-    else if (fe.frequency === "weekly") {
-      occurrenceDate = new Date(
-        occurrenceDate.getFullYear(),
-        occurrenceDate.getMonth(),
-        occurrenceDate.getDate() + 7
-      );
-    } 
-    else if (fe.frequency === "yearly") {
-      occurrenceDate = new Date(
-        occurrenceDate.getFullYear() + 1,
-        occurrenceDate.getMonth(),
-        occurrenceDate.getDate()
-      );
     } 
     else {
-      break;
+      startDate = new Date(now.getFullYear(), 0, 1);
     }
-  }
-}
 
-    // expenses.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));  
-   const combinedExpenses = [...expenses, ...fixedExpenseItems];
+    const receipts = await ReceiptModel.find({
+      userId,
+      $or: [
+        { fixedExpenseId: null },
+        { fixedExpenseId: { $exists: false } }
+      ]
+    }).populate("projectId", "name");
 
-// Sort by date (important for cash flow UI)
-combinedExpenses.sort(
-  (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
-);
+    const expenses = receipts
+      .filter((receipt) => {
+        const d = new Date(receipt.createdAt);
+        return !isNaN(d) && d >= startDate && d <= now;
+      })
+      .map((receipt) => ({
+        payments: {
+          sumOfReceipt: receipt.sumOfReceipt,
+          category: receipt.category,
+          date: receipt.createdAt,
+        },
+        projectName: receipt.projectId?.name || "General",
+        type: "expense",
+      }));
 
-res.json(combinedExpenses);
+    const fixedReceipts = await ReceiptModel.find({
+      userId,
+      fixedExpenseId: { $ne: null }
+    }).lean();
+
+    const receiptSet = new Set(
+      fixedReceipts.map(r =>
+        `${r.fixedExpenseId}_${new Date(r.occurrenceDate).toDateString()}`
+      )
+    );
+
+    const fixedExpenses = await FixedExpenseModel.find({
+      userId,
+      isActive: true,
+      startDate: { $lte: now },
+    }).lean();
+
+    const fixedExpenseItems = [];
+
+    for (const fe of fixedExpenses) {
+
+      if (!fe.startDate) continue;
+
+      let occurrenceDate = new Date(fe.startDate);
+
+      while (occurrenceDate <= now) {
+
+        if (occurrenceDate >= startDate && occurrenceDate <= now) {
+
+          const key = `${fe._id}_${occurrenceDate.toDateString()}`;
+
+          if (!receiptSet.has(key)) {
+
+            fixedExpenseItems.push({
+              payments: {
+                sumOfReceipt: fe.amount,
+                category: fe.title,
+                date: new Date(occurrenceDate),
+                isFixed: true,
+                title: fe.title,
+              },
+              projectName: "Fixed Expense",
+              type: "expense",
+            });
+
+          }
+        }
+
+        if (fe.frequency === "monthly") {
+          occurrenceDate = new Date(
+            occurrenceDate.getFullYear(),
+            occurrenceDate.getMonth() + 1,
+            fe.dayOfMonth || occurrenceDate.getDate()
+          );
+        } 
+        else if (fe.frequency === "weekly") {
+          occurrenceDate = new Date(
+            occurrenceDate.getFullYear(),
+            occurrenceDate.getMonth(),
+            occurrenceDate.getDate() + 7
+          );
+        } 
+        else if (fe.frequency === "yearly") {
+          occurrenceDate = new Date(
+            occurrenceDate.getFullYear() + 1,
+            occurrenceDate.getMonth(),
+            occurrenceDate.getDate()
+          );
+        } 
+        else {
+          break;
+        }
+      }
+    }
+
+    const combinedExpenses = [...expenses, ...fixedExpenseItems];
+
+    combinedExpenses.sort(
+      (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
+    );
+
+    res.json(combinedExpenses);
+
   } catch (err) {
     console.error("Error fetching cash flow expenses:", err);
     res.status(500).json({ message: "Server error" });
