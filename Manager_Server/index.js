@@ -1248,11 +1248,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     /* ---------------- NORMAL RECEIPTS ---------------- */
 
     const receipts = await ReceiptModel.find({
-      userId,
-      $or: [
-        { fixedExpenseId: null },
-        { fixedExpenseId: { $exists: false } }
-      ]
+      userId
     }).populate("projectId", "name");
 
     const expenses = receipts
