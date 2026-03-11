@@ -1216,8 +1216,8 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
   }
 });
 
-app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
-  try {
+app.get("/getCashFlowExpenses", authMiddleware, async (req,res)=>{
+  try{
 
     const userId = req.userId;
     const raw = req.query.period || "month";
@@ -1230,44 +1230,49 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
     let startDate;
 
-    if (period === "month") {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    if(period === "month"){
+      startDate = new Date(now.getFullYear(),now.getMonth(),1);
     }
-    else if (period === "quarter") {
-      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    else if(period === "quarter"){
+      startDate = new Date(now.getFullYear(),now.getMonth()-2,1);
     }
-    else {
-      startDate = new Date(now.getFullYear(), 0, 1);
+    else{
+      startDate = new Date(now.getFullYear(),0,1);
     }
 
     startDate.setHours(0,0,0,0);
 
+    /* ---------- NORMAL RECEIPTS ---------- */
+
     const receipts = await ReceiptModel.find({
       userId,
-      $or: [
-        { fixedExpenseId: null },
-        { fixedExpenseId: { $exists: false } }
+      $or:[
+        { fixedExpenseId:null },
+        { fixedExpenseId:{ $exists:false } }
       ]
     }).populate("projectId","name");
 
     const expenses = receipts
-      .filter(r => {
+      .filter(r=>{
         const d = new Date(r.createdAt);
         return d >= startDate && d <= now;
       })
-      .map(r => ({
-        payments: {
-          sumOfReceipt: r.sumOfReceipt,
-          category: r.category,
-          date: r.createdAt
+      .map(r=>({
+        payments:{
+          sumOfReceipt:r.sumOfReceipt,
+          category:r.category,
+          date:r.createdAt
         },
-        projectName: r.projectId?.name || "General",
-        type: "expense"
+        projectName:r.projectId?.name || "General",
+        type:"expense"
       }));
+
+
+    /* ---------- FIXED RECEIPTS ---------- */
 
     const fixedReceipts = await ReceiptModel.find({
       userId,
-      fixedExpenseId: { $ne: null }
+      fixedExpenseId:{ $ne:null }
     }).lean();
 
     const receiptSet = new Set(
@@ -1276,107 +1281,71 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
       )
     );
 
+
+    /* ---------- FIXED EXPENSE DEFINITIONS ---------- */
+
     const fixedExpenses = await FixedExpenseModel.find({
       userId,
-      isActive: true
+      isActive:true
     }).lean();
-
 
     const fixedExpenseItems = [];
 
-    for (const fe of fixedExpenses) {
+    for(const fe of fixedExpenses){
 
-      let occurrenceDate = new Date(fe.startDate || fe.createdAt);
-      occurrenceDate.setHours(0,0,0,0);
+      let occurrenceDate = new Date(startDate);
 
-      while (occurrenceDate < startDate) {
-
-        if (fe.frequency === "monthly") {
-          occurrenceDate = new Date(
-            occurrenceDate.getFullYear(),
-            occurrenceDate.getMonth() + 1,
-            fe.dayOfMonth || occurrenceDate.getDate()
-          );
-        }
-
-        else if (fe.frequency === "weekly") {
-          occurrenceDate = new Date(
-            occurrenceDate.getFullYear(),
-            occurrenceDate.getMonth(),
-            occurrenceDate.getDate() + 7
-          );
-        }
-
-        else if (fe.frequency === "yearly") {
-          occurrenceDate = new Date(
-            occurrenceDate.getFullYear() + 1,
-            occurrenceDate.getMonth(),
-            occurrenceDate.getDate()
-          );
-        }
-
-        else break;
+      if(fe.frequency === "monthly" && fe.dayOfMonth){
+        occurrenceDate.setDate(fe.dayOfMonth);
       }
 
-      while (occurrenceDate <= now) {
+      while(occurrenceDate <= now){
 
         const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
 
-        if (!receiptSet.has(key)) {
+        if(!receiptSet.has(key) && occurrenceDate >= new Date(fe.startDate || fe.createdAt)){
 
           fixedExpenseItems.push({
-            payments: {
-              sumOfReceipt: fe.amount,
-              category: fe.title,
-              date: new Date(occurrenceDate),
-              isFixed: true,
-              title: fe.title
+            payments:{
+              sumOfReceipt:fe.amount,
+              category:fe.title,
+              date:new Date(occurrenceDate),
+              isFixed:true
             },
-            projectName: "Fixed Expense",
-            type: "expense"
+            projectName:"Fixed Expense",
+            type:"expense"
           });
 
         }
 
-        if (fe.frequency === "monthly") {
-          occurrenceDate = new Date(
-            occurrenceDate.getFullYear(),
-            occurrenceDate.getMonth() + 1,
-            fe.dayOfMonth || occurrenceDate.getDate()
-          );
+        if(fe.frequency === "monthly"){
+          occurrenceDate.setMonth(occurrenceDate.getMonth()+1);
         }
-
-        else if (fe.frequency === "weekly") {
-          occurrenceDate = new Date(
-            occurrenceDate.getFullYear(),
-            occurrenceDate.getMonth(),
-            occurrenceDate.getDate() + 7
-          );
+        else if(fe.frequency === "weekly"){
+          occurrenceDate.setDate(occurrenceDate.getDate()+7);
         }
-
-        else if (fe.frequency === "yearly") {
-          occurrenceDate = new Date(
-            occurrenceDate.getFullYear() + 1,
-            occurrenceDate.getMonth(),
-            occurrenceDate.getDate()
-          );
+        else if(fe.frequency === "yearly"){
+          occurrenceDate.setFullYear(occurrenceDate.getFullYear()+1);
         }
-
-        else break;
+        else{
+          break;
+        }
       }
     }
 
-    const combinedExpenses = [...expenses, ...fixedExpenseItems];
+
+    const combinedExpenses = [...expenses,...fixedExpenseItems];
 
     combinedExpenses.sort(
-      (a,b) => new Date(a.payments.date) - new Date(b.payments.date)
+      (a,b)=> new Date(a.payments.date) - new Date(b.payments.date)
     );
 
     res.json(combinedExpenses);
 
-  } catch (err) {
-    console.error("Error fetching cash flow expenses:", err);
-    res.status(500).json({ message:"Server error" });
+  }
+  catch(err){
+    console.error(err);
+    res.status(500).json({message:"Server error"});
   }
 });
 
