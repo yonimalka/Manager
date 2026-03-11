@@ -1303,8 +1303,9 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req,res)=>{
 
         const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
 
-        if(!receiptSet.has(key) && occurrenceDate >= new Date(fe.startDate || fe.createdAt)){
-
+        if(!receiptSet.has(key) &&
+          normalizeDate(occurrenceDate) >= normalizeDate(fe.startDate || fe.createdAt)
+        ){
           fixedExpenseItems.push({
             payments:{
               sumOfReceipt:fe.amount,

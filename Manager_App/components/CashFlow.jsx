@@ -57,10 +57,10 @@ export default function CashFlow() {
 
       const incomeRes = await api.get(`/getCashFlowIncomes?period=${period}`);
       const expenseRes = await api.get(`/getCashFlowExpenses?period=${period}`);
-
+      
       const inc = Array.isArray(incomeRes.data) ? incomeRes.data : [];
       const exp = Array.isArray(expenseRes.data) ? expenseRes.data : [];
-      // console.log("exp: ", expenseRes.data)
+      console.log("exp: ", expenseRes.data)
       // console.log("inc: ", inc);
       
       setIncomes(inc);
