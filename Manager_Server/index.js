@@ -1252,19 +1252,27 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     }).populate("projectId", "name");
 
     const expenses = receipts
-      .filter(r => {
-        const d = new Date(r.createdAt);
-        return d >= startDate && d <= now;
-      })
-      .map(r => ({
-        payments: {
-          sumOfReceipt: r.sumOfReceipt,
-          category: r.category,
-          date: r.createdAt,
-        },
-        projectName: r.projectId?.name || "General",
-        type: "expense",
-      }));
+  .filter((receipt) => {
+    const d = new Date(receipt.createdAt);
+    return !isNaN(d) && d >= startDate && d <= now;
+  })
+  .map((receipt) => {
+
+    const isFixed = !!receipt.fixedExpenseId;
+
+    return {
+      payments: {
+        sumOfReceipt: receipt.sumOfReceipt,
+        category: receipt.category,
+        date: receipt.createdAt,
+        isFixed
+      },
+      projectName: isFixed
+        ? "Fixed Expense"
+        : (receipt.projectId?.name || "General"),
+      type: "expense",
+    };
+  });
 
     console.log("NORMAL EXPENSES:", expenses);
 
