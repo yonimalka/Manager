@@ -1167,7 +1167,7 @@ app.post("/updatePayment/:projectId", authMiddleware, async (req, res) => {
   }
 });
 
-// GET /getCashFlowIncomes/:userId?period=month|quarter|year
+
 app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
@@ -1269,7 +1269,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
     const receiptSet = new Set(
       fixedReceipts.map(r =>
-        `${r.fixedExpenseId}_${normalizeDate(r.occurrenceDate)}`
+        `${r.fixedExpenseId}_${normalizeDate(r.occurrenceDate || r.createdAt)}`
       )
     );
 
@@ -1287,13 +1287,11 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
     for (const fe of fixedExpenses) {
 
-      if (!fe.startDate) continue;
-
       let occurrenceDate = new Date(fe.startDate || fe.createdAt);
        occurrenceDate.setHours(0,0,0,0);
-
+       console.log("fixedExpenses:", fixedExpenses);
       while (occurrenceDate <= now) {
-
+         console.log("Processing:", fe.title, fe.startDate);
         if (occurrenceDate >= startDate && occurrenceDate <= now) {
 
           const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
