@@ -13,10 +13,11 @@ import {
   Image, 
   Alert,
 } from "react-native";
-import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload, BanknoteArrowUp, Calendar, DollarSign, Tag, ListChecks  } from "lucide-react-native";
+import { Plus, ChevronDown, ChevronUp, ListChevronsUpDown, Repeat, CloudUpload, BanknoteArrowUp, Calendar, DollarSign, Tag, ListChecks  } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
 import api from "../services/api";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
 import IncomesDownloadByDate from "./IncomesDownloadByDate";
@@ -295,6 +296,19 @@ const uploadReceipt = async (
     console.log(err);
   }
 };
+const viewReceipt = async (receiptId) => {
+  try {
+    const res = await api.get(`/receipt/${receiptId}`);
+    const receipt = res.data;
+
+    if (receipt?.imageUrl) {
+      Linking.openURL(receipt.imageUrl);
+    }
+
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   return (
     <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
@@ -518,10 +532,9 @@ const uploadReceipt = async (
                         {item.isActive && <View style={styles.checkboxInner} />}
                       </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={{ flex: 1, marginLeft: 12 }}
-                        onPress={() => openExpenseOccurrences(item)}
-                      >
+                       <View 
+                       style={{ flex: 1, marginLeft: 12 }}
+                       >
                         <Text
                           style={[
                             styles.fixedTitle,
@@ -538,6 +551,12 @@ const uploadReceipt = async (
                             userDetails?.locale || "en-US"
                           )} • {item.frequency}
                         </Text>
+                      </View>
+                       <TouchableOpacity
+                        
+                        onPress={() => openExpenseOccurrences(item)}
+                      >
+                      <ListChevronsUpDown/>
                       </TouchableOpacity>
                     </TouchableOpacity>
                   ))
@@ -720,7 +739,6 @@ const uploadReceipt = async (
                 </View>
                </View>
               </View>
-
             </View>
           );
         })}

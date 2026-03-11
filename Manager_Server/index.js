@@ -1237,8 +1237,10 @@ console.log("NOW:", now);
 
 // const sample = await FixedExpenseModel.findOne({ userId });
 // console.log(sample);
-   const receipts = await ReceiptModel.find({ userId })
-  .populate("projectId", "name");
+   const receipts = await ReceiptModel.find({
+  userId,
+  fixedExpenseId: null
+  }).populate("projectId", "name");
   const expenses = receipts
   .filter((receipt) => {
     const d = new Date(receipt.createdAt);
