@@ -1288,7 +1288,11 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     for (const fe of fixedExpenses) {
 
       let occurrenceDate = new Date(fe.startDate || fe.createdAt);
-       occurrenceDate.setHours(0,0,0,0);
+
+        if (fe.frequency === "monthly" && fe.dayOfMonth) {
+          occurrenceDate.setDate(fe.dayOfMonth);
+        }
+      occurrenceDate.setHours(0,0,0,0);
        console.log("fixedExpenses:", fixedExpenses);
       while (occurrenceDate <= now) {
          console.log("Processing:", fe.title, fe.startDate);
@@ -1345,7 +1349,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     combinedExpenses.sort(
       (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
     );
-
+    console.log("combinedExpenses:", combinedExpenses);
     res.json(combinedExpenses);
 
   } catch (err) {
