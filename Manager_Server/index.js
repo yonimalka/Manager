@@ -1216,137 +1216,167 @@ app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
   }
 });
 
-app.get("/getCashFlowExpenses", authMiddleware, async (req,res)=>{
-  try{
+app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
+  try {
 
     const userId = req.userId;
     const raw = req.query.period || "month";
 
     const now = new Date();
-    now.setHours(23,59,59,999);
+    now.setHours(23, 59, 59, 999);
 
-    const validPeriods = ["month","quarter","year"];
+    const validPeriods = ["month", "quarter", "year"];
     const period = validPeriods.includes(raw) ? raw : "month";
 
     let startDate;
 
-    if(period === "month"){
-      startDate = new Date(now.getFullYear(),now.getMonth(),1);
-    }
-    else if(period === "quarter"){
-      startDate = new Date(now.getFullYear(),now.getMonth()-2,1);
-    }
-    else{
-      startDate = new Date(now.getFullYear(),0,1);
+    if (period === "month") {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } 
+    else if (period === "quarter") {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    } 
+    else {
+      startDate = new Date(now.getFullYear(), 0, 1);
     }
 
     startDate.setHours(0,0,0,0);
 
-    /* ---------- NORMAL RECEIPTS ---------- */
+    console.log("NOW:", now);
+    console.log("START DATE:", startDate);
+
+    /* ---------------- NORMAL RECEIPTS ---------------- */
 
     const receipts = await ReceiptModel.find({
       userId,
-      $or:[
-        { fixedExpenseId:null },
-        { fixedExpenseId:{ $exists:false } }
+      $or: [
+        { fixedExpenseId: null },
+        { fixedExpenseId: { $exists: false } }
       ]
-    }).populate("projectId","name");
+    }).populate("projectId", "name");
 
     const expenses = receipts
-      .filter(r=>{
+      .filter(r => {
         const d = new Date(r.createdAt);
         return d >= startDate && d <= now;
       })
-      .map(r=>({
-        payments:{
-          sumOfReceipt:r.sumOfReceipt,
-          category:r.category,
-          date:r.createdAt
+      .map(r => ({
+        payments: {
+          sumOfReceipt: r.sumOfReceipt,
+          category: r.category,
+          date: r.createdAt,
         },
-        projectName:r.projectId?.name || "General",
-        type:"expense"
+        projectName: r.projectId?.name || "General",
+        type: "expense",
       }));
 
+    console.log("NORMAL EXPENSES:", expenses);
 
-    /* ---------- FIXED RECEIPTS ---------- */
+    /* ---------------- FIXED RECEIPTS ---------------- */
 
     const fixedReceipts = await ReceiptModel.find({
       userId,
-      fixedExpenseId:{ $ne:null }
+      fixedExpenseId: { $ne: null }
     }).lean();
+
+    console.log("FIXED RECEIPTS:", fixedReceipts);
 
     const receiptSet = new Set(
       fixedReceipts.map(r =>
-        `${r.fixedExpenseId}_${normalizeDate(r.occurrenceDate || r.createdAt)}`
+        `${String(r.fixedExpenseId)}_${normalizeDate(r.occurrenceDate || r.createdAt)}`
       )
     );
 
+    console.log("RECEIPT SET:", receiptSet);
 
-    /* ---------- FIXED EXPENSE DEFINITIONS ---------- */
+    /* ---------------- FIXED EXPENSES ---------------- */
 
     const fixedExpenses = await FixedExpenseModel.find({
-  userId,
-  isActive: true
-}).lean();
+      userId,
+      isActive: true
+    }).lean();
 
-const fixedExpenseItems = [];
+    console.log("FIXED EXPENSES FOUND:", fixedExpenses);
 
-for (const fe of fixedExpenses) {
+    const fixedExpenseItems = [];
 
-  let occurrenceDate = new Date(fe.startDate || fe.createdAt);
-  occurrenceDate.setHours(0,0,0,0);
+    for (const fe of fixedExpenses) {
 
-  while (occurrenceDate <= now) {
+      console.log("Processing fixed expense:", fe.title);
 
-    if (occurrenceDate >= startDate) {
+      let occurrenceDate = new Date(fe.startDate || fe.createdAt);
+      occurrenceDate.setHours(0,0,0,0);
 
-      const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
+      console.log("Initial occurrence:", occurrenceDate);
 
-      if (!receiptSet.has(key)) {
-        fixedExpenseItems.push({
-          payments: {
-            sumOfReceipt: fe.amount,
-            category: fe.title,
-            date: new Date(occurrenceDate),
-            isFixed: true
-          },
-          projectName: "Fixed Expense",
-          type: "expense"
-        });
+      while (occurrenceDate <= now) {
+
+        console.log("Checking occurrence:", occurrenceDate);
+
+        if (occurrenceDate >= startDate) {
+
+          const key = `${String(fe._id)}_${normalizeDate(occurrenceDate)}`;
+
+          console.log("Generated key:", key);
+
+          if (!receiptSet.has(key)) {
+
+            console.log("ADDING FIXED EXPENSE:", fe.title);
+
+            fixedExpenseItems.push({
+              payments: {
+                sumOfReceipt: fe.amount,
+                category: fe.title,
+                date: new Date(occurrenceDate),
+                isFixed: true,
+              },
+              projectName: "Fixed Expense",
+              type: "expense",
+            });
+
+          } else {
+
+            console.log("SKIPPED (receipt already exists)");
+
+          }
+
+        }
+
+        /* ---------- NEXT OCCURRENCE ---------- */
+
+        if (fe.frequency === "monthly") {
+          occurrenceDate.setMonth(occurrenceDate.getMonth() + 1);
+        } 
+        else if (fe.frequency === "weekly") {
+          occurrenceDate.setDate(occurrenceDate.getDate() + 7);
+        } 
+        else if (fe.frequency === "yearly") {
+          occurrenceDate.setFullYear(occurrenceDate.getFullYear() + 1);
+        } 
+        else {
+          break;
+        }
+
       }
-
     }
 
-    if (fe.frequency === "monthly") {
-      occurrenceDate.setMonth(occurrenceDate.getMonth() + 1);
-    }
-    else if (fe.frequency === "weekly") {
-      occurrenceDate.setDate(occurrenceDate.getDate() + 7);
-    }
-    else if (fe.frequency === "yearly") {
-      occurrenceDate.setFullYear(occurrenceDate.getFullYear() + 1);
-    }
-    else {
-      break;
-    }
+    console.log("FIXED EXPENSE ITEMS:", fixedExpenseItems);
 
-  }
-}
-console.log("fixedExpenseItems:", fixedExpenseItems);
+    /* ---------------- COMBINE ---------------- */
 
-
-const combinedExpenses = [...expenses, ...fixedExpenseItems];
+    const combinedExpenses = [...expenses, ...fixedExpenseItems];
 
     combinedExpenses.sort(
-      (a,b)=> new Date(a.payments.date) - new Date(b.payments.date)
+      (a, b) => new Date(a.payments.date) - new Date(b.payments.date)
     );
+
+    console.log("FINAL COMBINED EXPENSES:", combinedExpenses);
 
     res.json(combinedExpenses);
 
-  }
-  catch(err){
-    console.error(err);
-    res.status(500).json({message:"Server error"});
+  } catch (err) {
+    console.error("Error fetching cash flow expenses:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
