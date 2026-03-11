@@ -847,22 +847,38 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
       fixedTotal += occurrences * expense.amount;
     }
     const receiptsResult = await ReceiptModel.aggregate([
-      {
-        $match: {
-          userId: userId,
-          createdAt: {
-            $gte: startOfYear,
-            $lt: startOfNextYear,
-          },
-        },
+  {
+    $match: {
+      userId: userId,
+      createdAt: {
+        $gte: startOfYear,
+        $lt: startOfNextYear,
       },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$sumOfReceipt" },
-        },
-      },
-    ]);
+    },
+  },
+  {
+    $lookup: {
+      from: "fixedexpenses",
+      localField: "fixedExpenseId",
+      foreignField: "_id",
+      as: "fixedExpense",
+    },
+  },
+  {
+    $match: {
+      $or: [
+        { fixedExpenseId: { $exists: false } },
+        { "fixedExpense.isActive": false }
+      ]
+    }
+  },
+  {
+    $group: {
+      _id: null,
+      total: { $sum: "$sumOfReceipt" },
+    },
+  },
+]);
 
     const receiptsTotal = receiptsResult[0]?.total || 0;
 
