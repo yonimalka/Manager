@@ -10,10 +10,13 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
+  Image, 
+  Alert,
 } from "react-native";
 import { Plus, ChevronDown, ChevronUp, Repeat, CloudUpload, BanknoteArrowUp, Calendar, DollarSign, Tag, ListChecks  } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import api from "../services/api";
 import ReceiptDownloadByDate from "./ReceiptDownloadByDate";
 import IncomesDownloadByDate from "./IncomesDownloadByDate";
@@ -22,6 +25,9 @@ import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 import { useAuth } from "./useAuth";
 import { formatCurrency } from "../services/formatCurrency";
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable  } from "firebase/storage";
+import { storage } from "../components/firebase";
+
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -32,7 +38,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 export default function FinanceFixedExpenses() {
   const navigation = useNavigation();
-  const { userDetails } = useAuth();
+  const { userId, userDetails } = useAuth();
 
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState("");
@@ -46,6 +52,11 @@ export default function FinanceFixedExpenses() {
   const [visible, setVisible] = useState(false);
   const [fixedExpenses, setFixedExpenses] = useState([]);
   const [listExpanded, setListExpanded] = useState(false);
+  const [occurrenceModal, setOccurrenceModal] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [occurrences, setOccurrences] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingFor, setUploadingFor] = useState(null);
 
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -54,6 +65,15 @@ export default function FinanceFixedExpenses() {
   const toggleListExpand = () => {
   LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
   setListExpanded(!listExpanded);
+};
+const openExpenseOccurrences = async (expense) => {
+  setSelectedExpense(expense);
+
+  const res = await api.get(`/fixedExpenseOccurrences/${expense._id}`);
+
+  setOccurrences(res.data);
+
+  setOccurrenceModal(true);
 };
   const nextOccurrence = useMemo(() => {
     const now = new Date();
@@ -162,6 +182,119 @@ export default function FinanceFixedExpenses() {
       console.error(err);
     }
   };
+const captureReceipt = async (expense, date) => {
+  try {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Permission needed", "Camera permission is required.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.7,
+    });
+
+    if (result.canceled) return;
+
+    const imageUri = result?.assets?.[0]?.uri;
+
+    if (!imageUri) return;
+
+    setUploadingFor(date);
+
+    await uploadReceipt(
+      null,
+      expense.title,
+      expense.amount,
+      imageUri,
+      expense._id,
+      date
+    );
+
+  } catch (err) {
+    console.log(err);
+  }
+};
+const confirmUploadReceipt = async () => {
+  try {
+
+    setUploadingFor(previewDate);   // ADD THIS
+
+    await uploadReceipt(
+      null,
+      previewExpense.title,
+      previewExpense.amount,
+      previewImage,
+      previewExpense._id,
+      previewDate
+    );
+
+    setPreviewModal(false);
+    setPreviewImage(null);
+
+  } catch (err) {
+    console.log(err);
+  }
+};
+const uploadReceipt = async (
+  projectId = null,
+  category,
+  sum,
+  image,
+  fixedExpenseId = null,
+  occurrenceDate = null
+) => {
+  try {
+
+    const blob = await (await fetch(image)).blob();
+
+    const fileRef = ref(
+      storage,
+      `users/${userId}/receipts/fixed-expenses/${fixedExpenseId}/${Date.now()}.jpg`
+    );
+
+    const uploadTask = uploadBytesResumable(fileRef, blob);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+
+        setUploadProgress(Math.round(progress));
+      },
+      (error) => {
+        console.log(error);
+        Alert.alert("Upload failed");
+        setUploadingFor(null);
+        setUploadProgress(0);
+      },
+      async () => {
+        const url = await getDownloadURL(fileRef);
+
+        await api.post("/uploadReceipt", {
+          projectId,
+          category,
+          sumOfReceipt: Number(sum),
+          imageUrl: url,
+          fixedExpenseId,
+          occurrenceDate,
+        });
+
+        const res = await api.get(`/fixedExpenseOccurrences/${fixedExpenseId}`);
+        setOccurrences(res.data);
+
+        setUploadProgress(0);
+        setUploadingFor(null);
+
+        Alert.alert("Success", "Receipt uploaded successfully");
+      }
+    );
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   return (
     <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
@@ -376,16 +509,19 @@ export default function FinanceFixedExpenses() {
                     <TouchableOpacity
                       key={item._id}
                       style={styles.fixedItem}
-                      onPress={() => toggleActive(item._id)}
                       activeOpacity={0.7}
                     >
-                      <View style={styles.checkbox}>
-                        {item.isActive && (
-                          <View style={styles.checkboxInner} />
-                        )}
-                      </View>
-                      
-                      <View style={{ flex: 1, marginLeft: 12 }}>
+                      <TouchableOpacity
+                        style={styles.checkbox}
+                        onPress={() => toggleActive(item._id)}
+                      >
+                        {item.isActive && <View style={styles.checkboxInner} />}
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{ flex: 1, marginLeft: 12 }}
+                        onPress={() => openExpenseOccurrences(item)}
+                      >
                         <Text
                           style={[
                             styles.fixedTitle,
@@ -394,19 +530,15 @@ export default function FinanceFixedExpenses() {
                         >
                           {item.title}
                         </Text>
+                        
                         <Text style={styles.fixedAmount}>
                           {formatCurrency(
                             item.amount || 0,
                             userDetails?.currency || "USD",
                             userDetails?.locale || "en-US"
-                          )} • {item.frequency} • Next billing:{" "}
-                          {getNextBillingDate(item)
-                            ? new Date(getNextBillingDate(item)).toLocaleDateString(
-                                userDetails?.locale || "en-US"
-                              )
-                            : "—"}
+                          )} • {item.frequency}
                         </Text>
-                      </View>
+                      </TouchableOpacity>
                     </TouchableOpacity>
                   ))
                 )}
@@ -487,7 +619,117 @@ export default function FinanceFixedExpenses() {
           </View>
         </View>
       </Modal>
+    <Modal
+  visible={occurrenceModal}
+  transparent
+  animationType="fade"
+  statusBarTranslucent
+>
+  <View style={styles.modalBackdrop}>
+    <View style={styles.timelineModal}>
 
+      {/* Header */}
+      <View style={styles.timelineHeader}>
+        <Text style={styles.timelineTitle}>
+          {selectedExpense?.title}
+        </Text>
+
+        <TouchableOpacity onPress={() => setOccurrenceModal(false)}>
+          <Ionicons name="close" size={22} color="#64748B" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+
+        {occurrences.map((o, index) => {
+
+          const hasReceipt = !!o.receiptId;
+
+          return (
+            <View key={index} style={styles.timelineRow}>
+
+              {/* Timeline indicator */}
+              <View style={styles.timelineLeft}>
+                <View
+                  style={[
+                    styles.timelineDot,
+                    { backgroundColor: hasReceipt ? "#10B981" : "#F59E0B" }
+                  ]}
+                />
+                {index !== occurrences.length - 1 && (
+                  <View style={styles.timelineLine} />
+                )}
+              </View>
+
+              {/* Content */}
+              <View style={styles.timelineContent}>
+
+                <View style={styles.timelineTopRow}>
+                  <Text style={styles.timelineDate}>
+                    {new Date(o.date).toLocaleDateString()}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.timelineStatus,
+                      { color: hasReceipt ? "#10B981" : "#F59E0B" }
+                    ]}
+                  >
+                    {hasReceipt ? "Paid" : "Missing"}
+                  </Text>
+                </View>
+               <View>
+                <View style={styles.timelineActions}>
+
+                  {!hasReceipt && (
+                    <TouchableOpacity
+                      style={styles.timelineUpload}
+                      onPress={async () => {
+                        setUploadingFor(o.date);
+                        await captureReceipt(selectedExpense, o.date);
+                      }}
+                    >
+                      <CloudUpload size={16} color="#fff" />
+                      <Text style={styles.timelineUploadText}>
+                        Upload Receipt
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {uploadingFor?.toString() === o.date?.toString() && uploadProgress > 0 && (
+                    <View style={styles.progressContainer}>
+                      <View
+                        style={[
+                          styles.progressBar,
+                          { width: `${uploadProgress}%` }
+                        ]}
+                      />
+                      <Text style={styles.progressText}>{uploadProgress}%</Text>
+                    </View>
+                  )}
+                  {hasReceipt && (
+                    <TouchableOpacity
+                      style={styles.timelineView}
+                      onPress={() => viewReceipt(o.receiptId)}
+                    >
+                      <Text style={styles.timelineViewText}>
+                        View Receipt
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                </View>
+               </View>
+              </View>
+
+            </View>
+          );
+        })}
+
+      </ScrollView>
+
+    </View>
+  </View>
+</Modal>
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -816,6 +1058,234 @@ fixedTitleInactive: {
 
 fixedAmount: {
   fontSize: 13,
+  color: "#64748B",
+},
+occurrenceTitle: {
+  fontSize: 18,
+  fontWeight: "600",
+  color: "#0F172A",
+},
+
+occurrenceDate: {
+  fontSize: 15,
+  fontWeight: "500",
+  color: "#0F172A",
+},
+
+occurrenceStatus: {
+  fontSize: 12,
+  color: "#64748B",
+  marginTop: 3,
+},
+
+uploadReceiptButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  backgroundColor: "#0A7AFF",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 8,
+},
+
+uploadReceiptText: {
+  color: "#fff",
+  fontWeight: "500",
+  fontSize: 13,
+},
+
+viewReceiptButton: {
+  backgroundColor: "#10B981",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 8,
+},
+
+viewReceiptText: {
+  color: "#fff",
+  fontWeight: "500",
+  fontSize: 13,
+},
+modalBackdrop: {
+  flex: 1,
+  backgroundColor: "rgba(15,23,42,0.55)",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+timelineModal: {
+  width: "92%",
+  maxHeight: "75%",
+  backgroundColor: "#fff",
+  borderRadius: 24,
+  padding: 20,
+  shadowColor: "#000",
+  shadowOpacity: 0.2,
+  shadowRadius: 20,
+  elevation: 10,
+},
+
+timelineHeader: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 18,
+},
+
+timelineTitle: {
+  fontSize: 18,
+  fontWeight: "600",
+  color: "#0F172A",
+},
+
+timelineRow: {
+  flexDirection: "row",
+  marginBottom: 20,
+},
+
+timelineLeft: {
+  width: 30,
+  alignItems: "center",
+},
+
+timelineDot: {
+  width: 12,
+  height: 12,
+  borderRadius: 6,
+},
+
+timelineLine: {
+  width: 2,
+  flex: 1,
+  backgroundColor: "#E2E8F0",
+  marginTop: 4,
+},
+
+timelineContent: {
+  flex: 1,
+  backgroundColor: "#F8FAFC",
+  padding: 14,
+  borderRadius: 12,
+},
+
+timelineTopRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginBottom: 8,
+},
+
+timelineDate: {
+  fontSize: 15,
+  fontWeight: "500",
+  color: "#0F172A",
+},
+
+timelineStatus: {
+  fontSize: 13,
+  fontWeight: "600",
+},
+
+timelineActions: {
+  flexDirection: "row",
+  gap: 10,
+},
+
+timelineUpload: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  backgroundColor: "#0A7AFF",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 8,
+},
+
+timelineUploadText: {
+  color: "#fff",
+  fontSize: 13,
+  fontWeight: "500",
+},
+
+timelineView: {
+  backgroundColor: "#10B981",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 8,
+},
+
+timelineViewText: {
+  color: "#fff",
+  fontSize: 13,
+  fontWeight: "500",
+},
+previewModalCard: {
+  width: "90%",
+  backgroundColor: "#fff",
+  borderRadius: 20,
+  padding: 20,
+  alignItems: "center",
+  maxHeight: "80%",
+},
+
+previewTitle: {
+  fontSize: 18,
+  fontWeight: "600",
+  marginBottom: 15,
+},
+
+previewImage: {
+  width: "100%",
+  height: 350,
+  borderRadius: 12,
+  marginBottom: 20,
+},
+previewButtons: {
+  flexDirection: "row",
+  gap: 12,
+},
+
+previewCancel: {
+  backgroundColor: "#E2E8F0",
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  borderRadius: 10,
+},
+
+previewCancelText: {
+  color: "#334155",
+  fontWeight: "500",
+},
+
+previewUpload: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  backgroundColor: "#0A7AFF",
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  borderRadius: 10,
+},
+
+previewUploadText: {
+  color: "#fff",
+  fontWeight: "600",
+},
+progressContainer: {
+  marginTop: 8,
+  height: 8,
+  backgroundColor: "#E2E8F0",
+  borderRadius: 6,
+  overflow: "hidden",
+},
+
+progressBar: {
+  height: "100%",
+  backgroundColor: "#0A7AFF",
+},
+
+progressText: {
+  marginTop: 4,
+  fontSize: 12,
   color: "#64748B",
 },
 });
