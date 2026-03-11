@@ -68,6 +68,11 @@ app.use((req, res, next) => {
 });
 
 
+function normalizeDate(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  return d.getTime();
+}
 
 // openai API setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -1264,7 +1269,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
     const receiptSet = new Set(
       fixedReceipts.map(r =>
-        `${r.fixedExpenseId}_${new Date(r.occurrenceDate).toDateString()}`
+        `${r.fixedExpenseId}_${normalizeDate(r.occurrenceDate)}`
       )
     );
 
@@ -1286,7 +1291,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
         if (occurrenceDate >= startDate && occurrenceDate <= now) {
 
-          const key = `${fe._id}_${occurrenceDate.toDateString()}`;
+          const key = `${fe._id}_${normalizeDate(occurrenceDate)}`;
 
           if (!receiptSet.has(key)) {
 
