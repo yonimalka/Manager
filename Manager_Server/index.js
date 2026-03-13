@@ -404,16 +404,43 @@ app.post("/newProject", authMiddleware, async (req, res) => {
 
 app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
   try {
+
+    const projectId = new mongoose.Types.ObjectId(req.params.projectId);
+
     const project = await ProjectModel.findOne({
-      _id: req.params.projectId,
+      _id: projectId,
       userId: req.userId
     });
 
-    if (!project) return res.status(404).json({ message: "Project not found" });
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
 
-    res.json(project);
+    // calculate expenses from receipts
+    const receipts = await ReceiptModel.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(req.userId),
+          projectId: projectId
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalExpenses: { $sum: "$sumOfReceipt" }
+        }
+      }
+    ]);
+
+    const expenses = receipts[0]?.totalExpenses || 0;
+
+    res.json({
+      ...project.toObject(),
+      expenses
+    });
 
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
