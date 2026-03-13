@@ -903,38 +903,38 @@ app.get('/getTotalExpenses', authMiddleware, async (req, res) => {
       fixedTotal += occurrences * expense.amount;
     }
     const receiptsResult = await ReceiptModel.aggregate([
-  {
-    $match: {
-      userId: userId,
-      createdAt: {
-        $gte: startOfYear,
-        $lt: startOfNextYear,
+      {
+        $match: {
+          userId: userId,
+          createdAt: {
+            $gte: startOfYear,
+            $lt: startOfNextYear,
+          },
+        },
       },
-    },
-  },
-  {
-    $lookup: {
-      from: "fixedexpenses",
-      localField: "fixedExpenseId",
-      foreignField: "_id",
-      as: "fixedExpense",
-    },
-  },
-  {
-    $match: {
-      $or: [
-        { fixedExpenseId: { $exists: false } },
-        { "fixedExpense.isActive": false }
-      ]
-    }
-  },
-  {
-    $group: {
-      _id: null,
-      total: { $sum: "$sumOfReceipt" },
-    },
-  },
-]);
+      {
+        $lookup: {
+          from: "fixedexpenses",
+          localField: "fixedExpenseId",
+          foreignField: "_id",
+          as: "fixedExpense",
+        },
+      },
+      {
+        $match: {
+          $or: [
+            { fixedExpenseId: null },
+            { "fixedExpense.isActive": false }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$sumOfReceipt" },
+        },
+      },
+    ]);
 
     const receiptsTotal = receiptsResult[0]?.total || 0;
 
@@ -1293,17 +1293,15 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
 
     startDate.setHours(0,0,0,0);
 
-    console.log("NOW:", now);
-    console.log("START DATE:", startDate);
-
-    /* ---------------- NORMAL RECEIPTS ---------------- */
+    // console.log("NOW:", now);
+    // console.log("START DATE:", startDate);
 
     const receipts = await ReceiptModel.find({
       userId
     }).populate("projectId", "name");
 
     const expenses = receipts
-  .filter((receipt) => {
+      .filter((receipt) => {
     const d = new Date(receipt.createdAt);
     return !isNaN(d) && d >= startDate && d <= now;
   })

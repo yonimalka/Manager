@@ -204,54 +204,39 @@ export default function Receipts({ onClose, projectId }) {
     );
 
     const uploadTask = uploadBytesResumable(fileRef, blob);
-
     uploadTask.on(
       "state_changed",
-
       (snap) => {
         const percent = Math.round(
           (snap.bytesTransferred / snap.totalBytes) * 100
         );
-
         setProgress(percent);
       },
-
       (error) => {
         console.log(error);
         Alert.alert("Upload failed");
         setLoading(false);
       },
-
       async () => {
-
         const url = await getDownloadURL(fileRef);
-
         // 3️⃣ save image URL
         await api.patch(`/receipts/${receipt._id}/image`, {
           imageUrl: url,
         });
-
         setLoading(false);
-        Alert.alert("Success", "Receipt uploaded");
-
+        // Alert.alert("Success", "Receipt uploaded");
         onClose();
-
       }
     );
 
   } catch (err) {
-
     console.log("UPLOAD ERROR:", err?.response?.data || err);
-
     Alert.alert(
       "Upload Error",
       err?.response?.data?.message || "Failed to upload receipt"
     );
-
     setLoading(false);
-
   }
-
 };
 
   // Progress bar width
