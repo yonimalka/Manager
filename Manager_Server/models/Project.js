@@ -12,7 +12,7 @@ const ProjectSchema = new mongoose.Schema({
       paid: {type: Number, default: 0},
       paymentDetails: [paymentDetailsSchema],
       days: {type: Number, required: true},
-      materials: [MaterialsSchema],
+      materials: MaterialsSchema,
       toDoList: [toDoListSchema],
        createdAt: {
           type: Date,

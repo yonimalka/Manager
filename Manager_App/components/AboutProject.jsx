@@ -142,16 +142,14 @@ const AboutProject = () => {
       },
     ]);
   };
-  const renderRightActions = (index) => {
-  return (
-    <TouchableOpacity
-      style={s.materialDeleteButton}
-      onPress={() => removeMaterial(index)}
-    >
-      <Ionicons name="trash" size={22} color="white" />
-    </TouchableOpacity>
-  );
-};
+  const renderRightActions = (materialId) => (
+  <TouchableOpacity
+    style={s.deleteButton}
+    onPress={() => removeMaterial(materialId)}
+  >
+    <Ionicons name="trash" size={22} color="white" />
+  </TouchableOpacity>
+);
 const removeMaterial = async (materialId) => {
   try {
     // optimistic UI update
@@ -160,7 +158,7 @@ const removeMaterial = async (materialId) => {
     );
     setMaterialsArray(updated);
 
-    const res = api.delete(`/projects/${project._id}/materials/${materialId}`);
+    const res = api.delete(`/projects/${projectId}/materials/${materialId}`);
 
     if (!res.ok) {
       throw new Error("Failed to delete material");
@@ -334,27 +332,19 @@ const removeMaterial = async (materialId) => {
             ) : (
               <FlatList data={materialsArray} keyExtractor={(item, index) => index.toString()} scrollEnabled={false}
                 renderItem={({ item }) => (
-                  <Swipeable
-                    renderRightActions={() => (
-                      <TouchableOpacity
-                        style={s.deleteButton}
-                        onPress={() => removeMaterial(item._id)}
-                      >
-                        <Ionicons name="trash" size={22} color="white" />
-                      </TouchableOpacity>
-                    )}
-                    >
-                    <View style={s.materialItem}>
-                      <View style={s.materialIcon}>
-                        <Ionicons name="cube" size={20} color="#3B82F6" />
-                      </View>
-                      <View style={s.materialContent}>
-                        <Text style={s.materialName}>{item.item}</Text>
-                        <Text style={s.materialQty}>Quantity: {item.qty}</Text>
-                      </View>
+                <Swipeable renderRightActions={() => renderRightActions(item._id)}>
+                  <View style={s.materialItem}>
+                    <View style={s.materialIcon}>
+                      <Ionicons name="cube" size={20} color="#3B82F6" />
                     </View>
-                  </Swipeable>
-                )}
+
+                    <View style={s.materialContent}>
+                      <Text style={s.materialName}>{item.item}</Text>
+                      <Text style={s.materialQty}>Quantity: {item.qty}</Text>
+                    </View>
+                  </View>
+                </Swipeable>
+              )}
               />
             )}
             {isAddingMaterial && (
@@ -583,9 +573,9 @@ materialDeleteButton: {
   backgroundColor: "#EF4444",
   justifyContent: "center",
   alignItems: "center",
-  width: 70,
-  borderRadius: 12,
-  marginVertical: 12
+  width: 80,
+  marginVertical: 6,
+  borderRadius: 12
 },
   deleteButton: { marginHorizontal: 20, marginBottom: 30, backgroundColor: "#FEF2F2", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "#FEE2E2" },
   deleteText: { color: "#EF4444", fontSize: 16, fontWeight: "600" },
