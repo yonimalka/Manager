@@ -387,7 +387,7 @@ app.post("/newProject", authMiddleware, async (req, res) => {
       name,
       payment,
       days,
-      materials: [{ items: materialsList || [] }],
+      materials: { items: materialsList || [] },
       toDoList: toDoList || [],
       expenses: 0,
       paid: 0,
@@ -1188,10 +1188,7 @@ app.post("/AddItem/:projectId", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-app.delete(
-  "/projects/:projectId/materials/:materialId",
-  authMiddleware,
-  async (req, res) => {
+app.delete("/projects/:projectId/materials/:materialId", authMiddleware, async (req, res) => {
     try {
       const { projectId, materialId } = req.params;
 
