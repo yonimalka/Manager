@@ -25,6 +25,7 @@ const ReceiptModel = require ("./models/Receipt");
 const ProjectModel = require("./models/Project");
 const IncomeReceipt = require('./models/IncomeReceipt');
 const IncomeModel = require("./models/Incomes");
+const MaterialPriceHistory = require("./models/MaterialPriceHistory");
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
 
 const app = express();
@@ -401,7 +402,26 @@ app.post("/newProject", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Failed to create project" });
   }
 });
+app.get("/materials/suggestion/:name", authMiddleware, async (req,res)=>{
+  
+ const material = req.params.name
 
+ const prices = await MaterialPriceHistory.find({
+   userId: req.userId,
+   materialName: material
+ })
+
+ if(!prices.length) return res.json(null)
+
+ const avg =
+ prices.reduce((a,b)=>a+b.price,0)/prices.length
+
+ res.json({
+   averagePrice: avg,
+   lastPrice: prices[prices.length-1].price,
+   supplier: prices[prices.length-1].supplier
+ })
+})
 app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
   try {
 
@@ -1164,6 +1184,7 @@ app.post("/AddItem/:projectId", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const projectId = req.params.projectId;
+
     const addItem = req.body;
 
     const project = await ProjectModel.findOneAndUpdate(
@@ -1171,11 +1192,22 @@ app.post("/AddItem/:projectId", authMiddleware, async (req, res) => {
       {
         $push: { "materials.items": addItem }
       },
-      { new: true } // return updated project
+      { new: true }
     );
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
+    }
+
+    // save price history
+    if (addItem.estimatedUnitCost) {
+      await MaterialPriceHistory.create({
+        userId,
+        materialName: addItem.item,
+        price: addItem.estimatedUnitCost,
+        supplier: addItem.supplier,
+        projectId
+      });
     }
 
     res.json({

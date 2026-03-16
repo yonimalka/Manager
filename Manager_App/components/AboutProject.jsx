@@ -57,7 +57,7 @@ const AboutProject = () => {
 
   useEffect(() => {
     setToDoList(project?.toDoList || []);
-    setMaterialsArray(project?.materials[0]?.items || []);
+    setMaterialsArray(project?.materials?.items || []);
   }, [project]);
 
   useEffect(() => {
@@ -96,7 +96,12 @@ const AboutProject = () => {
   const handleAddMaterial = async () => {
   if (!itemValue || !qtyValue) return;
 
-  const newItem = { item: itemValue, qty: qtyValue };
+  const newItem = {
+  item: itemValue,
+  qty: Number(qtyValue),
+  // estimatedUnitCost: Number(priceValue || 0),
+  // supplier: supplierValue || ""
+};
 
   try {
     const res = await api.post(`/AddItem/${projectId}`, newItem);
@@ -144,7 +149,7 @@ const AboutProject = () => {
   };
   const renderRightActions = (materialId) => (
   <TouchableOpacity
-    style={s.deleteButton}
+    style={s.materialDeleteButton}
     onPress={() => removeMaterial(materialId)}
   >
     <Ionicons name="trash" size={22} color="white" />
@@ -573,8 +578,8 @@ materialDeleteButton: {
   backgroundColor: "#EF4444",
   justifyContent: "center",
   alignItems: "center",
-  width: 80,
-  marginVertical: 6,
+  width: 70,
+  marginVertical: 10,
   borderRadius: 12
 },
   deleteButton: { marginHorizontal: 20, marginBottom: 30, backgroundColor: "#FEF2F2", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "#FEE2E2" },
