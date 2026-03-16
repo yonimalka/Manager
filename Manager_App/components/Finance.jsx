@@ -300,9 +300,11 @@ const viewReceipt = async (receiptId) => {
   try {
     const res = await api.get(`/receipt/${receiptId}`);
     const receipt = res.data;
-
+    
     if (receipt?.imageUrl) {
-      Linking.openURL(receipt.imageUrl);
+      const item = receipt.imageUrl
+      // Linking.openURL(receipt.imageUrl);
+      navigation.navigate("ReceiptPreview", { item })
     }
 
   } catch (err) {

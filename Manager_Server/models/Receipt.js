@@ -49,5 +49,6 @@ userId: {
   { timestamps: true })
 ReceiptSchema.index({ userId: 1, createdAt: -1 });
 ReceiptSchema.index({ userId: 1, fixedExpenseId: 1, occurrenceDate: 1 });
+ReceiptSchema.index({ projectId: 1, userId: 1 });
 
 module.exports = mongoose.model("Receipt", ReceiptSchema)

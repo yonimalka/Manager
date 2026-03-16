@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, FlatList, TouchableOpacity, StyleSheet,
   Image, Alert, Modal, Dimensions, TextInput, Animated,
 } from "react-native";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -93,17 +94,20 @@ const AboutProject = () => {
   };
 
   const handleAddMaterial = async () => {
-    if (!itemValue || !qtyValue) return;
-    const newItem = { item: itemValue, qty: qtyValue };
-    setMaterialsArray([...materialsArray, newItem]);
+  if (!itemValue || !qtyValue) return;
+
+  const newItem = { item: itemValue, qty: qtyValue };
+
+  try {
+    const res = await api.post(`/AddItem/${projectId}`, newItem);
+
+    setMaterialsArray(res.data.materials); 
     setItemValue("");
     setQtyValue("");
-    try {
-      await api.post(`/AddItem/${projectId}`, newItem);
-    } catch (error) {
-      console.error("Error adding product:", error);
-    }
-  };
+  } catch (error) {
+    console.error("Error adding product:", error);
+  }
+};
 
   const submitIncomeReceipt = async (data) => {
     try {
@@ -138,7 +142,34 @@ const AboutProject = () => {
       },
     ]);
   };
+  const renderRightActions = (index) => {
+  return (
+    <TouchableOpacity
+      style={s.materialDeleteButton}
+      onPress={() => removeMaterial(index)}
+    >
+      <Ionicons name="trash" size={22} color="white" />
+    </TouchableOpacity>
+  );
+};
+const removeMaterial = async (materialId) => {
+  try {
+    // optimistic UI update
+    const updated = materialsArray.filter(
+      (m) => m._id !== materialId
+    );
+    setMaterialsArray(updated);
 
+    const res = api.delete(`/projects/${project._id}/materials/${materialId}`);
+
+    if (!res.ok) {
+      throw new Error("Failed to delete material");
+    }
+
+  } catch (error) {
+    console.log("Delete error:", error);
+  }
+};
   const visibleReceipts = showAllReceipts ? receipts : receipts.slice(0, 6);
   const profit = (project?.paid || 0) - expenses;
   const profitPercentage = project?.payment ? ((profit / project.payment) * 100).toFixed(1) : 0;
@@ -303,15 +334,26 @@ const AboutProject = () => {
             ) : (
               <FlatList data={materialsArray} keyExtractor={(item, index) => index.toString()} scrollEnabled={false}
                 renderItem={({ item }) => (
-                  <View style={s.materialItem}>
-                    <View style={s.materialIcon}>
-                      <Ionicons name="cube" size={20} color="#3B82F6" />
+                  <Swipeable
+                    renderRightActions={() => (
+                      <TouchableOpacity
+                        style={s.deleteButton}
+                        onPress={() => removeMaterial(item._id)}
+                      >
+                        <Ionicons name="trash" size={22} color="white" />
+                      </TouchableOpacity>
+                    )}
+                    >
+                    <View style={s.materialItem}>
+                      <View style={s.materialIcon}>
+                        <Ionicons name="cube" size={20} color="#3B82F6" />
+                      </View>
+                      <View style={s.materialContent}>
+                        <Text style={s.materialName}>{item.item}</Text>
+                        <Text style={s.materialQty}>Quantity: {item.qty}</Text>
+                      </View>
                     </View>
-                    <View style={s.materialContent}>
-                      <Text style={s.materialName}>{item.item}</Text>
-                      <Text style={s.materialQty}>Quantity: {item.qty}</Text>
-                    </View>
-                  </View>
+                  </Swipeable>
                 )}
               />
             )}
@@ -536,6 +578,14 @@ actionButtonSub: {
   color: "rgba(255,255,255,0.75)",
   fontSize: 12,
   fontWeight: "500",
+},
+materialDeleteButton: {
+  backgroundColor: "#EF4444",
+  justifyContent: "center",
+  alignItems: "center",
+  width: 70,
+  borderRadius: 12,
+  marginVertical: 12
 },
   deleteButton: { marginHorizontal: 20, marginBottom: 30, backgroundColor: "#FEF2F2", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "#FEE2E2" },
   deleteText: { color: "#EF4444", fontSize: 16, fontWeight: "600" },

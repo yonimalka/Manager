@@ -1160,36 +1160,66 @@ app.post("/updateTasks/:projectId", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-app.post('/AddItem/:projectId', authMiddleware, async (req, res) => {
+app.post("/AddItem/:projectId", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
     const projectId = req.params.projectId;
     const addItem = req.body;
 
-    const project = await ProjectModel.findOne({
-      _id: projectId,
-      userId
-    });
+    const project = await ProjectModel.findOneAndUpdate(
+      { _id: projectId, userId },
+      {
+        $push: { "materials.items": addItem }
+      },
+      { new: true } // return updated project
+    );
 
-    if (!project)
+    if (!project) {
       return res.status(404).json({ message: "Project not found" });
-
-    if (!project.materials || !project.materials.length) {
-      project.materials = [{ items: [] }];
     }
 
-    project.materials[0].items.push(addItem);
-
-    await project.save();
-
-    res.json({ message: "Item added successfully", project });
+    res.json({
+      message: "Item added successfully",
+      materials: project.materials.items
+    });
 
   } catch (err) {
     console.error("AddItem error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+app.delete(
+  "/projects/:projectId/materials/:materialId",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const { projectId, materialId } = req.params;
 
+      const project = await ProjectModel.findOneAndUpdate(
+        { _id: projectId, userId: req.userId },
+        {
+          $pull: {
+            "materials.items": { _id: materialId }
+          }
+        },
+        { new: true }
+      );
+
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      res.json({
+        message: "Material removed",
+        materials: project.materials.items
+      });
+
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
 app.get('/GetMaterialsList/:projectId', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
