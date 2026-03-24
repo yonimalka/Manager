@@ -11,6 +11,7 @@ export default function BottomNavBar() {
   const tabs = [
     { name: "CashFlow", icon: "trending-up-outline", label: "CashFlow" },
     { name: "NewProject", icon: "add-circle-outline", label: "New" },
+    { name: "AgentScreen", icon: "sparkles-outline", label: "Assistant" },
     { name: "Finance", icon: "cash-outline", label: "Finance" },
     { name: "ProfileDetails", icon: "person-outline", label: "Me" },
   ];

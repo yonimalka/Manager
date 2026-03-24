@@ -26,6 +26,8 @@ import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 import { useAuth } from "./useAuth";
 import { formatCurrency } from "../services/formatCurrency";
+import { getNextOccurrence } from "../services/getNextOccurrence";
+import { formatDate } from "../services/formatDate";
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable  } from "firebase/storage";
 import { storage } from "../components/firebase";
 
@@ -551,7 +553,11 @@ const viewReceipt = async (receiptId) => {
                             item.amount || 0,
                             userDetails?.currency || "USD",
                             userDetails?.locale || "en-US"
-                          )} • {item.frequency}
+                          )} / {item.frequency} • next on{" "}
+                          {formatDate(
+                            getNextOccurrence(item),
+                            userDetails?.locale || "en-US"
+                          )}
                         </Text>
                       </View>
                        <TouchableOpacity

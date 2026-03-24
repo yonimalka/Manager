@@ -37,6 +37,9 @@ import Employees from "./Employees";
 import AddEmployee from "./AddEmployee";
 import testing from "./testing";
 import Finance from "./Finance";
+import AgentScreen from "./AgentScreen";
+import AgentHistory from "./AgentHistory";
+import AgentTasks from "./AgentTasks";
 // React Navigation Setup
 const Stack = createStackNavigator();
 
@@ -78,6 +81,9 @@ const MainApp = () => {
         <Stack.Screen name="Employees" component={Employees} options={{ headerShown: false }}/>
         <Stack.Screen name="AddEmployee" component={AddEmployee} options={{ headerShown: false }}/>
         <Stack.Screen name="Finance" component={Finance} options={{ headerShown: false }}/>
+        <Stack.Screen name="AgentScreen" component={AgentScreen} options={{ headerShown: false }}/>
+        <Stack.Screen name="AgentHistory" component={AgentHistory} options={{ headerShown: false }}/>
+        <Stack.Screen name="AgentTasks" component={AgentTasks} options={{ headerShown: false }}/>
         {/* <Stack.Screen name="testing" component={testing} options={{ headerShown: false }}/> */}
       </Stack.Navigator>
     </NavigationContainer>

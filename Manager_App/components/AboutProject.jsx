@@ -220,7 +220,11 @@ const removeMaterial = async (materialId) => {
                 <View style={s.statIconContainer}>
                   <Ionicons name="cash-outline" size={24} color="#fff" />
                 </View>
-                <Text style={s.statValue}>{formatCurrency(
+                <Text style={s.statValue}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}
+                    >{formatCurrency(
                        projectDetails?.paid || 0,
                        userDetails?.currency || "USD",
                        userDetails?.locale || "en-US"
@@ -233,7 +237,10 @@ const removeMaterial = async (materialId) => {
                 <View style={s.statIconContainer}>
                   <Ionicons name="card-outline" size={24} color="#fff" />
                 </View>
-                <Text style={s.statValue}>{formatCurrency(
+                <Text style={s.statValue}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}>{formatCurrency(
                        expenses || 0,
                        userDetails?.currency || "USD",
                        userDetails?.locale || "en-US"
@@ -483,11 +490,14 @@ const s = StyleSheet.create({
   projectSubtitle: { fontSize: 14, color: "rgba(19, 16, 16, 0.8)", fontWeight: "500" },
   scrollContent: { paddingBottom: 0 },
   statsContainer: { paddingHorizontal: 20, marginTop: 0, marginBottom: 24 },
-  statsRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
-  statCard: { flex: 1, borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
-  statCardGradient: { padding: 20, minHeight: 140 },
+  statsRow: { flexDirection: "row", gap: 12, marginBottom: 12, alignItems: "stretch" },
+  statCard: { flex: 1, borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6, justifyContent: "stretch" },
+  statCardGradient: { 
+  padding: 20, 
+  height: 140 
+  },
   statIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255, 255, 255, 0.2)", alignItems: "center", justifyContent: "center", marginBottom: 12 },
-  statValue: { fontSize: 24, fontWeight: "800", color: "#fff", marginBottom: 4 },
+  statValue: { fontSize: 24, fontWeight: "800", color: "#fff", marginBottom: 4, numberOfLines: 1, },
   statLabel: { fontSize: 13, color: "rgba(255, 255, 255, 0.9)", fontWeight: "600" },
   profitCard: { borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   profitCardGradient: { padding: 20 },

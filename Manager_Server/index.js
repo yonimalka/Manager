@@ -27,6 +27,7 @@ const IncomeReceipt = require('./models/IncomeReceipt');
 const IncomeModel = require("./models/Incomes");
 const MaterialPriceHistory = require("./models/MaterialPriceHistory");
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
+const { ACTIVE_STATUSES, requireSubscription, hasActiveEntitlement } = require('./middleware/requireSubscription');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -51,6 +52,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 const taxRoutes = require("./routes/tax");
 app.use(taxRoutes);
 
+const agentRoutes = require("./routes/agent");
+app.use(agentRoutes);
+
 app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:3000',
@@ -73,6 +77,77 @@ function normalizeDate(date) {
   const d = new Date(date);
   d.setHours(0,0,0,0);
   return d.getTime();
+}
+
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["trialing", "active", "grace_period"]);
+
+function normalizeSubscriptionStatus(status) {
+  if (!status) return "inactive";
+
+  const normalized = String(status).toLowerCase();
+
+  if (["trialing", "active", "grace_period", "cancelled", "expired", "inactive"].includes(normalized)) {
+    return normalized;
+  }
+
+  if (["billing_issue", "in_grace_period"].includes(normalized)) {
+    return "grace_period";
+  }
+
+  return "inactive";
+}
+
+function buildSubscriptionResponse(user) {
+  const subscription = user?.subscription || {};
+  const status = normalizeSubscriptionStatus(subscription.status);
+  const expiresAt = subscription.expiresAt ? new Date(subscription.expiresAt) : null;
+  const trialEndsAt = subscription.trialEndsAt ? new Date(subscription.trialEndsAt) : null;
+
+  return {
+    provider: subscription.provider || "revenuecat",
+    entitlement: subscription.entitlement || "pro",
+    productId: subscription.productId || null,
+    status,
+    trialEndsAt,
+    expiresAt,
+    willRenew: !!subscription.willRenew,
+    hasAccess: ACTIVE_SUBSCRIPTION_STATUSES.has(status),
+    lastEventType: subscription.lastEventType || null,
+    lastSyncedAt: subscription.lastSyncedAt || null,
+  };
+}
+
+function extractRevenueCatPayload(body = {}) {
+  const event = body.event || body;
+  const aliases = Array.isArray(event.aliases) ? event.aliases : [];
+  const appUserId = event.app_user_id || event.appUserId || aliases[0] || null;
+
+  const entitlement =
+    event.entitlement_id ||
+    event.entitlement ||
+    event.entitlement_identifier ||
+    "pro";
+
+  const status = normalizeSubscriptionStatus(
+    event.status ||
+      event.period_type ||
+      (event.type === "CANCELLATION" ? "cancelled" : null) ||
+      (event.type === "EXPIRATION" ? "expired" : null) ||
+      (event.type === "BILLING_ISSUE" ? "grace_period" : null)
+  );
+
+  return {
+    appUserId,
+    provider: "revenuecat",
+    entitlement,
+    productId: event.product_id || event.productId || null,
+    status,
+    trialEndsAt: event.trial_end_at_ms ? new Date(Number(event.trial_end_at_ms)) : null,
+    expiresAt: event.expiration_at_ms ? new Date(Number(event.expiration_at_ms)) : null,
+    willRenew: !!event.renewal_status,
+    lastEventType: event.type || "SYNC",
+    rawEvent: event,
+  };
 }
 
 // openai API setup
@@ -382,6 +457,24 @@ res.json({
 app.post("/newProject", authMiddleware, async (req, res) => {
   try {
     const { name, payment, days, materialsList, toDoList } = req.body;
+
+    const user = await UserModel.findById(req.userId).select("subscription");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const existingProjectsCount = await ProjectModel.countDocuments({ userId: req.userId });
+    const isPro = hasActiveEntitlement(user.subscription || {}, "pro");
+
+    if (!isPro && existingProjectsCount >= 1) {
+      return res.status(402).json({
+        message: "Maggo Pro is required for unlimited projects",
+        code: "SUBSCRIPTION_REQUIRED",
+        feature: "unlimited_projects",
+        freeProjectLimit: 1,
+        currentProjectCount: existingProjectsCount,
+      });
+    }
 
     const project = await ProjectModel.create({
       userId: req.userId,
@@ -1034,7 +1127,7 @@ app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   // })
 })
 
-app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
+app.get("/downloadReceiptsZip", authMiddleware, requireSubscription("pro"), async (req, res) => {
   try {
   
     const { from, to } = req.query;
@@ -1077,7 +1170,7 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error while creating ZIP" });
   }
 });
-app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
+app.get("/downloadIncomesReceiptsZip", authMiddleware, requireSubscription("pro"), async (req, res) => {
   try {
     console.log("enter route on downloadIncomesReceiptsZip");
     
@@ -1519,7 +1612,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/quoteGenerator', authMiddleware, upload.none(), async (req, res) => {
+app.post('/quoteGenerator', authMiddleware, requireSubscription("pro"), upload.none(), async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -1606,7 +1699,7 @@ Do NOT wrap in markdown, do NOT add commentary.
     res.status(500).json({ error: "Server error while generating quote", details: error.message });
   }
 });
- app.get("/employees", authMiddleware, async (req, res) =>{
+ app.get("/employees", authMiddleware, requireSubscription("pro"), async (req, res) =>{
     const userId = req.userId;
     await UserModel.findById(userId)
     .then((user) =>{
@@ -1614,7 +1707,7 @@ Do NOT wrap in markdown, do NOT add commentary.
       res.json(employees);
     })
  })
-app.post("/addEmployee", authMiddleware, async (req, res) =>{
+app.post("/addEmployee", authMiddleware, requireSubscription("pro"), async (req, res) =>{
   const userId = req.userId;
   const { name, role, phone, email, salaryType, salaryRate } = req.body;
 
@@ -1663,6 +1756,125 @@ app.delete("/deleteUser/:userId", async (req, res) => {
     res.json({ message: 'User deleted successfully', user: deleteUser });
 
 })
+
+app.get("/subscription/status", authMiddleware, async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.userId).select("subscription email name");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const projectCount = await ProjectModel.countDocuments({ userId: req.userId });
+
+    res.json({
+      userId: req.userId,
+      email: user.email,
+      name: user.name,
+      subscription: buildSubscriptionResponse(user),
+      limits: {
+        freeProjectLimit: 1,
+        projectCount,
+      },
+    });
+  } catch (error) {
+    console.error("subscription/status error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/subscription/sync", authMiddleware, async (req, res) => {
+  try {
+    const {
+      productId = null,
+      entitlement = "pro",
+      status = "inactive",
+      trialEndsAt = null,
+      expiresAt = null,
+      willRenew = false,
+      lastEventType = "APP_SYNC",
+    } = req.body || {};
+
+    const normalizedStatus = normalizeSubscriptionStatus(status);
+
+    const user = await UserModel.findByIdAndUpdate(
+      req.userId,
+      {
+        $set: {
+          subscription: {
+            provider: "revenuecat",
+            entitlement,
+            productId,
+            status: normalizedStatus,
+            trialEndsAt,
+            expiresAt,
+            willRenew,
+            lastEventType,
+            lastSyncedAt: new Date(),
+          },
+        },
+      },
+      { new: true }
+    ).select("subscription");
+
+    res.json({
+      message: "Subscription synced",
+      subscription: buildSubscriptionResponse(user),
+    });
+  } catch (error) {
+    console.error("subscription/sync error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/webhooks/revenuecat", async (req, res) => {
+  try {
+    const configuredWebhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
+    const incomingWebhookSecret = req.headers["x-revenuecat-signature"] || req.headers["authorization"];
+
+    if (configuredWebhookSecret && incomingWebhookSecret !== configuredWebhookSecret) {
+      return res.status(401).json({ message: "Invalid webhook signature" });
+    }
+
+    const payload = extractRevenueCatPayload(req.body || {});
+
+    if (!payload.appUserId) {
+      return res.status(400).json({ message: "appUserId is required" });
+    }
+
+    const user = await UserModel.findByIdAndUpdate(
+      payload.appUserId,
+      {
+        $set: {
+          subscription: {
+            provider: payload.provider,
+            entitlement: payload.entitlement,
+            productId: payload.productId,
+            status: payload.status,
+            trialEndsAt: payload.trialEndsAt,
+            expiresAt: payload.expiresAt,
+            willRenew: payload.willRenew,
+            lastEventType: payload.lastEventType,
+            lastSyncedAt: new Date(),
+          },
+        },
+      },
+      { new: true }
+    ).select("subscription");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found for RevenueCat event" });
+    }
+
+    res.json({
+      ok: true,
+      subscription: buildSubscriptionResponse(user),
+    });
+  } catch (error) {
+    console.error("RevenueCat webhook error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}!!!`);
