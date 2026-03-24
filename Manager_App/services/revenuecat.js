@@ -61,6 +61,7 @@ export async function configureRevenueCat(appUserId) {
 }
 
 export async function getRevenueCatCustomerInfo() {
+  if (!purchasesConfigured) return null;
   try {
     return await Purchases.getCustomerInfo();
   } catch (error) {
@@ -70,6 +71,7 @@ export async function getRevenueCatCustomerInfo() {
 }
 
 export async function getRevenueCatOfferings() {
+  if (!purchasesConfigured) return null;
   try {
     return await Purchases.getOfferings();
   } catch (error) {
@@ -92,6 +94,7 @@ export async function getRevenueCatPackages() {
 }
 
 export async function purchaseRevenueCatPackage(selectedPackage) {
+  if (!purchasesConfigured) throw new Error("RevenueCat is not configured yet.");
   try {
     if (!selectedPackage) {
       throw new Error("Selected RevenueCat package is missing");
@@ -138,7 +141,12 @@ export async function presentRevenueCatCustomerCenter() {
   return await RevenueCatUI.presentCustomerCenter();
 }
 
+export function isRevenueCatConfigured() {
+  return purchasesConfigured;
+}
+
 export async function restoreRevenueCatPurchases() {
+  if (!purchasesConfigured) throw new Error("RevenueCat is not configured yet.");
   try {
     return await Purchases.restorePurchases();
   } catch (error) {

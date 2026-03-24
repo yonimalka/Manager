@@ -24,7 +24,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Camera, Trash2, Pencil  } from "lucide-react-native";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
-
+import SubscriptionCard from "./SubscriptionCard";
+import { fetchSubscriptionStatus } from "../services/subscription";
 
 const isRTL = I18nManager.isRTL;
 
@@ -36,6 +37,7 @@ export default function ProfileDetails() {
   const [image, setImage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [collectTax, setCollectTax] = useState(false);
+  const [subscription, setSubscription] = useState(null);
   const [selectedCurrency, setSelectedCurrency] = useState(
   userDetails?.currency || "USD"
 );
@@ -52,7 +54,10 @@ export default function ProfileDetails() {
 
   const fetchData = async () => {
     try {
-      const res = await api.get(`/getUserDetails`);
+      const [res, subscriptionData] = await Promise.all([
+        api.get(`/getUserDetails`),
+        fetchSubscriptionStatus(),
+      ]);
       const data = res.data;
       let addressObj = {
        street: "",
@@ -77,6 +82,7 @@ export default function ProfileDetails() {
       setSelectedCurrency(data.currency || "USD");
       setImage(res.data.logo);
       setCollectTax(res.data?.taxSettings?.collectTax || false);
+      setSubscription(subscriptionData);
     } catch (err) {
       console.error(err);
     }
@@ -254,6 +260,13 @@ export default function ProfileDetails() {
   <Pencil size={22} color="#2563EB" />
 </TouchableOpacity>
       )}
+      <View style={styles.subscriptionWrap}>
+        <SubscriptionCard
+          subscription={subscription}
+          onPress={() => navigation.navigate("SubscriptionScreen")}
+        />
+      </View>
+
       {/* Info Card */}
       <View style={styles.card}>
         <Label title="Name" />
@@ -481,6 +494,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
     padding: 10,
     borderRadius: 20,
+  },
+
+  subscriptionWrap: {
+    marginBottom: 16,
   },
 
   card: {

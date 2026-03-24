@@ -24,6 +24,7 @@ import {
   restoreProSubscription,
 } from "../services/subscription";
 
+
 const premiumFeatures = [
   "Unlimited projects",
   "Advanced finance tools",
@@ -84,7 +85,7 @@ export default function SubscriptionScreen() {
 
   const handlePackagePurchase = async (pkg) => {
     if (!pkg) {
-      Alert.alert("Unavailable", "This package is not configured in RevenueCat yet.");
+      Alert.alert("Unavailable", "This package is not configured in RevenueCat yet. Make sure your offering has a monthly/yearly/lifetime package.");
       return;
     }
 
@@ -123,7 +124,7 @@ export default function SubscriptionScreen() {
       }
     } catch (error) {
       console.error("Paywall failed:", error);
-      Alert.alert("Paywall failed", error?.message || "Could not open the paywall.");
+      Alert.alert("Paywall unavailable", error?.message || "Could not open the paywall.");
     } finally {
       setPaywallLoading(false);
     }
@@ -138,7 +139,7 @@ export default function SubscriptionScreen() {
       }
     } catch (error) {
       console.error("Paywall failed:", error);
-      Alert.alert("Paywall failed", error?.message || "Could not open the paywall.");
+      Alert.alert("Paywall unavailable", error?.message || "Could not open the paywall.");
     } finally {
       setPaywallLoading(false);
     }

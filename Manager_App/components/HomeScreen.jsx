@@ -376,7 +376,7 @@ const HomeScreen = () => {
                 style={styles.navButton}
                 onPress={() => navigation.navigate("AgentScreen")}
               >
-                <Ionicons name="sparkles-outline" size={34} color="#10b981" />
+                <Ionicons name="sparkles-outline" size={31} color="#10b981" />
                 {/* <Text style={styles.navText}>Assistant</Text> */}
               </TouchableOpacity>
             </View>
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
       fontSize: 12,
       color: "#00796b",
       marginTop: 4,
-      fontWeight: "500",
+      fontWeight: "400",
     },
 });
 
