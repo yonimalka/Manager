@@ -37,6 +37,7 @@ import Employees from "./Employees";
 import AddEmployee from "./AddEmployee";
 import testing from "./testing";
 import Finance from "./Finance";
+// import SubscriptionScreen from "./SubscriptionScreen";
 import AgentScreen from "./AgentScreen";
 import AgentHistory from "./AgentHistory";
 import AgentTasks from "./AgentTasks";
@@ -81,6 +82,7 @@ const MainApp = () => {
         <Stack.Screen name="Employees" component={Employees} options={{ headerShown: false }}/>
         <Stack.Screen name="AddEmployee" component={AddEmployee} options={{ headerShown: false }}/>
         <Stack.Screen name="Finance" component={Finance} options={{ headerShown: false }}/>
+        {/* <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen} options={{ headerShown: false }}/> */}
         <Stack.Screen name="AgentScreen" component={AgentScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="AgentHistory" component={AgentHistory} options={{ headerShown: false }}/>
         <Stack.Screen name="AgentTasks" component={AgentTasks} options={{ headerShown: false }}/>

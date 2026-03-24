@@ -12,7 +12,8 @@ import {
   Image,
   Animated,
   Dimensions,
-  Modal
+  Modal,
+  Platform
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 // import { SERVER_URL } from "@env";
@@ -20,7 +21,7 @@ import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-
+import AgentScreen from "./AgentScreen";
 import Receipts from "./Receipts";
 import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 // import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
@@ -28,7 +29,7 @@ import Incomes from "./Incomes";
 import Expenses from "./Expenses";
 import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
-// import BottomNavBar from "../components/BottomNavBar";
+import BottomNavBar from "../components/BottomNavBar";
 import { useAuth } from "./useAuth";
 import api from "../services/api";
 import { signInAnonymously } from "firebase/auth";
@@ -369,6 +370,16 @@ const HomeScreen = () => {
       </Animated.ScrollView>
 
       {/* <BottomNavBar /> */}
+      
+      <View style={styles.navContainer}>
+              <TouchableOpacity
+                style={styles.navButton}
+                onPress={() => navigation.navigate("AgentScreen")}
+              >
+                <Ionicons name="sparkles-outline" size={34} color="#10b981" />
+                {/* <Text style={styles.navText}>Assistant</Text> */}
+              </TouchableOpacity>
+            </View>
     </View>
   );
 };
@@ -651,6 +662,45 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     opacity: 0.5,
   },
+  navContainer: {
+      position: 'absolute',
+      bottom: 25,
+      alignSelf: 'flex-end',
+      height: 70,
+      width: 70,
+      flexDirection: "row",
+      borderRadius: 50,
+      justifyContent: "space-around",
+      alignItems: "center",
+      backgroundColor: "#ffffff",
+      paddingVertical: 0,
+      // marginBottom: 25,
+      marginHorizontal: 25,
+      borderTopColor: "#e0e0e0",
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOpacity: 0.15,
+          shadowOffset: { width: 0, height: 0 },
+          shadowRadius: 5,
+        },
+        android:{
+          elevation: 5,
+          shadowColor: "#000",
+        }
+      }),
+    },
+    navButton: {
+      alignItems: "center",
+      justifyContent: "center",
+
+    },
+    navText: {
+      fontSize: 12,
+      color: "#00796b",
+      marginTop: 4,
+      fontWeight: "500",
+    },
 });
 
 export default HomeScreen;
