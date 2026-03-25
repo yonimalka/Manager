@@ -443,11 +443,38 @@ const AGENT_TOOLS = [
   {
     type: "function",
     function: {
+      name: "get_business_data",
+      description:
+        "Fetch real financial data from the database for a given period. " +
+        "ALWAYS call this first before generating any PDF or Excel file that involves financial figures, transactions, projects, or expenses. " +
+        "Returns actual income entries, expense entries, projects, and summary totals.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: {
+            type: "string",
+            enum: ["month", "quarter", "year"],
+            description: "Time period to fetch data for",
+          },
+          include: {
+            type: "array",
+            items: { type: "string", enum: ["cashflow", "projects", "expenses"] },
+            description: "Which data sets to include",
+          },
+        },
+        required: ["period", "include"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "generate_pdf",
       description:
         "Generate any PDF document the user asks for — reports, invoices, summaries, analyses, cash flow, anything. " +
         "You define the full document structure: title, subtitle, and sections. Each section can have a heading, text content, and/or a table. " +
-        "Use the business data you already know from context. Call this whenever the user wants a PDF, report, or printable document.",
+        "If the document needs real financial data, call get_business_data first, then use that data to fill the sections. " +
+        "Call this whenever the user wants a PDF, report, or printable document.",
       parameters: {
         type: "object",
         properties: {
@@ -515,21 +542,79 @@ const AGENT_TOOLS = [
 ];
 
 async function executeTool(toolName, toolArgs, userId) {
+  if (toolName === "get_business_data") {
+    const { period = "month", include = ["cashflow"] } = toolArgs;
+    const result = {};
+
+    if (include.includes("cashflow")) {
+      const data = await getCashflowReportData(userId, period);
+      result.cashflow = {
+        period: getPeriodLabel(period),
+        totalIncome: data.totalIncome,
+        totalExpenses: data.totalExpenses,
+        netCashFlow: data.netCashFlow,
+        currency: data.currency,
+        incomes: data.incomes.slice(0, 50).map((i) => ({
+          description: i.name || i.description || "Income",
+          date: i.date ? new Date(i.date).toLocaleDateString() : "",
+          amount: i.amount,
+        })),
+        expenses: data.expenses.slice(0, 50).map((e) => ({
+          category: e.category || "Expense",
+          date: e.date ? new Date(e.date).toLocaleDateString() : "",
+          amount: e.amount,
+        })),
+      };
+    }
+
+    if (include.includes("projects")) {
+      const projects = await getProjectsReportData(userId, period);
+      result.projects = projects.slice(0, 50).map((p) => ({
+        name: p.name || "Untitled",
+        client: p.client || "",
+        status: p.status || "",
+        value: Number(p.payment || 0),
+        paid: Number(p.paid || 0),
+        outstanding: Number(p.payment || 0) - Number(p.paid || 0),
+        date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "",
+      }));
+    }
+
+    if (include.includes("expenses")) {
+      const expenses = await getExpensesReportData(userId, period);
+      result.expenses = expenses.slice(0, 50).map((e) => ({
+        category: e.category || "General",
+        amount: Number(e.sumOfReceipt || e.amount || 0),
+        date: e.createdAt ? new Date(e.createdAt).toLocaleDateString() : "",
+      }));
+    }
+
+    return { type: "data", data: result };
+  }
+
   if (toolName === "generate_pdf") {
+    console.log("[PDF] generate_pdf called, sections:", JSON.stringify(toolArgs.sections?.length), "title:", toolArgs.title);
     const user = await UserModel.findById(userId).select("name businessName").lean().catch(() => null);
-    const buf = await genericToPdf({
-      title: toolArgs.title || "Report",
-      subtitle: toolArgs.subtitle || "",
-      businessName: user?.businessName || user?.name || "",
-      sections: toolArgs.sections || [],
-    });
-    const slug = (toolArgs.title || "report").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 30);
-    return {
-      type: "pdf",
-      buffer: buf,
-      filename: `${slug}-${Date.now()}.pdf`,
-      message: `Here is your PDF: ${toolArgs.title}.`,
-    };
+    try {
+      const buf = await genericToPdf({
+        title: toolArgs.title || "Report",
+        subtitle: toolArgs.subtitle || "",
+        businessName: user?.businessName || user?.name || "",
+        sections: toolArgs.sections || [],
+      });
+      console.log("[PDF] buffer size:", buf?.length);
+      if (!buf || buf.length < 100) throw new Error("PDF buffer is empty or too small");
+      const slug = (toolArgs.title || "report").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 30);
+      return {
+        type: "pdf",
+        buffer: buf,
+        filename: `${slug}-${Date.now()}.pdf`,
+        message: `Here is your PDF: ${toolArgs.title}.`,
+      };
+    } catch (pdfErr) {
+      console.error("[PDF] generation failed:", pdfErr.message);
+      throw pdfErr;
+    }
   }
 
   if (toolName === "generate_excel") {
@@ -609,61 +694,76 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
     const choice = completion.choices?.[0];
     const toolCalls = choice?.message?.tool_calls;
 
+    // ── Tool call path (multi-turn loop) ───────────────────────────────────
     if (toolCalls?.length > 0) {
-      const toolCall = toolCalls[0];
-      const toolName = toolCall.function.name;
-      const toolArgs = JSON.parse(toolCall.function.arguments || "{}");
+      const openaiMessages = [{ role: "system", content: systemPrompt }, ...recentMessages];
+      let currentChoice = choice;
+      const MAX_TOOL_ROUNDS = 5;
 
-      let toolResult;
-      try {
-        toolResult = await executeTool(toolName, toolArgs, req.userId);
-      } catch (toolErr) {
-        console.error("Tool execution error:", toolErr);
-        toolResult = null;
-      }
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        const currentToolCalls = currentChoice?.message?.tool_calls;
+        if (!currentToolCalls?.length) break;
 
-      if (["pdf", "excel", "csv"].includes(toolResult?.type)) {
-        const attachment = {
-          type: toolResult.type,
-          filename: toolResult.filename,
-          base64: toolResult.buffer ? toolResult.buffer.toString("base64") : undefined,
-          content: toolResult.content,
-        };
-        const reply = toolResult.message || "Done.";
+        const toolCall = currentToolCalls[0];
+        const toolName = toolCall.function.name;
+        const toolArgs = JSON.parse(toolCall.function.arguments || "{}");
 
-        conversation.messages.push({ role: "assistant", content: reply, attachment });
-        conversation.lastMessageAt = new Date();
-        if (conversation.messages.length === 2) conversation.title = message.slice(0, 60);
-        await conversation.save();
+        let toolResult;
+        try {
+          toolResult = await executeTool(toolName, toolArgs, req.userId);
+        } catch (toolErr) {
+          console.error(`Tool ${toolName} error:`, toolErr);
+          toolResult = { error: toolErr.message };
+        }
 
-        return res.json({
-          conversationId: conversation._id,
-          reply,
-          title: conversation.title,
-          attachment,
+        // File produced — return immediately
+        if (["pdf", "excel", "csv"].includes(toolResult?.type)) {
+          const attachment = {
+            type: toolResult.type,
+            filename: toolResult.filename,
+            base64: toolResult.buffer ? toolResult.buffer.toString("base64") : undefined,
+            content: toolResult.content,
+          };
+          const reply = toolResult.message || `Here is your ${toolResult.type.toUpperCase()} file.`;
+
+          conversation.messages.push({ role: "assistant", content: reply, attachment });
+          conversation.lastMessageAt = new Date();
+          if (conversation.messages.length === 2) conversation.title = message.slice(0, 60);
+          await conversation.save();
+
+          return res.json({
+            conversationId: conversation._id,
+            reply,
+            title: conversation.title,
+            attachment,
+          });
+        }
+
+        // Data result — feed back to model and let it continue
+        const toolResultText = toolResult
+          ? JSON.stringify(toolResult.data || toolResult)
+          : "No result.";
+
+        openaiMessages.push(currentChoice.message);
+        openaiMessages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: toolResultText,
         });
+
+        const next = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: openaiMessages,
+          tools: AGENT_TOOLS,
+          tool_choice: "auto",
+          max_tokens: 2000,
+        });
+
+        currentChoice = next.choices?.[0];
       }
 
-      const toolResultText = toolResult
-        ? JSON.stringify(toolResult)
-        : "Tool executed but returned no result.";
-
-      const followUp = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...recentMessages,
-          choice.message,
-          {
-            role: "tool",
-            tool_call_id: toolCall.id,
-            content: toolResultText,
-          },
-        ],
-        max_tokens: 1200,
-      });
-
-      const reply = followUp.choices?.[0]?.message?.content?.trim() || "Done.";
+      // Final text reply after tool loop
+      const reply = currentChoice?.message?.content?.trim() || "Done.";
       conversation.messages.push({ role: "assistant", content: reply });
       conversation.lastMessageAt = new Date();
       if (conversation.messages.length === 2) conversation.title = message.slice(0, 60);
@@ -671,9 +771,6 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
 
       return res.json({ conversationId: conversation._id, reply, title: conversation.title });
     }
-
-    const reply = choice?.message?.content?.trim();
-    if (!reply) throw new Error("Empty response from OpenAI");
 
     conversation.messages.push({ role: "assistant", content: reply });
     conversation.lastMessageAt = new Date();
