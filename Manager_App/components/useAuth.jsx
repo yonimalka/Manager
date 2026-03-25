@@ -4,6 +4,10 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
 import jwtDecode from "jwt-decode";
+// import { configureRevenueCat } from "../services/revenuecat";
+import { refreshSubscriptionStatus } from "../services/subscription";
+import { configureRevenueCat } from "../services/revenuecat";
+// import { refreshSubscriptionStatus } from "../services/subscription";
 
 export const useAuth = () => {
   const [auth, setAuth] = useState({
@@ -47,9 +51,18 @@ export const useAuth = () => {
         authLoading: false,
       });
 
+      await configureRevenueCat(decoded.userId);
+      await refreshSubscriptionStatus().catch((error) => {
+        console.error("Initial subscription refresh failed:", error);
+      });
+
       // ✅ Fetch full user profile (INCLUDING currency)
       const res = await api.get(`/getUserDetails`);
       setUserDetails(res.data);
+
+      // ✅ Configure RevenueCat
+      await configureRevenueCat(decoded.userId);
+      await refreshSubscriptionStatus().catch(() => {});
 
     } catch (err) {
       console.error("Auth failed:", err);

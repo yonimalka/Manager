@@ -3,13 +3,13 @@ import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import { Platform } from "react-native";
 
 const IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
-const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+// const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
 const PRO_ENTITLEMENT = process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "pro";
 
 let purchasesConfigured = false;
 
 function getApiKey() {
-  return Platform.OS === "ios" ? IOS_API_KEY : ANDROID_API_KEY;
+  return  IOS_API_KEY;
 }
 
 function findPackageByIdentifier(offering, identifier) {
@@ -44,20 +44,30 @@ function getOfferingPackages(offering) {
 export async function configureRevenueCat(appUserId) {
   const apiKey = getApiKey();
 
+  console.log("[RC] apiKey:", apiKey);
+  console.log("[RC] appUserId:", appUserId);
+
   if (!apiKey || !appUserId) {
+    console.warn("[RC] Missing apiKey or appUserId — aborting");
     return { configured: false };
   }
 
-  Purchases.setLogLevel(LOG_LEVEL.WARN);
+  try {
+    Purchases.setLogLevel(LOG_LEVEL.WARN);
 
-  if (!purchasesConfigured) {
-    await Purchases.configure({ apiKey, appUserID: appUserId });
-    purchasesConfigured = true;
-  } else {
-    await Purchases.logIn(appUserId);
+    if (!purchasesConfigured) {
+      await Purchases.configure({ apiKey, appUserID: appUserId });
+      purchasesConfigured = true;
+    } else {
+      await Purchases.logIn(appUserId);
+    }
+
+    console.log("[RC] Configured successfully");
+    return { configured: true };
+  } catch (err) {
+    console.error("[RC] ERROR:", err.code, err.message);
+    return { configured: false, error: err.message };
   }
-
-  return { configured: true };
 }
 
 export async function getRevenueCatCustomerInfo() {
@@ -123,6 +133,7 @@ export async function purchaseRevenueCatPackage(selectedPackage) {
 }
 
 export async function presentRevenueCatPaywallIfNeeded(offering = null) {
+  if (!purchasesConfigured) throw new Error("RevenueCat is not configured yet.");
   return await RevenueCatUI.presentPaywallIfNeeded({
     requiredEntitlementIdentifier: PRO_ENTITLEMENT,
     offering: offering || undefined,
@@ -131,6 +142,7 @@ export async function presentRevenueCatPaywallIfNeeded(offering = null) {
 }
 
 export async function presentRevenueCatPaywall(offering = null) {
+  if (!purchasesConfigured) throw new Error("RevenueCat is not configured yet.");
   return await RevenueCatUI.presentPaywall({
     offering: offering || undefined,
     displayCloseButton: true,
@@ -138,6 +150,7 @@ export async function presentRevenueCatPaywall(offering = null) {
 }
 
 export async function presentRevenueCatCustomerCenter() {
+  if (!purchasesConfigured) throw new Error("RevenueCat is not configured yet.");
   return await RevenueCatUI.presentCustomerCenter();
 }
 

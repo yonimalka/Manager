@@ -195,7 +195,7 @@ export default function SubscriptionScreen() {
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>Maggo Pro</Text>
         <Text style={styles.heroSubtitle}>
-          Monthly, yearly, and lifetime access powered by RevenueCat.
+          Monthly, yearly access powered by RevenueCat.
         </Text>
       </View>
 

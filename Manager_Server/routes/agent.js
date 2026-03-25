@@ -1,4 +1,7 @@
 const express = require("express");
+const multer = require("multer");
+const ExcelJS = require("exceljs");
+const pdfParse = require("pdf-parse");
 const router = express.Router();
 const { OpenAI } = require("openai");
 const authMiddleware = require("../authMiddleware");
@@ -8,10 +11,57 @@ const AgentTaskModel = require("../models/AgentTask");
 const UserModel = require("../models/User");
 const ProjectModel = require("../models/Project");
 const ReceiptModel = require("../models/Receipt");
+const { genericToPdf } = require("../pdf/genericToPdf");
+const { genericToExcel } = require("../excel/genericToExcel");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+function getIncomesModel() {
+  try {
+    return require("../models/Incomes");
+  } catch {
+    return null;
+  }
+}
+
+function getPeriodStartDate(period = "month") {
+  const now = new Date();
+
+  if (period === "month") return new Date(now.getFullYear(), now.getMonth(), 1);
+  if (period === "quarter") {
+    const q = Math.floor(now.getMonth() / 3);
+    return new Date(now.getFullYear(), q * 3, 1);
+  }
+
+  return new Date(now.getFullYear(), 0, 1);
+}
+
+function getPeriodLabel(period = "month") {
+  return {
+    month: "This Month",
+    quarter: "This Quarter",
+    year: "This Year",
+  }[period] || period;
+}
+
+function safeCsvValue(value) {
+  const stringValue = value == null ? "" : String(value);
+  if (/[,"\n]/.test(stringValue)) {
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  }
+  return stringValue;
+}
+
+function buildCsv(rows = []) {
+  return rows.map((row) => row.map(safeCsvValue).join(",")).join("\n");
+}
 
 async function buildUserContext(userId) {
   const [user, projects, receipts] = await Promise.all([
@@ -99,9 +149,123 @@ ${Object.entries(finance.categoryBreakdown).map(([k, v]) => `- ${k}: ${v}`).join
   return base + "\n\n" + context;
 }
 
+async function getCashflowReportData(userId, period = "month") {
+  const IncomesModel = getIncomesModel();
+  const startDate = getPeriodStartDate(period);
+
+  const [incomeData, expenseData, user] = await Promise.all([
+    IncomesModel
+      ? IncomesModel.find({ userId, createdAt: { $gte: startDate } })
+          .sort({ createdAt: -1 })
+          .limit(100)
+          .lean()
+          .catch(() => [])
+      : Promise.resolve([]),
+    ReceiptModel.find({ userId, createdAt: { $gte: startDate } })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean()
+      .catch(() => []),
+    UserModel.findById(userId).select("name businessName currency locale"),
+  ]);
+
+  const incomes = incomeData.map((i) => ({
+    description: i.payer || i.customerName || i.projectName || "Income",
+    name: i.payer || i.customerName || i.projectName || "Income",
+    amount: Number(i.amount || i.total || i.subtotal || 0),
+    date: i.date || i.createdAt,
+  }));
+
+  const expenses = expenseData.map((e) => ({
+    category: e.category || "Expense",
+    description: e.category || "Expense",
+    amount: Number(e.sumOfReceipt || e.amount || 0),
+    date: e.occurrenceDate || e.createdAt,
+    createdAt: e.createdAt,
+  }));
+
+  const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+
+  return {
+    businessName: user?.businessName || user?.name || "Your Business",
+    period: getPeriodLabel(period),
+    currency: user?.currency || "USD",
+    totalIncome,
+    totalExpenses,
+    netCashFlow: totalIncome - totalExpenses,
+    incomes,
+    expenses,
+    generatedAt: new Date().toLocaleDateString(),
+  };
+}
+
+async function getProjectsReportData(userId, period = "month") {
+  const startDate = getPeriodStartDate(period);
+  return ProjectModel.find({ userId, createdAt: { $gte: startDate } })
+    .sort({ createdAt: -1 })
+    .limit(200)
+    .lean();
+}
+
+async function getExpensesReportData(userId, period = "month") {
+  const startDate = getPeriodStartDate(period);
+  return ReceiptModel.find({ userId, createdAt: { $gte: startDate } })
+    .sort({ createdAt: -1 })
+    .limit(200)
+    .lean();
+}
+
+async function extractExcelText(fileBuffer) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(fileBuffer);
+
+  const sections = [];
+  workbook.eachSheet((worksheet) => {
+    const rows = [];
+    worksheet.eachRow((row) => {
+      const values = row.values
+        .slice(1)
+        .map((value) => {
+          if (value == null) return "";
+          if (typeof value === "object") {
+            if (value.text) return value.text;
+            if (value.result) return String(value.result);
+            return JSON.stringify(value);
+          }
+          return String(value);
+        })
+        .filter(Boolean);
+
+      if (values.length) rows.push(values.join(" | "));
+    });
+
+    sections.push(`Sheet: ${worksheet.name}\n${rows.join("\n")}`);
+  });
+
+  return sections.join("\n\n").trim();
+}
+
+async function saveUploadedFileMessage({ conversationId, userId, filename, text }) {
+  if (!conversationId) return;
+
+  const conversation = await ConversationModel.findOne({
+    _id: conversationId,
+    userId,
+  });
+
+  if (!conversation) return;
+
+  conversation.messages.push({
+    role: "user",
+    content: `[File uploaded: ${filename}]\n\n${(text || "").slice(0, 3000)}`,
+  });
+  conversation.lastMessageAt = new Date();
+  await conversation.save();
+}
+
 // ─── Agent CRUD ──────────────────────────────────────────────────────────────
 
-// GET /agent — get or auto-create agent for logged-in user
 router.get("/agent", authMiddleware, async (req, res) => {
   try {
     let agent = await AgentModel.findOne({ userId: req.userId });
@@ -122,7 +286,6 @@ router.get("/agent", authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /agent — update agent name/persona/systemPrompt/language
 router.put("/agent", authMiddleware, async (req, res) => {
   try {
     const { name, persona, systemPrompt, language } = req.body;
@@ -142,7 +305,6 @@ router.put("/agent", authMiddleware, async (req, res) => {
 
 // ─── Conversations ───────────────────────────────────────────────────────────
 
-// GET /agent/conversations — list conversations
 router.get("/agent/conversations", authMiddleware, async (req, res) => {
   try {
     const conversations = await ConversationModel.find({ userId: req.userId })
@@ -157,7 +319,6 @@ router.get("/agent/conversations", authMiddleware, async (req, res) => {
   }
 });
 
-// POST /agent/conversations — create new conversation
 router.post("/agent/conversations", authMiddleware, async (req, res) => {
   try {
     const { title } = req.body;
@@ -186,7 +347,6 @@ router.post("/agent/conversations", authMiddleware, async (req, res) => {
   }
 });
 
-// GET /agent/conversations/:id — get full conversation with messages
 router.get("/agent/conversations/:id", authMiddleware, async (req, res) => {
   try {
     const conversation = await ConversationModel.findOne({
@@ -205,7 +365,6 @@ router.get("/agent/conversations/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /agent/conversations/:id
 router.delete("/agent/conversations/:id", authMiddleware, async (req, res) => {
   try {
     await ConversationModel.findOneAndDelete({
@@ -220,9 +379,179 @@ router.delete("/agent/conversations/:id", authMiddleware, async (req, res) => {
   }
 });
 
+router.post(
+  "/agent/upload",
+  authMiddleware,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      const file = req.file;
+      const conversationId = req.body?.conversationId || null;
+
+      if (!file) {
+        return res.status(400).json({ message: "File is required" });
+      }
+
+      const originalName = file.originalname || "upload";
+      const ext = originalName.split(".").pop()?.toLowerCase();
+      const mime = file.mimetype;
+      let type;
+      let text = "";
+
+      if (mime === "application/pdf" || ext === "pdf") {
+        type = "pdf";
+        const parsed = await pdfParse(file.buffer);
+        text = parsed.text?.trim() || "";
+      } else if (
+        mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        ext === "xlsx"
+      ) {
+        type = "excel";
+        text = await extractExcelText(file.buffer);
+      } else if (mime === "text/csv" || ext === "csv") {
+        type = "csv";
+        text = file.buffer.toString("utf8");
+      } else if (mime === "text/plain" || ext === "txt") {
+        type = "txt";
+        text = file.buffer.toString("utf8");
+      } else {
+        return res.status(400).json({ message: "Unsupported file type" });
+      }
+
+      await saveUploadedFileMessage({
+        conversationId,
+        userId: req.userId,
+        filename: originalName,
+        text,
+      });
+
+      return res.json({
+        type,
+        text,
+        filename: originalName,
+      });
+    } catch (err) {
+      console.error("POST /agent/upload error:", err);
+      return res.status(500).json({ message: "Server error", error: err.message });
+    }
+  }
+);
+
+// ─── Agent tools (generic) ───────────────────────────────────────────────────
+
+const AGENT_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "generate_pdf",
+      description:
+        "Generate any PDF document the user asks for — reports, invoices, summaries, analyses, cash flow, anything. " +
+        "You define the full document structure: title, subtitle, and sections. Each section can have a heading, text content, and/or a table. " +
+        "Use the business data you already know from context. Call this whenever the user wants a PDF, report, or printable document.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Document title" },
+          subtitle: { type: "string", description: "Optional subtitle or period description" },
+          sections: {
+            type: "array",
+            description: "Ordered list of document sections",
+            items: {
+              type: "object",
+              properties: {
+                heading: { type: "string" },
+                content: { type: "string", description: "Paragraph text for this section" },
+                table: {
+                  type: "object",
+                  properties: {
+                    headers: { type: "array", items: { type: "string" } },
+                    rows: {
+                      type: "array",
+                      items: { type: "array", items: { type: "string" } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        required: ["title", "sections"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "generate_excel",
+      description:
+        "Generate any Excel (.xlsx) spreadsheet the user asks for — cashflow, expenses, projects, employees, custom tables, anything. " +
+        "You define the full workbook: one or more sheets, each with headers and rows. " +
+        "Use the business data you already know from context. Call this whenever the user wants an Excel file, spreadsheet, or XLSX export.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Workbook title (for filename)" },
+          sheets: {
+            type: "array",
+            description: "List of worksheets",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "Sheet tab name" },
+                headers: { type: "array", items: { type: "string" } },
+                rows: {
+                  type: "array",
+                  items: { type: "array", items: { type: "string" } }
+                }
+              },
+              required: ["name", "headers", "rows"]
+            }
+          }
+        },
+        required: ["title", "sheets"]
+      }
+    }
+  }
+];
+
+async function executeTool(toolName, toolArgs, userId) {
+  if (toolName === "generate_pdf") {
+    const user = await UserModel.findById(userId).select("name businessName").lean().catch(() => null);
+    const buf = await genericToPdf({
+      title: toolArgs.title || "Report",
+      subtitle: toolArgs.subtitle || "",
+      businessName: user?.businessName || user?.name || "",
+      sections: toolArgs.sections || [],
+    });
+    const slug = (toolArgs.title || "report").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 30);
+    return {
+      type: "pdf",
+      buffer: buf,
+      filename: `${slug}-${Date.now()}.pdf`,
+      message: `Here is your PDF: ${toolArgs.title}.`,
+    };
+  }
+
+  if (toolName === "generate_excel") {
+    const buf = await genericToExcel({
+      title: toolArgs.title || "Report",
+      sheets: toolArgs.sheets || [],
+    });
+    const slug = (toolArgs.title || "report").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 30);
+    return {
+      type: "excel",
+      buffer: buf,
+      filename: `${slug}-${Date.now()}.xlsx`,
+      message: `Here is your Excel file: ${toolArgs.title}.`,
+    };
+  }
+
+  return null;
+}
+
+
 // ─── Chat ────────────────────────────────────────────────────────────────────
 
-// POST /agent/chat — send message, get AI reply
 router.post("/agent/chat", authMiddleware, async (req, res) => {
   try {
     const { conversationId, message } = req.body;
@@ -231,7 +560,6 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "Message is required" });
     }
 
-    // Load or create conversation
     let conversation;
     if (conversationId) {
       conversation = await ConversationModel.findOne({
@@ -259,15 +587,12 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
       });
     }
 
-    // Load agent + user context
     const agent = await AgentModel.findById(conversation.agentId);
     const userContext = await buildUserContext(req.userId);
     const systemPrompt = buildSystemPrompt(agent, userContext);
 
-    // Append user message
     conversation.messages.push({ role: "user", content: message });
 
-    // Build messages for OpenAI (keep last 20 for context window)
     const recentMessages = conversation.messages.slice(-20).map((m) => ({
       role: m.role,
       content: m.content,
@@ -275,32 +600,87 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...recentMessages,
-      ],
+      messages: [{ role: "system", content: systemPrompt }, ...recentMessages],
+      tools: AGENT_TOOLS,
+      tool_choice: "auto",
       max_tokens: 1200,
     });
 
-    const reply = completion.choices?.[0]?.message?.content?.trim();
-    if (!reply) throw new Error("Empty response from OpenAI");
+    const choice = completion.choices?.[0];
+    const toolCalls = choice?.message?.tool_calls;
 
-    // Append assistant reply
-    conversation.messages.push({ role: "assistant", content: reply });
-    conversation.lastMessageAt = new Date();
+    if (toolCalls?.length > 0) {
+      const toolCall = toolCalls[0];
+      const toolName = toolCall.function.name;
+      const toolArgs = JSON.parse(toolCall.function.arguments || "{}");
 
-    // Auto-title from first message
-    if (conversation.messages.length === 2) {
-      conversation.title = message.slice(0, 60);
+      let toolResult;
+      try {
+        toolResult = await executeTool(toolName, toolArgs, req.userId);
+      } catch (toolErr) {
+        console.error("Tool execution error:", toolErr);
+        toolResult = null;
+      }
+
+      if (["pdf", "excel", "csv"].includes(toolResult?.type)) {
+        const attachment = {
+          type: toolResult.type,
+          filename: toolResult.filename,
+          base64: toolResult.buffer ? toolResult.buffer.toString("base64") : undefined,
+          content: toolResult.content,
+        };
+        const reply = toolResult.message || "Done.";
+
+        conversation.messages.push({ role: "assistant", content: reply, attachment });
+        conversation.lastMessageAt = new Date();
+        if (conversation.messages.length === 2) conversation.title = message.slice(0, 60);
+        await conversation.save();
+
+        return res.json({
+          conversationId: conversation._id,
+          reply,
+          title: conversation.title,
+          attachment,
+        });
+      }
+
+      const toolResultText = toolResult
+        ? JSON.stringify(toolResult)
+        : "Tool executed but returned no result.";
+
+      const followUp = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...recentMessages,
+          choice.message,
+          {
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: toolResultText,
+          },
+        ],
+        max_tokens: 1200,
+      });
+
+      const reply = followUp.choices?.[0]?.message?.content?.trim() || "Done.";
+      conversation.messages.push({ role: "assistant", content: reply });
+      conversation.lastMessageAt = new Date();
+      if (conversation.messages.length === 2) conversation.title = message.slice(0, 60);
+      await conversation.save();
+
+      return res.json({ conversationId: conversation._id, reply, title: conversation.title });
     }
 
+    const reply = choice?.message?.content?.trim();
+    if (!reply) throw new Error("Empty response from OpenAI");
+
+    conversation.messages.push({ role: "assistant", content: reply });
+    conversation.lastMessageAt = new Date();
+    if (conversation.messages.length === 2) conversation.title = message.slice(0, 60);
     await conversation.save();
 
-    res.json({
-      conversationId: conversation._id,
-      reply,
-      title: conversation.title,
-    });
+    res.json({ conversationId: conversation._id, reply, title: conversation.title });
   } catch (err) {
     console.error("POST /agent/chat error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -309,7 +689,6 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
 
-// GET /agent/tasks
 router.get("/agent/tasks", authMiddleware, async (req, res) => {
   try {
     const tasks = await AgentTaskModel.find({ userId: req.userId })
@@ -323,7 +702,6 @@ router.get("/agent/tasks", authMiddleware, async (req, res) => {
   }
 });
 
-// POST /agent/tasks — create and immediately run a task
 router.post("/agent/tasks", authMiddleware, async (req, res) => {
   try {
     const { type, title, description, conversationId } = req.body;
@@ -352,7 +730,6 @@ router.post("/agent/tasks", authMiddleware, async (req, res) => {
       status: "in_progress",
     });
 
-    // Run task via OpenAI
     try {
       const userContext = await buildUserContext(req.userId);
       const systemPrompt = buildSystemPrompt(agent, userContext);
@@ -391,7 +768,6 @@ Please complete this task for the user. Return a clear, professional response.`;
   }
 });
 
-// DELETE /agent/tasks/:id
 router.delete("/agent/tasks/:id", authMiddleware, async (req, res) => {
   try {
     await AgentTaskModel.findOneAndDelete({

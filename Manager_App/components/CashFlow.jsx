@@ -149,88 +149,104 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
       </View>
 
       {/* CHART */}
-      <Text style={styles.cardTitle}>Chart Overview</Text>
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-
+      <View style={styles.chartCard}>
+        {/* Header + Period selector */}
+        <View style={styles.chartHeaderRow}>
+          <Text style={styles.chartCardTitle}>Overview</Text>
           <View style={styles.periodRow}>
-            {["month", "quarter", "year"].map((p) => (
-              <TouchableOpacity
-                key={p}
-                onPress={() => setPeriod(p)}
-                style={[
-                  styles.periodBtn,
-                  period === p && styles.periodBtnActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.periodText,
-                    period === p && styles.periodTextActive,
-                  ]}
-                >
-                  {p.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {["month", "quarter", "year"].map((p) => (
+            <TouchableOpacity
+              key={p}
+              onPress={() => setPeriod(p)}
+              activeOpacity={0.7}
+              style={[styles.periodBtn, period === p && styles.periodBtnActive]}
+            >
+              <Text style={[styles.periodText, period === p && styles.periodTextActive]}>
+                {p.charAt(0).toUpperCase() + p.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
           </View>
         </View>
 
         {loading ? (
-  <View style={{ alignItems: "center", paddingVertical: 20 }}>
-    <Skeleton width={220} height={220} radius={110} />
+          <View style={{ alignItems: "center", paddingVertical: 28 }}>
+            <Skeleton width={220} height={220} radius={110} />
+            <Skeleton width={100} height={14} style={{ marginTop: 20 }} />
+            <Skeleton width={140} height={22} style={{ marginTop: 8 }} />
+          </View>
+        ) : (
+          <View style={{ alignItems: "center" }}>
+            {/* Donut */}
+            <View style={styles.donutWrapper}>
+              <VictoryPie
+                data={donutData}
+                width={240}
+                height={240}
+                innerRadius={82}
+                radius={110}
+                padAngle={2.5}
+                labels={() => null}
+                colorScale={["#22C55E", "#F43F5E"]}
+                style={{ parent: { overflow: "hidden" } }}
+              />
+              {/* Center */}
+              <View style={styles.donutCenter}>
+                <Text style={styles.donutCenterLabel}>Net Cash Flow</Text>
+                <Text
+                  style={[
+                    styles.donutCenterValue,
+                    { color: netCashFlow >= 0 ? "#16A34A" : "#E11D48" },
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {formatCurrency(
+                    netCashFlow || 0,
+                    userDetails?.currency || "USD",
+                    userDetails?.locale || "en-US"
+                  )}
+                </Text>
+                <View style={[
+                  styles.donutCenterBadge,
+                  { backgroundColor: netCashFlow >= 0 ? "#DCFCE7" : "#FFE4E6" }
+                ]}>
+                  <Text style={[
+                    styles.donutCenterBadgeText,
+                    { color: netCashFlow >= 0 ? "#16A34A" : "#E11D48" }
+                  ]}>
+                    {netCashFlow >= 0 ? "▲ Positive" : "▼ Negative"}
+                  </Text>
+                </View>
+              </View>
+            </View>
 
-    <View style={{ marginTop: 18 }}>
-      <Skeleton width={120} height={14} />
-      <Skeleton width={90} height={18} style={{ marginTop: 8 }} />
-    </View>
-    <Text style={{ marginTop: 16, color: "#6B7280", fontWeight: "500" }}>
-      Calculating cash flow…
-    </Text>
-  </View>
-) : (
-  <View style={{ alignItems: "center", justifyContent: "center" }}>
-    <VictoryPie
-      data={donutData}
-      innerRadius={75}
-      radius={110}
-      padAngle={3}
-      labels={({ datum }) =>
-         formatCurrency(
-       datum.y || 0,
-       userDetails?.currency || "USD",
-       userDetails?.locale || "en-US"
-      )
-      }
-      colorScale={["#34C759", "#FF3B30"]}
-      style={{
-        labels: {
-          fontSize: 12,
-          fill: "#111",
-          fontWeight: "600",
-        },
-      }}
-    />
+            {/* Legend */}
+            <View style={styles.donutLegend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: "#22C55E" }]} />
+                <View>
+                  <Text style={styles.legendLabel}>Income</Text>
+                  <Text style={styles.legendValue}>
+                    {formatCurrency(totalIncome || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+                  </Text>
+                </View>
+              </View>
 
-    {/* CENTER TEXT */}
-    <View style={styles.donutCenter}>
-      <Text style={styles.donutLabel}>Net</Text>
-      <Text
-        style={[
-          styles.donutValue,
-          { color: netCashFlow >= 0 ? "#34C759" : "#FF3B30" },
-        ]}
-      >
-        {formatCurrency(
-       netCashFlow || 0,
-       userDetails?.currency || "USD",
-       userDetails?.locale || "en-US"
-      )}
-      </Text>
-    </View>
-  </View>
-)}
+              <View style={styles.legendDivider} />
 
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: "#F43F5E" }]} />
+                <View>
+                  <Text style={styles.legendLabel}>Expenses</Text>
+                  <Text style={styles.legendValue}>
+                    {formatCurrency(totalExpenses || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* INCOME LIST */}
@@ -427,60 +443,128 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  card: {
-    position: "static",
-    // justifyContent: "flex-end",
-    alignItems: "center",
-    // backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 16,
-    // paddingHorizontal: 20,
+  chartCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 20,
+    marginHorizontal: 20,
+    marginBottom: 28,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-
-  cardHeader: {
+  chartHeaderRow: {
     flexDirection: "row",
-    // position: "absolute",
+    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  cardTitle: { 
-    fontSize: 18, 
-    fontWeight: "700", 
     marginBottom: 16,
-    paddingHorizontal: 20,
+  },
+  chartCardTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  periodRow: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    padding: 3,
+    alignSelf: "center",
+  },
+  periodBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9,
+    marginHorizontal: 1,
+    minWidth: 70,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  periodBtnActive: {
+    backgroundColor: "#2563EB",
+  },
+  periodText: { fontSize: 13, color: "#94A3B8", fontWeight: "600" },
+  periodTextActive: { color: "#fff", fontWeight: "700" },
+
+  donutWrapper: {
+    width: 240,
+    height: 240,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  donutCenter: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 148,
+  },
+  donutCenterLabel: {
+    fontSize: 11,
+    color: "#94A3B8",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  donutCenterValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  donutCenterBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  donutCenterBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
 
-  periodRow: { flexDirection: "row", gap: 6, justifyContent: "flex-end", alignItems: "flex-start"},
-  periodBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: "#F1F5F9",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+  donutLegend: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginTop: 16,
+    width: "100%",
+    gap: 16,
   },
-  periodBtnActive: { backgroundColor: "#0A84FF" },
-  periodText: { fontSize: 12, color: "#64748B", fontWeight: "600" },
-  periodTextActive: { color: "#fff" },
- donutCenter: {
-  position: "absolute",
-  alignItems: "center",
-  justifyContent: "center",
-},
-donutLabel: {
-  fontSize: 14,
-  color: "#6B7280",
-  fontWeight: "600",
-},
-donutValue: {
-  fontSize: 22,
-  fontWeight: "800",
-},
+  legendItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    flexShrink: 0,
+  },
+  legendLabel: {
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  legendValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  legendDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: "#E2E8F0",
+  },
 section : { 
   marginTop: 28, 
   paddingHorizontal: 20, 

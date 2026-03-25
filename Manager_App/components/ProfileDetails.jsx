@@ -260,12 +260,12 @@ export default function ProfileDetails() {
   <Pencil size={22} color="#2563EB" />
 </TouchableOpacity>
       )}
-      <View style={styles.subscriptionWrap}>
+      {/* <View style={styles.subscriptionWrap}>
         <SubscriptionCard
           subscription={subscription}
           onPress={() => navigation.navigate("SubscriptionScreen")}
         />
-      </View>
+      </View> */}
 
       {/* Info Card */}
       <View style={styles.card}>

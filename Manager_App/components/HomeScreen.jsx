@@ -35,6 +35,7 @@ import api from "../services/api";
 import { signInAnonymously } from "firebase/auth";
 import { auth } from "./firebase";
 import { formatCurrency } from "../services/formatCurrency";
+import { fetchSubscriptionStatus, hasProAccess } from "../services/subscription";
 
 const { width } = Dimensions.get("window");
 
@@ -193,7 +194,19 @@ const HomeScreen = () => {
       <View style={styles.skeletonCard} />
     </View>
   );
-
+  const handleAgentPress = async () => {
+    navigation.navigate("AgentScreen");
+    // try {
+    // const subscription = await fetchSubscriptionStatus();
+    // if (hasProAccess(subscription)) {
+    // navigation.navigate("AgentScreen");
+    // } else {
+    // navigation.navigate("SubscriptionScreen");
+    // }
+    // } catch (err) {
+    // navigation.navigate("AgentScreen");
+    // }
+  };
   return (
     <View style={styles.screen}>
       {/* Animated Header Background */}
@@ -374,10 +387,9 @@ const HomeScreen = () => {
       <View style={styles.navContainer}>
               <TouchableOpacity
                 style={styles.navButton}
-                onPress={() => navigation.navigate("AgentScreen")}
-              >
+                onPress={handleAgentPress}
+                >
                 <Ionicons name="sparkles-outline" size={31} color="#10b981" />
-                {/* <Text style={styles.navText}>Assistant</Text> */}
               </TouchableOpacity>
             </View>
     </View>

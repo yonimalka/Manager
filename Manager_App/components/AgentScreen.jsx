@@ -6,7 +6,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +15,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import * as DocumentPicker from "expo-document-picker";
 import api from "../services/api";
 
 const SUGGESTIONS = [
@@ -107,7 +109,7 @@ export default function AgentScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeConvId]);
+  }, [activeConvId, fadeAnim]);
 
   useEffect(() => {
     loadAgent();
@@ -118,6 +120,75 @@ export default function AgentScreen() {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 120);
     }
   }, [messages]);
+
+  const saveBase64File = async (attachment, mimeType, dialogTitle, uti) => {
+    const fileUri = FileSystem.documentDirectory + attachment.filename;
+    await FileSystem.writeAsStringAsync(fileUri, attachment.base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(fileUri, {
+        mimeType,
+        dialogTitle,
+        UTI: uti,
+      });
+    } else {
+      Alert.alert("File saved", `Saved to: ${fileUri}`);
+    }
+  };
+
+  const saveTextFile = async (attachment) => {
+    const fileUri = FileSystem.documentDirectory + attachment.filename;
+    await FileSystem.writeAsStringAsync(fileUri, attachment.content || "", {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(fileUri, {
+        mimeType: "text/csv",
+        dialogTitle: "Download CSV",
+        UTI: "public.comma-separated-values-text",
+      });
+    } else {
+      Alert.alert("CSV saved", `Saved to: ${fileUri}`);
+    }
+  };
+
+  const openFileAttachment = async (attachment) => {
+    try {
+      if (!attachment) return;
+
+      if (attachment.type === "pdf") {
+        await saveBase64File(
+          attachment,
+          "application/pdf",
+          "Cash Flow Report",
+          "com.adobe.pdf"
+        );
+        return;
+      }
+
+      if (attachment.type === "excel") {
+        await saveBase64File(
+          attachment,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Open Excel",
+          "org.openxmlformats.spreadsheetml.sheet"
+        );
+        return;
+      }
+
+      if (attachment.type === "csv") {
+        await saveTextFile(attachment);
+      }
+    } catch (err) {
+      console.error("Attachment open error:", err);
+      Alert.alert("Error", "Could not open the attachment.");
+    }
+  };
 
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
@@ -141,8 +212,13 @@ export default function AgentScreen() {
         role: "assistant",
         content: res.data.reply,
         _id: (Date.now() + 1).toString(),
+        attachment: res.data.attachment || null,
       };
       setMessages((prev) => [...prev, assistantMsg]);
+
+      if (res.data.attachment?.type === "pdf") {
+        await openFileAttachment(res.data.attachment);
+      }
     } catch (err) {
       console.error("Chat error:", err);
       Alert.alert("Error", "Failed to send message. Try again.");
@@ -150,6 +226,92 @@ export default function AgentScreen() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleAttachmentPick = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "text/csv",
+          "text/plain",
+        ],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+      if (sending) return;
+
+      const asset = result.assets[0];
+      const formData = new FormData();
+      formData.append("file", {
+        uri: asset.uri,
+        name: asset.name,
+        type: asset.mimeType || "application/octet-stream",
+      });
+      if (activeConvId) formData.append("conversationId", activeConvId);
+
+      setSending(true);
+
+      const uploadRes = await api.post("/agent/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const extractedMessage = `[File: ${uploadRes.data.filename}] ${uploadRes.data.text || ""}`.trim();
+      setSending(false);
+      await sendMessage(extractedMessage);
+    } catch (err) {
+      console.error("File upload error:", err);
+      Alert.alert("Error", "Failed to upload the file.");
+      setSending(false);
+    }
+  };
+
+  const renderAttachmentButton = (attachment) => {
+    if (!attachment) return null;
+
+    if (attachment.type === "pdf") {
+      return (
+        <TouchableOpacity
+          style={styles.pdfBtn}
+          onPress={() => openFileAttachment(attachment)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="document-text" size={15} color="#2563EB" />
+          <Text style={styles.pdfBtnText}>Open PDF Report</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (attachment.type === "excel") {
+      return (
+        <TouchableOpacity
+          style={styles.excelBtn}
+          onPress={() => openFileAttachment(attachment)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="grid" size={15} color="#16A34A" />
+          <Text style={styles.excelBtnText}>Open Excel</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (attachment.type === "csv") {
+      return (
+        <TouchableOpacity
+          style={styles.csvBtn}
+          onPress={() => openFileAttachment(attachment)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="download-outline" size={15} color="#0891B2" />
+          <Text style={styles.csvBtnText}>Download CSV</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    return null;
   };
 
   const renderMessage = ({ item, index }) => {
@@ -161,6 +323,7 @@ export default function AgentScreen() {
         style={[
           styles.msgWrapper,
           isUser ? styles.msgWrapperUser : styles.msgWrapperAssistant,
+          isLast && { marginBottom: 4 },
         ]}
       >
         {!isUser && (
@@ -186,6 +349,7 @@ export default function AgentScreen() {
           >
             {item.content}
           </Text>
+          {renderAttachmentButton(item.attachment)}
         </View>
       </Animated.View>
     );
@@ -206,13 +370,11 @@ export default function AgentScreen() {
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* Background */}
       <LinearGradient
         colors={["#0F172A", "#0F172A", "#0F1F3D"]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
           <Ionicons name="chevron-back" size={20} color="#94A3B8" />
@@ -239,7 +401,6 @@ export default function AgentScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Messages */}
       {messages.length === 0 ? (
         <Animated.ScrollView
           style={{ flex: 1, opacity: fadeAnim }}
@@ -290,7 +451,6 @@ export default function AgentScreen() {
         />
       )}
 
-      {/* Typing indicator */}
       {sending && (
         <View style={styles.typingWrapper}>
           <LinearGradient colors={["#1E40AF", "#3B82F6"]} style={styles.assistantAvatar}>
@@ -302,9 +462,17 @@ export default function AgentScreen() {
         </View>
       )}
 
-      {/* Input bar */}
       <View style={styles.inputBar}>
         <View style={styles.inputContainer}>
+          <TouchableOpacity
+            style={styles.attachBtn}
+            onPress={handleAttachmentPick}
+            disabled={sending}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="attach" size={22} color="#94A3B8" />
+          </TouchableOpacity>
+
           <TextInput
             ref={inputRef}
             style={styles.input}
@@ -357,8 +525,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
   },
-
-  // ── Header ──────────────────────────────────────────────
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -411,8 +577,6 @@ const styles = StyleSheet.create({
     color: "#22C55E",
     fontWeight: "600",
   },
-
-  // ── Empty state ──────────────────────────────────────────
   emptyContainer: {
     flexGrow: 1,
     padding: 24,
@@ -483,8 +647,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 20,
   },
-
-  // ── Messages ─────────────────────────────────────────────
   messageList: {
     padding: 16,
     paddingBottom: 12,
@@ -537,8 +699,6 @@ const styles = StyleSheet.create({
   bubbleTextAssistant: {
     color: "#E2E8F0",
   },
-
-  // ── Typing ───────────────────────────────────────────────
   typingWrapper: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -567,8 +727,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#3B82F6",
   },
-
-  // ── Input bar ────────────────────────────────────────────
   inputBar: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -584,10 +742,21 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     borderWidth: 1,
     borderColor: "#334155",
-    paddingLeft: 18,
+    paddingLeft: 10,
     paddingRight: 6,
     paddingVertical: 6,
     gap: 8,
+  },
+  attachBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    flexShrink: 0,
   },
   input: {
     flex: 1,
@@ -616,5 +785,59 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#334155",
     lineHeight: 16,
+  },
+  pdfBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  pdfBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  excelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F0FDF4",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  excelBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#16A34A",
+  },
+  csvBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#ECFEFF",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#A5F3FC",
+  },
+  csvBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0891B2",
   },
 });
