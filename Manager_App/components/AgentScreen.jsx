@@ -123,17 +123,28 @@ export default function AgentScreen() {
 
   const saveBase64File = async (attachment, mimeType, dialogTitle, uti) => {
     const fileUri = FileSystem.documentDirectory + attachment.filename;
-    await FileSystem.writeAsStringAsync(fileUri, attachment.base64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+    const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL || "https://manager-production-1942.up.railway.app";
+    const downloadUrl = attachment.downloadUrl
+      ? `${serverUrl}${attachment.downloadUrl}`
+      : null;
+
+    if (downloadUrl) {
+      const token = await require("@react-native-async-storage/async-storage").default.getItem("token");
+      const result = await FileSystem.downloadAsync(downloadUrl, fileUri, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (result.status !== 200) throw new Error("Download failed");
+    } else if (attachment.base64) {
+      await FileSystem.writeAsStringAsync(fileUri, attachment.base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+    } else {
+      throw new Error("No file data available");
+    }
 
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
-      await Sharing.shareAsync(fileUri, {
-        mimeType,
-        dialogTitle,
-        UTI: uti,
-      });
+      await Sharing.shareAsync(fileUri, { mimeType, dialogTitle, UTI: uti });
     } else {
       Alert.alert("File saved", `Saved to: ${fileUri}`);
     }

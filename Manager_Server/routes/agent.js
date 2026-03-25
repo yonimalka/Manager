@@ -2,7 +2,13 @@ const express = require("express");
 const multer = require("multer");
 const ExcelJS = require("exceljs");
 const pdfParse = require("pdf-parse");
+const fs = require("fs");
+const path = require("path");
 const router = express.Router();
+
+// Temp directory for generated files
+const REPORTS_DIR = path.join(__dirname, "../tmp_reports");
+if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
 const { OpenAI } = require("openai");
 const authMiddleware = require("../authMiddleware");
 const AgentModel = require("../models/Agent");
@@ -716,14 +722,26 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
           toolResult = { error: toolErr.message };
         }
 
-        // File produced — return immediately
+        // File produced — save to disk and return download URL
         if (["pdf", "excel", "csv"].includes(toolResult?.type)) {
+          const filename = toolResult.filename || `report-${Date.now()}.${toolResult.type}`;
+          const filePath = path.join(REPORTS_DIR, filename);
+
+          if (toolResult.buffer) {
+            fs.writeFileSync(filePath, toolResult.buffer);
+          } else if (toolResult.content) {
+            fs.writeFileSync(filePath, toolResult.content, "utf8");
+          }
+
+          // Auto-delete after 1 hour
+          setTimeout(() => { try { fs.unlinkSync(filePath); } catch {} }, 60 * 60 * 1000);
+
           const attachment = {
             type: toolResult.type,
-            filename: toolResult.filename,
-            base64: toolResult.buffer ? toolResult.buffer.toString("base64") : undefined,
-            content: toolResult.content,
+            filename,
+            downloadUrl: `/agent/download/${encodeURIComponent(filename)}`,
           };
+
           const reply = toolResult.message || `Here is your ${toolResult.type.toUpperCase()} file.`;
 
           conversation.messages.push({ role: "assistant", content: reply, attachment });
@@ -782,6 +800,28 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
     console.error("POST /agent/chat error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
+});
+
+// ─── File download ───────────────────────────────────────────────────────────
+
+router.get("/agent/download/:filename", authMiddleware, (req, res) => {
+  const filename = decodeURIComponent(req.params.filename);
+  const filePath = path.join(REPORTS_DIR, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: "File not found or expired" });
+  }
+
+  const ext = path.extname(filename).toLowerCase();
+  const mimeTypes = {
+    ".pdf": "application/pdf",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".csv": "text/csv",
+  };
+
+  res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.sendFile(filePath);
 });
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
