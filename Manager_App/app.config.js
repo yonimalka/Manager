@@ -20,7 +20,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: "com.yonatanmalka.Manager",
       usesAppleSignIn: true,
-      buildNumber: "7",
+      buildNumber: "8",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
          NSCameraUsageDescription: "This app needs access to your camera to take receipts.",
