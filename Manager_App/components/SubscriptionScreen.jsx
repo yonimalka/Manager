@@ -8,6 +8,7 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -27,10 +28,10 @@ import {
 
 const premiumFeatures = [
   "Unlimited projects",
+  "AI-powered Private Assistant",
+  "Cash Flow Managment",
   "Advanced finance tools",
   "Receipt and income exports",
-  "Employee management",
-  "AI-powered quote generation",
 ];
 
 function packageLabel(pkg, fallback) {
@@ -195,7 +196,7 @@ export default function SubscriptionScreen() {
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>Maggo Pro</Text>
         <Text style={styles.heroSubtitle}>
-          Monthly, yearly access powered by RevenueCat.
+          Unlock the full Maggo experience with a monthly or yearly subscription.
         </Text>
       </View>
 
@@ -215,9 +216,10 @@ export default function SubscriptionScreen() {
               disabled={purchaseLoading}
               onPress={() => handlePackagePurchase(offering?.monthly)}
             >
-              <View>
-                <Text style={styles.planTitle}>{packageLabel(offering?.monthly, "Monthly")}</Text>
-                <Text style={styles.planCaption}>30-day trial if configured in the store</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.planTitle}>Maggo Pro — Monthly</Text>
+                <Text style={styles.planDuration}>1 month · Auto-renewable</Text>
+                <Text style={styles.planCaption}>Full access to all Pro features</Text>
               </View>
               <Text style={styles.planPrice}>{packagePrice(offering?.monthly)}</Text>
             </TouchableOpacity>
@@ -227,27 +229,16 @@ export default function SubscriptionScreen() {
               disabled={purchaseLoading}
               onPress={() => handlePackagePurchase(offering?.yearly)}
             >
-              <View>
-                <Text style={styles.planTitle}>{packageLabel(offering?.yearly, "Yearly")}</Text>
-                <Text style={styles.planCaption}>Best for annual subscribers</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.planTitle}>Maggo Pro — Yearly</Text>
+                <Text style={styles.planDuration}>1 year · Auto-renewable</Text>
+                <Text style={styles.planCaption}>Best value — save vs. monthly</Text>
               </View>
               <Text style={styles.planPrice}>{packagePrice(offering?.yearly)}</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.planCard, purchaseLoading && styles.buttonDisabled]}
-              disabled={purchaseLoading}
-              onPress={() => handlePackagePurchase(offering?.lifetime)}
-            >
-              <View>
-                <Text style={styles.planTitle}>{packageLabel(offering?.lifetime, "Lifetime")}</Text>
-                <Text style={styles.planCaption}>One-time unlock</Text>
-              </View>
-              <Text style={styles.planPrice}>{packagePrice(offering?.lifetime)}</Text>
-            </TouchableOpacity>
           </View>
 
-          {!!detailRows.length && (
+         {active && !!detailRows.length && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Subscription details</Text>
               {detailRows.map((row) => (
@@ -273,25 +264,33 @@ export default function SubscriptionScreen() {
             ))}
           </View>
 
-          <TouchableOpacity
-            style={[styles.primaryButton, paywallLoading && styles.buttonDisabled]}
-            onPress={handlePaywall}
-            disabled={paywallLoading}
-          >
-            {paywallLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Open RevenueCat paywall</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.secondaryButton, paywallLoading && styles.buttonDisabled]}
-            onPress={handleForcePaywall}
-            disabled={paywallLoading}
-          >
-            <Text style={styles.secondaryButtonText}>Force paywall</Text>
-          </TouchableOpacity>
+          {!active ? (
+            // ── Not subscribed ──────────────────────────────────────────────
+            <TouchableOpacity
+              style={[styles.primaryButton, paywallLoading && styles.buttonDisabled]}
+              onPress={handleForcePaywall}
+              disabled={paywallLoading}
+            >
+              {paywallLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Get Maggo Pro</Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            // ── Already subscribed ──────────────────────────────────────────
+            <TouchableOpacity
+              style={[styles.primaryButton, customerCenterLoading && styles.buttonDisabled]}
+              onPress={handleCustomerCenter}
+              disabled={customerCenterLoading}
+            >
+              {customerCenterLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Manage Subscription</Text>
+              )}
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.secondaryButton, restoreLoading && styles.buttonDisabled]}
@@ -301,27 +300,23 @@ export default function SubscriptionScreen() {
             {restoreLoading ? (
               <ActivityIndicator color="#2563EB" />
             ) : (
-              <Text style={styles.secondaryButtonText}>Restore purchases</Text>
+              <Text style={styles.secondaryButtonText}>Restore Purchases</Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.secondaryButton, customerCenterLoading && styles.buttonDisabled]}
-            onPress={handleCustomerCenter}
-            disabled={customerCenterLoading}
-          >
-            {customerCenterLoading ? (
-              <ActivityIndicator color="#2563EB" />
-            ) : (
-              <Text style={styles.secondaryButtonText}>Open Customer Center</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Setup note</Text>
-            <Text style={styles.sectionText}>
-              The trial, products, offering, paywall, and Customer Center configuration all come from RevenueCat and the app stores. This screen now consumes those remote configs directly.
+          <View style={styles.legalSection}>
+            <Text style={styles.legalText}>
+              Maggo Pro is an auto-renewable subscription. Payment will be charged to your Apple ID account at confirmation of purchase. The subscription automatically renews unless it is canceled at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscriptions by going to your Account Settings in the App Store after purchase.
             </Text>
+            <View style={styles.legalLinks}>
+              <TouchableOpacity onPress={() => Linking.openURL("https://www.notion.so/Maggo-App-Privacy-Policy-2ffed979e93e808dbd29c1c17572a19f")}>
+                <Text style={styles.legalLink}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalSep}>·</Text>
+              <TouchableOpacity onPress={() => Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")}>
+                <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </>
       )}
@@ -407,6 +402,12 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     marginBottom: 4,
   },
+  planDuration: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2563EB",
+    marginBottom: 2,
+  },
   planCaption: {
     fontSize: 13,
     color: "#64748B",
@@ -471,5 +472,32 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  legalSection: {
+    paddingHorizontal: 4,
+    paddingBottom: 10,
+  },
+  legalText: {
+    fontSize: 11,
+    color: "#94A3B8",
+    lineHeight: 17,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  legalLinks: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  legalLink: {
+    fontSize: 12,
+    color: "#2563EB",
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+  legalSep: {
+    fontSize: 12,
+    color: "#CBD5E1",
   },
 });

@@ -38,7 +38,7 @@ export default function SubscriptionCard({ subscription, onPress }) {
           <Text style={styles.caption}>
             {active
               ? "Your premium features are ready to use."
-              : "Start a 30-day trial and unlock premium features."}
+              : "Unlock the full power of Maggo with a Pro subscription."}
           </Text>
         </View>
       </View>

@@ -195,17 +195,17 @@ const HomeScreen = () => {
     </View>
   );
   const handleAgentPress = async () => {
+    // navigation.navigate("AgentScreen");
+    try {
+    const subscription = await fetchSubscriptionStatus();
+    if (hasProAccess(subscription)) {
     navigation.navigate("AgentScreen");
-    // try {
-    // const subscription = await fetchSubscriptionStatus();
-    // if (hasProAccess(subscription)) {
-    // navigation.navigate("AgentScreen");
-    // } else {
-    // navigation.navigate("SubscriptionScreen");
-    // }
-    // } catch (err) {
-    // navigation.navigate("AgentScreen");
-    // }
+    } else {
+    navigation.navigate("SubscriptionScreen");
+    }
+    } catch (err) {
+    navigation.navigate("AgentScreen");
+    }
   };
   return (
     <View style={styles.screen}>
