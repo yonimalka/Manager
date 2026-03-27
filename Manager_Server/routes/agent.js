@@ -71,30 +71,66 @@ function buildCsv(rows = []) {
 }
 
 async function buildUserContext(userId) {
-  const [user, projects, receipts] = await Promise.all([
+  const IncomesModel = getIncomesModel();
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const [user, projects, receipts, recentIncomes] = await Promise.all([
     UserModel.findById(userId).select(
       "name businessName currency locale totalIncomes totalExpenses subscription"
     ),
     ProjectModel.find({ userId })
-      .select("name payment expenses days paid")
-      .limit(20)
-      .lean(),
-    ReceiptModel.find({ userId })
-      .select("category sumOfReceipt createdAt")
+      .select("name payment expenses days paid status client createdAt")
       .sort({ createdAt: -1 })
       .limit(30)
       .lean(),
+    ReceiptModel.find({ userId })
+      .select("category sumOfReceipt createdAt occurrenceDate")
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean(),
+    IncomesModel
+      ? IncomesModel.find({ userId, createdAt: { $gte: sixMonthsAgo } })
+          .select("amount total payer customerName projectName date createdAt")
+          .sort({ createdAt: -1 })
+          .limit(50)
+          .lean()
+          .catch(() => [])
+      : Promise.resolve([]),
   ]);
 
   const totalProjectValue = projects.reduce((s, p) => s + (Number(p.payment) || 0), 0);
   const totalProjectExpenses = projects.reduce((s, p) => s + (Number(p.expenses) || 0), 0);
   const totalReceiptsSum = receipts.reduce((s, r) => s + (Number(r.sumOfReceipt) || 0), 0);
+  const unpaidProjects = projects.filter((p) => !p.paid);
+  const totalOutstanding = unpaidProjects.reduce((s, p) => s + (Number(p.payment) || 0) - (Number(p.expenses) || 0), 0);
 
   const categoryBreakdown = receipts.reduce((acc, r) => {
     const cat = r.category || "Uncategorized";
     acc[cat] = (acc[cat] || 0) + Number(r.sumOfReceipt || 0);
     return acc;
   }, {});
+
+  // Monthly trend — last 6 months
+  const monthlyTrend = {};
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    monthlyTrend[key] = { income: 0, expenses: 0 };
+  }
+
+  recentIncomes.forEach((inc) => {
+    const d = new Date(inc.date || inc.createdAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (monthlyTrend[key]) monthlyTrend[key].income += Number(inc.amount || inc.total || 0);
+  });
+
+  receipts.forEach((r) => {
+    const d = new Date(r.occurrenceDate || r.createdAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (monthlyTrend[key]) monthlyTrend[key].expenses += Number(r.sumOfReceipt || 0);
+  });
 
   return {
     user: {
@@ -111,6 +147,8 @@ async function buildUserContext(userId) {
       expenses: p.expenses,
       paid: p.paid,
       profit: (Number(p.payment) || 0) - (Number(p.expenses) || 0),
+      status: p.status,
+      client: p.client,
     })),
     finance: {
       totalProjectValue,
@@ -118,6 +156,9 @@ async function buildUserContext(userId) {
       netProjectProfit: totalProjectValue - totalProjectExpenses,
       totalReceiptsSum,
       categoryBreakdown,
+      unpaidProjectsCount: unpaidProjects.length,
+      totalOutstanding,
+      monthlyTrend,
     },
   };
 }
@@ -125,35 +166,67 @@ async function buildUserContext(userId) {
 function buildSystemPrompt(agent, userContext) {
   const { user, projects, finance } = userContext;
 
-  const base =
-    agent.systemPrompt ||
-    `You are ${agent.name}, a personal AI accountant and business assistant for ${user.name || "the user"}.
-You work exclusively for this user and have full access to their business data.
-Always answer in the user's preferred language. Be practical, concise, and professional.
-You can create quotes, generate financial reports, summarize expenses and income, help with invoices, and answer any business finance questions.
-Always use the user's currency (${user.currency}) and their business context.`;
+  const trendLines = Object.entries(finance.monthlyTrend || {})
+    .map(([month, d]) => `  ${month}: income ${d.income.toFixed(2)}, expenses ${d.expenses.toFixed(2)}, net ${(d.income - d.expenses).toFixed(2)}`)
+    .join("\n");
+
+  const topCategories = Object.entries(finance.categoryBreakdown || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([k, v]) => `  ${k}: ${v.toFixed(2)}`)
+    .join("\n");
+
+  const systemPrompt = agent.systemPrompt || `You are ${agent.name}, an elite financial AI assistant and CFO-level advisor for ${user.businessName || user.name || "this business"}.
+
+## Your Expertise
+You have deep mastery of:
+- Business accounting, bookkeeping, P&L analysis, and financial reporting
+- Cash flow management, revenue forecasting, and expense optimization
+- Invoice management, accounts receivable, and outstanding payments
+- Budget planning, KPI tracking, and business health diagnostics
+- Financial document generation: reports, summaries, spreadsheets, invoices
+- Business strategy, cost reduction, and profitability improvement
+
+You apply universal financial principles — your knowledge is global and not tied to any specific country or tax system. When local tax or legal specifics are needed, you acknowledge them and advise the user to consult a local accountant.
+
+## Your Behavior
+- **Always fetch fresh data first** — before answering any financial question, call get_business_data or get_financial_trends to get real numbers. Never estimate from memory.
+- **Be proactive** — when you see financial data, surface insights the user didn't ask about: unusual spikes, outstanding payments, negative cash flow months, high expense categories, etc.
+- **Think like a CFO** — give strategic advice, not just numbers. If revenue is down 20% MoM, say so and suggest why and what to do.
+- **Be direct and concise** — lead with the key insight, then supporting details. No filler.
+- **Always use ${user.currency}** for all amounts.
+- **Answer in the user's language** — detect from their message and respond in the same language.
+- **When generating documents** — make them professional, comprehensive, and well-structured. Always call get_business_data first to populate with real figures.
+- **Flag problems clearly** — if you see a financial risk or issue, say it directly and suggest a concrete fix.
+
+## What You Are Not
+- Not a generic chatbot — you are this specific business's dedicated financial expert
+- Not a substitute for a licensed accountant for tax filings — advise accordingly when relevant`;
 
   const context = `
-## Current Business Context
-Business: ${user.businessName || user.name}
+## Live Business Data — ${user.businessName || user.name}
 Currency: ${user.currency}
-Total income recorded: ${user.totalIncomes || 0}
-Total expenses recorded: ${user.totalExpenses || 0}
+Total lifetime income: ${user.totalIncomes || 0} ${user.currency}
+Total lifetime expenses: ${user.totalExpenses || 0} ${user.currency}
 
-## Projects (${projects.length})
-${projects.map((p) => `- ${p.name}: value ${p.payment}, expenses ${p.expenses}, profit ${p.profit}`).join("\n") || "No projects yet."}
+## Projects Overview (${projects.length} total)
+${projects.slice(0, 15).map((p) => `- ${p.name}${p.client ? ` [${p.client}]` : ""}: value ${p.payment || 0}, expenses ${p.expenses || 0}, profit ${p.profit || 0}, paid: ${p.paid ? "yes" : "no"}`).join("\n") || "No projects yet."}
+${finance.unpaidProjectsCount > 0 ? `\n⚠️ OUTSTANDING: ${finance.unpaidProjectsCount} unpaid project(s) totaling ${finance.totalOutstanding.toFixed(2)} ${user.currency}` : ""}
 
-## Finance Summary
-Total project value: ${finance.totalProjectValue}
-Total project expenses: ${finance.totalProjectExpenses}
-Net project profit: ${finance.netProjectProfit}
-Total receipts sum: ${finance.totalReceiptsSum}
+## Financial Summary
+Total project value: ${finance.totalProjectValue.toFixed(2)} ${user.currency}
+Total project expenses: ${finance.totalProjectExpenses.toFixed(2)} ${user.currency}
+Net project profit: ${finance.netProjectProfit.toFixed(2)} ${user.currency}
+Total receipts/expenses logged: ${finance.totalReceiptsSum.toFixed(2)} ${user.currency}
 
-Expense categories:
-${Object.entries(finance.categoryBreakdown).map(([k, v]) => `- ${k}: ${v}`).join("\n") || "No expense categories yet."}
+## Expense Categories (recent)
+${topCategories || "No expenses recorded yet."}
+
+## Monthly Trend (last 6 months)
+${trendLines || "No trend data available."}
 `;
 
-  return base + "\n\n" + context;
+  return systemPrompt + "\n\n" + context;
 }
 
 async function getCashflowReportData(userId, period = "month") {
@@ -448,6 +521,48 @@ router.post(
 
 const AGENT_TOOLS = [
   {
+    name: "get_financial_trends",
+    description:
+      "Fetch month-by-month income and expense breakdown for trend analysis, forecasting, and growth insights. " +
+      "Use this when the user asks about trends, growth, forecasts, comparisons between months, or when you want to proactively surface financial patterns.",
+    input_schema: {
+      type: "object",
+      properties: {
+        months: {
+          type: "number",
+          description: "Number of past months to include (default 6, max 12)",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "search_transactions",
+    description:
+      "Search income or expense transactions by keyword, category, or date range. " +
+      "Use when the user asks about a specific client, category, expense type, or time period.",
+    input_schema: {
+      type: "object",
+      properties: {
+        type: {
+          type: "string",
+          enum: ["income", "expense", "both"],
+          description: "Which transaction type to search",
+        },
+        keyword: {
+          type: "string",
+          description: "Optional keyword to filter by (client name, category, description)",
+        },
+        period: {
+          type: "string",
+          enum: ["month", "quarter", "year", "all"],
+          description: "Time period to search within",
+        },
+      },
+      required: ["type"],
+    },
+  },
+  {
     name: "get_business_data",
     description:
       "Fetch real financial data from the database for a given period. " +
@@ -535,6 +650,161 @@ const AGENT_TOOLS = [
 ];
 
 async function executeTool(toolName, toolArgs, userId) {
+  if (toolName === "get_financial_trends") {
+    const IncomesModel = getIncomesModel();
+    const months = Math.min(Number(toolArgs.months) || 6, 12);
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months);
+
+    const [incomes, expenses, user] = await Promise.all([
+      IncomesModel
+        ? IncomesModel.find({ userId, createdAt: { $gte: startDate } })
+            .select("amount total payer customerName projectName date createdAt")
+            .lean()
+            .catch(() => [])
+        : Promise.resolve([]),
+      ReceiptModel.find({ userId, createdAt: { $gte: startDate } })
+        .select("category sumOfReceipt createdAt occurrenceDate")
+        .lean(),
+      UserModel.findById(userId).select("currency").lean(),
+    ]);
+
+    const currency = user?.currency || "USD";
+    const trend = {};
+
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      trend[key] = { income: 0, expenses: 0, net: 0 };
+    }
+
+    incomes.forEach((inc) => {
+      const d = new Date(inc.date || inc.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (trend[key]) trend[key].income += Number(inc.amount || inc.total || 0);
+    });
+
+    expenses.forEach((e) => {
+      const d = new Date(e.occurrenceDate || e.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (trend[key]) trend[key].expenses += Number(e.sumOfReceipt || 0);
+    });
+
+    Object.keys(trend).forEach((k) => {
+      trend[k].net = trend[k].income - trend[k].expenses;
+    });
+
+    const months_data = Object.entries(trend).map(([month, d]) => ({
+      month,
+      income: parseFloat(d.income.toFixed(2)),
+      expenses: parseFloat(d.expenses.toFixed(2)),
+      net: parseFloat(d.net.toFixed(2)),
+    }));
+
+    const totalIncome = months_data.reduce((s, m) => s + m.income, 0);
+    const totalExpenses = months_data.reduce((s, m) => s + m.expenses, 0);
+    const avgMonthlyIncome = totalIncome / months;
+    const avgMonthlyExpenses = totalExpenses / months;
+
+    // Simple linear forecast for next month
+    const last3 = months_data.slice(-3);
+    const forecastIncome = last3.length ? last3.reduce((s, m) => s + m.income, 0) / last3.length : avgMonthlyIncome;
+    const forecastExpenses = last3.length ? last3.reduce((s, m) => s + m.expenses, 0) / last3.length : avgMonthlyExpenses;
+
+    return {
+      type: "data",
+      data: {
+        currency,
+        periods: months_data,
+        summary: {
+          totalIncome: parseFloat(totalIncome.toFixed(2)),
+          totalExpenses: parseFloat(totalExpenses.toFixed(2)),
+          totalNet: parseFloat((totalIncome - totalExpenses).toFixed(2)),
+          avgMonthlyIncome: parseFloat(avgMonthlyIncome.toFixed(2)),
+          avgMonthlyExpenses: parseFloat(avgMonthlyExpenses.toFixed(2)),
+        },
+        forecast: {
+          nextMonthIncome: parseFloat(forecastIncome.toFixed(2)),
+          nextMonthExpenses: parseFloat(forecastExpenses.toFixed(2)),
+          nextMonthNet: parseFloat((forecastIncome - forecastExpenses).toFixed(2)),
+          note: "Forecast based on 3-month moving average",
+        },
+      },
+    };
+  }
+
+  if (toolName === "search_transactions") {
+    const { type = "both", keyword = "", period = "month" } = toolArgs;
+    const IncomesModel = getIncomesModel();
+    const startDate = period === "all" ? new Date(0) : getPeriodStartDate(period);
+    const kw = keyword.toLowerCase();
+    const results = { income: [], expense: [] };
+
+    if ((type === "income" || type === "both") && IncomesModel) {
+      const incomes = await IncomesModel.find({ userId, createdAt: { $gte: startDate } })
+        .sort({ createdAt: -1 })
+        .limit(200)
+        .lean()
+        .catch(() => []);
+
+      results.income = incomes
+        .filter((i) => {
+          if (!kw) return true;
+          const searchable = [i.payer, i.customerName, i.projectName, i.description]
+            .join(" ")
+            .toLowerCase();
+          return searchable.includes(kw);
+        })
+        .slice(0, 50)
+        .map((i) => ({
+          description: i.payer || i.customerName || i.projectName || "Income",
+          amount: Number(i.amount || i.total || 0),
+          date: i.date || i.createdAt,
+        }));
+    }
+
+    if (type === "expense" || type === "both") {
+      const expenses = await ReceiptModel.find({ userId, createdAt: { $gte: startDate } })
+        .sort({ createdAt: -1 })
+        .limit(200)
+        .lean();
+
+      results.expense = expenses
+        .filter((e) => {
+          if (!kw) return true;
+          const searchable = [e.category, e.description, e.vendor, e.notes]
+            .join(" ")
+            .toLowerCase();
+          return searchable.includes(kw);
+        })
+        .slice(0, 50)
+        .map((e) => ({
+          category: e.category || "Expense",
+          amount: Number(e.sumOfReceipt || e.amount || 0),
+          date: e.occurrenceDate || e.createdAt,
+        }));
+    }
+
+    const totalIncome = results.income.reduce((s, i) => s + i.amount, 0);
+    const totalExpense = results.expense.reduce((s, e) => s + e.amount, 0);
+
+    return {
+      type: "data",
+      data: {
+        keyword: keyword || "all",
+        period: getPeriodLabel(period === "all" ? "year" : period),
+        income: results.income,
+        expense: results.expense,
+        totals: {
+          income: parseFloat(totalIncome.toFixed(2)),
+          expense: parseFloat(totalExpense.toFixed(2)),
+          net: parseFloat((totalIncome - totalExpense).toFixed(2)),
+        },
+      },
+    };
+  }
+
   if (toolName === "get_business_data") {
     const { period = "month", include = ["cashflow"] } = toolArgs;
     const result = {};
