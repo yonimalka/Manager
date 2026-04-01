@@ -2,14 +2,14 @@ const UserModel = require("../models/User");
 
 const ACTIVE_STATUSES = new Set(["trialing", "active", "grace_period"]);
 
-const hasActiveEntitlement = (subscription = {}, requiredEntitlement = "pro") => {
+const hasActiveEntitlement = (subscription = {}, requiredEntitlement = "MaggoPro") => {
   return (
     subscription.entitlement === requiredEntitlement &&
     ACTIVE_STATUSES.has(subscription.status)
   );
 };
 
-const requireSubscription = (requiredEntitlement = "pro") => async (req, res, next) => {
+const requireSubscription = (requiredEntitlement = "MaggoPro") => async (req, res, next) => {
   try {
     const user = await UserModel.findById(req.userId).select("subscription");
 

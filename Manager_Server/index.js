@@ -105,7 +105,7 @@ function buildSubscriptionResponse(user) {
 
   return {
     provider: subscription.provider || "revenuecat",
-    entitlement: subscription.entitlement || "pro",
+    entitlement: subscription.entitlement || "MaggoPro",
     productId: subscription.productId || null,
     status,
     trialEndsAt,
@@ -126,7 +126,7 @@ function extractRevenueCatPayload(body = {}) {
     event.entitlement_id ||
     event.entitlement ||
     event.entitlement_identifier ||
-    "pro";
+    "MaggoPro";
 
   const status = normalizeSubscriptionStatus(
     event.status ||
@@ -464,7 +464,7 @@ app.post("/newProject", authMiddleware, async (req, res) => {
     }
 
     const existingProjectsCount = await ProjectModel.countDocuments({ userId: req.userId });
-    const isPro = hasActiveEntitlement(user.subscription || {}, "pro");
+    const isPro = hasActiveEntitlement(user.subscription || {}, "MaggoPro");
 
     if (!isPro && existingProjectsCount >= 1) {
       return res.status(402).json({
@@ -1127,7 +1127,7 @@ app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   // })
 })
 
-app.get("/downloadReceiptsZip", authMiddleware, requireSubscription("pro"), async (req, res) => {
+app.get("/downloadReceiptsZip", authMiddleware, requireSubscription("MaggoPro"), async (req, res) => {
   try {
   
     const { from, to } = req.query;
@@ -1170,7 +1170,7 @@ app.get("/downloadReceiptsZip", authMiddleware, requireSubscription("pro"), asyn
     res.status(500).json({ message: "Server error while creating ZIP" });
   }
 });
-app.get("/downloadIncomesReceiptsZip", authMiddleware, requireSubscription("pro"), async (req, res) => {
+app.get("/downloadIncomesReceiptsZip", authMiddleware, requireSubscription("MaggoPro"), async (req, res) => {
   try {
     console.log("enter route on downloadIncomesReceiptsZip");
     
@@ -1612,7 +1612,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/quoteGenerator', authMiddleware, requireSubscription("pro"), upload.none(), async (req, res) => {
+app.post('/quoteGenerator', authMiddleware, requireSubscription("MaggoPro"), upload.none(), async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -1699,7 +1699,7 @@ Do NOT wrap in markdown, do NOT add commentary.
     res.status(500).json({ error: "Server error while generating quote", details: error.message });
   }
 });
- app.get("/employees", authMiddleware, requireSubscription("pro"), async (req, res) =>{
+ app.get("/employees", authMiddleware, requireSubscription("MaggoPro"), async (req, res) =>{
     const userId = req.userId;
     await UserModel.findById(userId)
     .then((user) =>{
@@ -1707,7 +1707,7 @@ Do NOT wrap in markdown, do NOT add commentary.
       res.json(employees);
     })
  })
-app.post("/addEmployee", authMiddleware, requireSubscription("pro"), async (req, res) =>{
+app.post("/addEmployee", authMiddleware, requireSubscription("MaggoPro"), async (req, res) =>{
   const userId = req.userId;
   const { name, role, phone, email, salaryType, salaryRate } = req.body;
 
@@ -1787,7 +1787,7 @@ app.post("/subscription/sync", authMiddleware, async (req, res) => {
   try {
     const {
       productId = null,
-      entitlement = "pro",
+      entitlement = "MaggoPro",
       status = "inactive",
       trialEndsAt = null,
       expiresAt = null,
