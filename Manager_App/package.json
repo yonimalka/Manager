@@ -1,6 +1,6 @@
 {
   "name": "manager",
-  "version": "1.0.0",
+  "version": "1.2.3",
   "main": "index.js",
   "private": true,
   "scripts": {
@@ -39,7 +39,7 @@
     "expo-random": "^14.0.1",
     "expo-sharing": "~13.1.5",
     "expo-status-bar": "~2.2.3",
-    "expo-updates": "~0.28.17",
+    "expo-updates": "~0.28.18",
     "expo-web-browser": "~14.2.0",
     "firebase": "^12.6.0",
     "jwt-decode": "^3.1.2",

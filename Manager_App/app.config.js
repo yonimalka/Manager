@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-const version = "1.2.1";
+const version = "1.2.3";
 
 export default {
   expo: {
@@ -20,7 +20,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: "com.yonatanmalka.Manager",
       usesAppleSignIn: true,
-      buildNumber: "8",
+      buildNumber: "6",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
          NSCameraUsageDescription: "This app needs access to your camera to take receipts.",
@@ -48,6 +48,7 @@ export default {
       projectId: "a0b72a58-39e1-4ed6-8402-837f500c13e3"
     },
     plugins: [
+      "expo-updates",
       "expo-apple-authentication",
       "expo-web-browser",
       [

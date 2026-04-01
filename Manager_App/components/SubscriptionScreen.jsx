@@ -9,9 +9,10 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  AppState,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import SubscriptionCard from "./SubscriptionCard";
 import {
   fetchProOffering,
@@ -28,10 +29,11 @@ import {
 
 const premiumFeatures = [
   "Unlimited projects",
-  "AI-powered Private Assistant",
-  "Cash Flow Managment",
   "Advanced finance tools",
+  "Cash flow management",
   "Receipt and income exports",
+  "Employee management",
+  "AI-powered Private Assistant",
 ];
 
 function packageLabel(pkg, fallback) {
@@ -79,6 +81,21 @@ export default function SubscriptionScreen() {
 
   useEffect(() => {
     loadSubscription();
+  }, [loadSubscription]);
+
+  // Refresh when screen comes back into focus (e.g. after paywall closes)
+  useFocusEffect(
+    useCallback(() => {
+      loadSubscription();
+    }, [loadSubscription])
+  );
+
+  // Refresh when app returns to foreground (e.g. after Apple payment sheet)
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") loadSubscription();
+    });
+    return () => sub.remove();
   }, [loadSubscription]);
 
   const active = hasProAccess(subscription);
@@ -238,7 +255,7 @@ export default function SubscriptionScreen() {
             </TouchableOpacity>
           </View>
 
-         {active && !!detailRows.length && (
+          {!!detailRows.length && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Subscription details</Text>
               {detailRows.map((row) => (

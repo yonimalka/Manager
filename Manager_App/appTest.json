@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mago",
     "slug": "Manager",
-    "version": "1.0.1",
+    "version": "1.2.3",
     "orientation": "portrait",
     "icon": "./assets/MaggoLogo.png",
     "userInterfaceStyle": "light",
