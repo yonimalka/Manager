@@ -1766,12 +1766,14 @@ app.get("/subscription/status", authMiddleware, async (req, res) => {
     }
 
     const projectCount = await ProjectModel.countDocuments({ userId: req.userId });
+    const subResponse = buildSubscriptionResponse(user);
+    console.log("[STATUS] userId:", req.userId, "status:", subResponse.status, "hasAccess:", subResponse.hasAccess, "entitlement:", subResponse.entitlement);
 
     res.json({
       userId: req.userId,
       email: user.email,
       name: user.name,
-      subscription: buildSubscriptionResponse(user),
+      subscription: subResponse,
       limits: {
         freeProjectLimit: 1,
         projectCount,
@@ -1785,6 +1787,7 @@ app.get("/subscription/status", authMiddleware, async (req, res) => {
 
 app.post("/subscription/sync", authMiddleware, async (req, res) => {
   try {
+    console.log("[SYNC] userId:", req.userId, "body:", JSON.stringify(req.body));
     const {
       productId = null,
       entitlement = "MaggoPro",

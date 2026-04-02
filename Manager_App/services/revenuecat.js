@@ -3,13 +3,13 @@ import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import { Platform } from "react-native";
 
 const IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
-// const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
-const PRO_ENTITLEMENT = process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "pro";
+const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+const PRO_ENTITLEMENT = process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "MaggoPro";
 
 let purchasesConfigured = false;
 
 function getApiKey() {
-  return  IOS_API_KEY;
+  return Platform.OS === "ios" ? IOS_API_KEY : ANDROID_API_KEY;
 }
 
 function findPackageByIdentifier(offering, identifier) {
