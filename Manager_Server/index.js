@@ -128,13 +128,25 @@ function extractRevenueCatPayload(body = {}) {
     event.entitlement_identifier ||
     "MaggoPro";
 
-  const status = normalizeSubscriptionStatus(
-    event.status ||
-      event.period_type ||
-      (event.type === "CANCELLATION" ? "cancelled" : null) ||
-      (event.type === "EXPIRATION" ? "expired" : null) ||
-      (event.type === "BILLING_ISSUE" ? "grace_period" : null)
-  );
+  const eventType = event.type || "";
+  const periodType = String(event.period_type || "").toUpperCase();
+  let resolvedStatus;
+  if (["INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION", "SUBSCRIBER_ALIAS"].includes(eventType)) {
+    resolvedStatus = periodType === "TRIAL" ? "trialing" : "active";
+  } else if (eventType === "CANCELLATION") {
+    resolvedStatus = "cancelled";
+  } else if (eventType === "EXPIRATION") {
+    resolvedStatus = "expired";
+  } else if (eventType === "BILLING_ISSUE") {
+    resolvedStatus = "grace_period";
+  } else if (periodType === "TRIAL") {
+    resolvedStatus = "trialing";
+  } else if (["NORMAL", "INTRO"].includes(periodType)) {
+    resolvedStatus = "active";
+  } else {
+    resolvedStatus = event.status || "inactive";
+  }
+  const status = normalizeSubscriptionStatus(resolvedStatus);
 
   return {
     appUserId,
