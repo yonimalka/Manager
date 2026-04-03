@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { presentRevenueCatPaywallIfNeeded } from "../services/revenuecat";
 import {
   View,
   Text,
@@ -75,7 +76,11 @@ export default function ReceiptDownloadByDate() {
 
       await Sharing.shareAsync(res.uri);
     } catch (err) {
-      console.log("ZIP download error:", err);
+      if (err.response?.status === 402) {
+        try { await presentRevenueCatPaywallIfNeeded(); } catch { /* no navigation here */ }
+      } else {
+        console.log("ZIP download error:", err);
+      }
     }
   };
 

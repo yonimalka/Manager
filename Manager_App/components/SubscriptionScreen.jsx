@@ -29,11 +29,11 @@ import {
 
 const premiumFeatures = [
   "Unlimited projects",
-  "Advanced finance tools",
-  "Cash flow management",
-  "Receipt and income exports",
   "Employee management",
   "AI-powered Private Assistant",
+  "Receipt & income exports",
+  "Price quote generation",
+  "Advanced finance insights",
 ];
 
 function packageLabel(pkg, fallback) {
@@ -227,35 +227,37 @@ export default function SubscriptionScreen() {
         <>
           <SubscriptionCard subscription={subscription} onPress={() => {}} />
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Plans</Text>
+          {!active && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Plans</Text>
 
-            <TouchableOpacity
-              style={[styles.planCard, purchaseLoading && styles.buttonDisabled]}
-              disabled={purchaseLoading}
-              onPress={() => handlePackagePurchase(offering?.monthly)}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.planTitle}>Maggo Pro — Monthly</Text>
-                <Text style={styles.planDuration}>1 month · Auto-renewable</Text>
-                <Text style={styles.planCaption}>Full access to all Pro features</Text>
-              </View>
-              <Text style={styles.planPrice}>{packagePrice(offering?.monthly)}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.planCard, purchaseLoading && styles.buttonDisabled]}
+                disabled={purchaseLoading}
+                onPress={() => handlePackagePurchase(offering?.monthly)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.planTitle}>Maggo Pro — Monthly</Text>
+                  <Text style={styles.planDuration}>1 month · Auto-renewable</Text>
+                  <Text style={styles.planCaption}>Full access to all Pro features</Text>
+                </View>
+                <Text style={styles.planPrice}>{packagePrice(offering?.monthly)}</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.planCard, purchaseLoading && styles.buttonDisabled]}
-              disabled={purchaseLoading}
-              onPress={() => handlePackagePurchase(offering?.yearly)}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.planTitle}>Maggo Pro — Yearly</Text>
-                <Text style={styles.planDuration}>1 year · Auto-renewable</Text>
-                <Text style={styles.planCaption}>Best value — save vs. monthly</Text>
-              </View>
-              <Text style={styles.planPrice}>{packagePrice(offering?.yearly)}</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.planCard, purchaseLoading && styles.buttonDisabled]}
+                disabled={purchaseLoading}
+                onPress={() => handlePackagePurchase(offering?.yearly)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.planTitle}>Maggo Pro — Yearly</Text>
+                  <Text style={styles.planDuration}>1 year · Auto-renewable</Text>
+                  <Text style={styles.planCaption}>Best value — save vs. monthly</Text>
+                </View>
+                <Text style={styles.planPrice}>{packagePrice(offering?.yearly)}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {!!detailRows.length && (
             <View style={styles.section}>
@@ -271,16 +273,26 @@ export default function SubscriptionScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Premium features</Text>
-            {premiumFeatures.map((feature) => (
-              <View key={feature} style={styles.featureRow}>
-                <Ionicons
-                  name={active ? "checkmark-circle" : "ellipse-outline"}
-                  size={18}
-                  color={active ? "#16A34A" : "#64748B"}
-                />
-                <Text style={styles.featureText}>{feature}</Text>
-              </View>
-            ))}
+            {premiumFeatures.map((feature) => {
+              const comingSoon = feature === "Price quote generation" || feature === "Employee management";
+              return (
+                <View key={feature} style={styles.featureRow}>
+                  <Ionicons
+                    name={active && !comingSoon ? "checkmark-circle" : "ellipse-outline"}
+                    size={18}
+                    color={active && !comingSoon ? "#16A34A" : "#64748B"}
+                  />
+                  <Text style={[styles.featureText, comingSoon && { color: "#94A3B8" }]}>
+                    {feature}
+                  </Text>
+                  {comingSoon && (
+                    <View style={styles.comingSoonBadge}>
+                      <Text style={styles.comingSoonText}>Coming soon</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
 
           {!active ? (
@@ -358,7 +370,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(35, 31, 31, 0.2)",
+    backgroundColor: "#1E293B",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -518,5 +530,17 @@ const styles = StyleSheet.create({
   legalSep: {
     fontSize: 12,
     color: "#CBD5E1",
+  },
+  comingSoonBadge: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  comingSoonText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#94A3B8",
   },
 });

@@ -35,7 +35,7 @@ import api from "../services/api";
 import { signInAnonymously } from "firebase/auth";
 import { auth } from "./firebase";
 import { formatCurrency } from "../services/formatCurrency";
-import { fetchSubscriptionStatus, hasProAccess } from "../services/subscription";
+import { refreshSubscriptionStatus, hasProAccess } from "../services/subscription";
 
 const { width } = Dimensions.get("window");
 
@@ -197,7 +197,7 @@ const HomeScreen = () => {
   const handleAgentPress = async () => {
     // navigation.navigate("AgentScreen");
     try {
-    const subscription = await fetchSubscriptionStatus();
+    const subscription = await refreshSubscriptionStatus();
     if (hasProAccess(subscription)) {
     navigation.navigate("AgentScreen");
     } else {

@@ -33,12 +33,12 @@ export default function SubscriptionCard({ subscription, onPress }) {
           />
         </View>
         <View style={styles.copy}>
-          <Text style={[styles.title, { color: accent.text }]}>Maggo Pro</Text>
+          {!active && <Text style={[styles.title, { color: accent.text }]}>Maggo Pro</Text>}
           <Text style={[styles.status, { color: accent.text }]}>{label}</Text>
           <Text style={styles.caption}>
             {active
               ? "Your premium features are ready to use."
-              : "Unlock the full power of Maggo with a Pro subscription."}
+              : "Start a 30-day trial and unlock premium features."}
           </Text>
         </View>
       </View>

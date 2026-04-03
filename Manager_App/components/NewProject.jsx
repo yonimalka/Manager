@@ -1,6 +1,3 @@
-// React Native version visually matched to Claude's web design (iOS / Tailwind-like)
-// Focus: cards, spacing, colors, rounded corners, subtle shadows, section headers
-
 import React, { useState } from "react";
 import {
   View,
@@ -63,7 +60,16 @@ const NewProject = () => {
       Alert.alert("Success", "Project added successfully!");
       navigation.goBack();
     } catch (err) {
-      Alert.alert("Error", "Failed to add project");
+      if (err.response?.status === 402) {
+        try {
+          const { presentRevenueCatPaywallIfNeeded } = await import("../services/revenuecat");
+          await presentRevenueCatPaywallIfNeeded();
+        } catch {
+          navigation.navigate("SubscriptionScreen");
+        }
+      } else {
+        Alert.alert("Error", "Failed to add project");
+      }
     }
   };
 

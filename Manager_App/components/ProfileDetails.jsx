@@ -25,7 +25,7 @@ import { Camera, Trash2, Pencil  } from "lucide-react-native";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
 import SubscriptionCard from "./SubscriptionCard";
-import { fetchSubscriptionStatus } from "../services/subscription";
+import { refreshSubscriptionStatus } from "../services/subscription";
 
 const isRTL = I18nManager.isRTL;
 
@@ -56,7 +56,7 @@ export default function ProfileDetails() {
     try {
       const [res, subscriptionData] = await Promise.all([
         api.get(`/getUserDetails`),
-        fetchSubscriptionStatus(),
+        refreshSubscriptionStatus(),
       ]);
       const data = res.data;
       let addressObj = {
