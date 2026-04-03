@@ -41,7 +41,10 @@ export const useAuth = () => {
         return;
       }
 
-      // ✅ Set basic auth
+      // ✅ Configure RC before rendering authenticated screens
+      await configureRevenueCat(decoded.userId);
+
+      // ✅ Set basic auth — RC is ready at this point
       setAuth({
         userId: decoded.userId,
         role: decoded.role || null,
@@ -49,8 +52,8 @@ export const useAuth = () => {
         authLoading: false,
       });
 
-      await configureRevenueCat(decoded.userId);
-      await refreshSubscriptionStatus().catch((error) => {
+      // Background subscription sync — non-blocking
+      refreshSubscriptionStatus().catch((error) => {
         console.error("Initial subscription refresh failed:", error);
       });
 

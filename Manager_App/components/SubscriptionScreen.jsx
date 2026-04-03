@@ -63,13 +63,15 @@ export default function SubscriptionScreen() {
 
       const [subscriptionData, offeringData] = await Promise.all([
         refreshSubscriptionStatus(),
-        fetchProOffering().catch((error) => {
-          console.error("Failed to load offering:", error);
-          return null;
-        }),
+        fetchProOffering().catch(() => null),
       ]);
 
-      setSubscription(subscriptionData);
+      // Always accept "active", never downgrade from "active" → "inactive"
+      setSubscription((prev) => {
+        if (subscriptionData?.hasAccess) return subscriptionData;
+        if (prev?.hasAccess) return prev;
+        return subscriptionData;
+      });
       setOffering(offeringData);
     } catch (error) {
       console.error("Failed to load subscription:", error);
@@ -356,7 +358,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#1E293B",
+    backgroundColor: "rgba(35, 31, 31, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },

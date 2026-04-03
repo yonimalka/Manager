@@ -50,14 +50,32 @@ export async function refreshSubscriptionStatus() {
   const customerInfo = await getRevenueCatCustomerInfo();
 
   if (customerInfo) {
-    try {
-      return await syncSubscriptionFromCustomerInfo(customerInfo, "CUSTOMER_INFO_REFRESH");
-    } catch (error) {
-      console.error("Subscription sync failed, falling back to API status:", error);
-    }
+    // Fire server sync in background — don't block the UI on it
+    syncSubscriptionFromCustomerInfo(customerInfo, "CUSTOMER_INFO_REFRESH").catch(
+      (err) => console.error("[sub] background sync failed:", err)
+    );
+
+    // Return RC state directly so the UI is always accurate
+    const s = getEntitlementState(customerInfo);
+    return {
+      provider: "revenuecat",
+      entitlement: s.entitlementId,
+      productId: s.productId,
+      status: s.status,
+      hasAccess: s.hasAccess,
+      trialEndsAt: s.trialEndsAt,
+      expiresAt: s.expiresAt,
+      willRenew: s.willRenew,
+      lastSyncedAt: new Date().toISOString(),
+    };
   }
 
-  return await fetchSubscriptionStatus();
+  // RC not configured yet — fall back to server
+  try {
+    return await fetchSubscriptionStatus();
+  } catch {
+    return null;
+  }
 }
 
 export async function purchaseProPackage(selectedPackage) {
