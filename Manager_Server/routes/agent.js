@@ -9,7 +9,7 @@ const router = express.Router();
 // Temp directory for generated files
 const REPORTS_DIR = path.join(__dirname, "../tmp_reports");
 if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
-const Anthropic = require("@anthropic-ai/sdk");
+const OpenAI = require("openai");
 const authMiddleware = require("../authMiddleware");
 const AgentModel = require("../models/Agent");
 const ConversationModel = require("../models/Conversation");
@@ -20,13 +20,8 @@ const ReceiptModel = require("../models/Receipt");
 const { genericToPdf } = require("../pdf/genericToPdf");
 const { genericToExcel } = require("../excel/genericToExcel");
 
-const https = require("https");
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  timeout: 30000,
-  httpAgent: new https.Agent({ keepAlive: false }),
-});
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-4-5-20250514";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const AI_MODEL = process.env.AI_MODEL || "gpt-4o";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -522,134 +517,131 @@ router.post(
   }
 );
 
-// ─── Agent tools (Anthropic format) ─────────────────────────────────────────
+// ─── Agent tools (OpenAI format) ─────────────────────────────────────────────
 
 const AGENT_TOOLS = [
   {
-    name: "get_financial_trends",
-    description:
-      "Fetch month-by-month income and expense breakdown for trend analysis, forecasting, and growth insights. " +
-      "Use this when the user asks about trends, growth, forecasts, comparisons between months, or when you want to proactively surface financial patterns.",
-    input_schema: {
-      type: "object",
-      properties: {
-        months: {
-          type: "number",
-          description: "Number of past months to include (default 6, max 12)",
+    type: "function",
+    function: {
+      name: "get_financial_trends",
+      description:
+        "Fetch month-by-month income and expense breakdown for trend analysis, forecasting, and growth insights. " +
+        "Use this when the user asks about trends, growth, forecasts, comparisons between months, or when you want to proactively surface financial patterns.",
+      parameters: {
+        type: "object",
+        properties: {
+          months: { type: "number", description: "Number of past months to include (default 6, max 12)" },
         },
+        required: [],
       },
-      required: [],
     },
   },
   {
-    name: "search_transactions",
-    description:
-      "Search income or expense transactions by keyword, category, or date range. " +
-      "Use when the user asks about a specific client, category, expense type, or time period.",
-    input_schema: {
-      type: "object",
-      properties: {
-        type: {
-          type: "string",
-          enum: ["income", "expense", "both"],
-          description: "Which transaction type to search",
+    type: "function",
+    function: {
+      name: "search_transactions",
+      description:
+        "Search income or expense transactions by keyword, category, or date range. " +
+        "Use when the user asks about a specific client, category, expense type, or time period.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: ["income", "expense", "both"], description: "Which transaction type to search" },
+          keyword: { type: "string", description: "Optional keyword to filter by (client name, category, description)" },
+          period: { type: "string", enum: ["month", "quarter", "year", "all"], description: "Time period to search within" },
         },
-        keyword: {
-          type: "string",
-          description: "Optional keyword to filter by (client name, category, description)",
-        },
-        period: {
-          type: "string",
-          enum: ["month", "quarter", "year", "all"],
-          description: "Time period to search within",
-        },
+        required: ["type"],
       },
-      required: ["type"],
     },
   },
   {
-    name: "get_business_data",
-    description:
-      "Fetch real financial data from the database for a given period. " +
-      "ALWAYS call this first before generating any PDF or Excel file that involves financial figures, transactions, projects, or expenses. " +
-      "Returns actual income entries, expense entries, projects, and summary totals.",
-    input_schema: {
-      type: "object",
-      properties: {
-        period: {
-          type: "string",
-          enum: ["month", "quarter", "year"],
-          description: "Time period to fetch data for",
+    type: "function",
+    function: {
+      name: "get_business_data",
+      description:
+        "Fetch real financial data from the database for a given period. " +
+        "ALWAYS call this first before generating any PDF or Excel file that involves financial figures, transactions, projects, or expenses. " +
+        "Returns actual income entries, expense entries, projects, and summary totals.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { type: "string", enum: ["month", "quarter", "year"], description: "Time period to fetch data for" },
+          include: {
+            type: "array",
+            items: { type: "string", enum: ["cashflow", "projects", "expenses"] },
+            description: "Which data sets to include",
+          },
         },
-        include: {
-          type: "array",
-          items: { type: "string", enum: ["cashflow", "projects", "expenses"] },
-          description: "Which data sets to include",
-        },
+        required: ["period", "include"],
       },
-      required: ["period", "include"],
     },
   },
   {
-    name: "generate_pdf",
-    description:
-      "Generate any PDF document the user asks for — reports, invoices, summaries, cash flow, anything. " +
-      "You define the full document structure: title, subtitle, and sections. Each section can have a heading, text content, and/or a table. " +
-      "If the document needs real financial data, call get_business_data first, then use that data to fill the sections. " +
-      "Call this whenever the user wants a PDF, report, or printable document.",
-    input_schema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Document title" },
-        subtitle: { type: "string", description: "Optional subtitle or period description" },
-        sections: {
-          type: "array",
-          description: "Ordered list of document sections",
-          items: {
-            type: "object",
-            properties: {
-              heading: { type: "string" },
-              content: { type: "string", description: "Paragraph text for this section" },
-              table: {
-                type: "object",
-                properties: {
-                  headers: { type: "array", items: { type: "string" } },
-                  rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+    type: "function",
+    function: {
+      name: "generate_pdf",
+      description:
+        "Generate any PDF document the user asks for — reports, invoices, summaries, cash flow, anything. " +
+        "You define the full document structure: title, subtitle, and sections. Each section can have a heading, text content, and/or a table. " +
+        "If the document needs real financial data, call get_business_data first, then use that data to fill the sections. " +
+        "Call this whenever the user wants a PDF, report, or printable document.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Document title" },
+          subtitle: { type: "string", description: "Optional subtitle or period description" },
+          sections: {
+            type: "array",
+            description: "Ordered list of document sections",
+            items: {
+              type: "object",
+              properties: {
+                heading: { type: "string" },
+                content: { type: "string", description: "Paragraph text for this section" },
+                table: {
+                  type: "object",
+                  properties: {
+                    headers: { type: "array", items: { type: "string" } },
+                    rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+                  },
                 },
               },
             },
           },
         },
+        required: ["title", "sections"],
       },
-      required: ["title", "sections"],
     },
   },
   {
-    name: "generate_excel",
-    description:
-      "Generate any Excel (.xlsx) spreadsheet the user asks for — cashflow, expenses, projects, custom tables, anything. " +
-      "You define the full workbook: one or more sheets, each with headers and rows. " +
-      "If the document needs real financial data, call get_business_data first. " +
-      "Call this whenever the user wants an Excel file, spreadsheet, or XLSX export.",
-    input_schema: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Workbook title (for filename)" },
-        sheets: {
-          type: "array",
-          description: "List of worksheets",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string", description: "Sheet tab name" },
-              headers: { type: "array", items: { type: "string" } },
-              rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+    type: "function",
+    function: {
+      name: "generate_excel",
+      description:
+        "Generate any Excel (.xlsx) spreadsheet the user asks for — cashflow, expenses, projects, custom tables, anything. " +
+        "You define the full workbook: one or more sheets, each with headers and rows. " +
+        "If the document needs real financial data, call get_business_data first. " +
+        "Call this whenever the user wants an Excel file, spreadsheet, or XLSX export.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Workbook title (for filename)" },
+          sheets: {
+            type: "array",
+            description: "List of worksheets",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "Sheet tab name" },
+                headers: { type: "array", items: { type: "string" } },
+                rows: { type: "array", items: { type: "array", items: { type: "string" } } },
+              },
+              required: ["name", "headers", "rows"],
             },
-            required: ["name", "headers", "rows"],
           },
         },
+        required: ["title", "sheets"],
       },
-      required: ["title", "sheets"],
     },
   },
 ];
@@ -945,7 +937,7 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
     const agent = await AgentModel.findById(conversation.agentId);
     const userContext = await buildUserContext(req.userId);
     const systemPrompt = buildSystemPrompt(agent, userContext);
-    console.log("[AGENT] context built, calling Claude model:", CLAUDE_MODEL);
+    console.log("[AGENT] context built, calling model:", AI_MODEL);
 
     conversation.messages.push({ role: "user", content: message });
 
@@ -954,55 +946,48 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
       content: m.content,
     }));
 
-    // ── First Claude call ──────────────────────────────────────────────────
-    const claudeMessages = recentMessages.map((m) => ({
-      role: m.role === "assistant" ? "assistant" : "user",
-      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-    }));
-
-    // Anthropic requires messages to alternate user/assistant — ensure first is user
-    const sanitizedMessages = claudeMessages.filter((m) =>
-      ["user", "assistant"].includes(m.role)
-    );
+    // ── OpenAI chat loop ───────────────────────────────────────────────────
+    const openAIMessages = [
+      { role: "system", content: systemPrompt },
+      ...recentMessages.map((m) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      })),
+    ];
 
     const MAX_TOOL_ROUNDS = 5;
-    let currentMessages = [...sanitizedMessages];
+    let currentMessages = [...openAIMessages];
     let finalReply = null;
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      console.log(`[AGENT] Claude round ${round + 1}, messages: ${currentMessages.length}`);
-      const claudeCall = anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      console.log(`[AGENT] GPT round ${round + 1}, messages: ${currentMessages.length}`);
+      const response = await openai.chat.completions.create({
+        model: AI_MODEL,
         max_tokens: 2000,
-        system: systemPrompt,
         messages: currentMessages,
         tools: AGENT_TOOLS,
+        tool_choice: "auto",
       });
-      const response = await Promise.race([
-        claudeCall,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Anthropic API timeout after 25s")), 25000)),
-      ]);
 
-      // Extract text and tool_use blocks
-      const textBlock = response.content.find((b) => b.type === "text");
-      const toolUseBlock = response.content.find((b) => b.type === "tool_use");
+      const choice = response.choices[0];
+      const assistantMsg = choice.message;
+      const toolCall = assistantMsg.tool_calls?.[0];
 
-      if (!toolUseBlock) {
-        // Pure text reply — done
-        finalReply = textBlock?.text?.trim() || "Done.";
+      if (!toolCall) {
+        finalReply = assistantMsg.content?.trim() || "Done.";
         break;
       }
 
       // Tool call
-      const toolName = toolUseBlock.name;
-      const toolArgs = toolUseBlock.input || {};
-      console.log(`[Claude] tool call: ${toolName}`, JSON.stringify(toolArgs).slice(0, 120));
+      const toolName = toolCall.function.name;
+      const toolArgs = JSON.parse(toolCall.function.arguments || "{}");
+      console.log(`[GPT] tool call: ${toolName}`, JSON.stringify(toolArgs).slice(0, 120));
 
       let toolResult;
       try {
         toolResult = await executeTool(toolName, toolArgs, req.userId);
       } catch (toolErr) {
-        console.error(`[Claude] tool ${toolName} error:`, toolErr.message);
+        console.error(`[GPT] tool ${toolName} error:`, toolErr.message);
         toolResult = { error: toolErr.message };
       }
 
@@ -1040,19 +1025,16 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
         });
       }
 
-      // Data result — feed back to Claude and continue
+      // Data result — feed back and continue
       const toolResultText = toolResult
         ? JSON.stringify(toolResult.data || toolResult)
         : "No result.";
 
-      currentMessages.push({ role: "assistant", content: response.content });
+      currentMessages.push(assistantMsg);
       currentMessages.push({
-        role: "user",
-        content: [{
-          type: "tool_result",
-          tool_use_id: toolUseBlock.id,
-          content: toolResultText,
-        }],
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: toolResultText,
       });
     }
 
@@ -1144,14 +1126,16 @@ ${description ? `Details: ${description}` : ""}
 
 Please complete this task for the user. Return a clear, professional response.`;
 
-      const completion = await anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      const completion = await openai.chat.completions.create({
+        model: AI_MODEL,
         max_tokens: 2000,
-        system: systemPrompt,
-        messages: [{ role: "user", content: taskPrompt }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: taskPrompt },
+        ],
       });
 
-      const result = completion.content?.find((b) => b.type === "text")?.text?.trim();
+      const result = completion.choices[0]?.message?.content?.trim();
 
       task.status = "completed";
       task.resultText = result;
