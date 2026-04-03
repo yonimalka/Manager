@@ -20,7 +20,7 @@ const ReceiptModel = require("../models/Receipt");
 const { genericToPdf } = require("../pdf/genericToPdf");
 const { genericToExcel } = require("../excel/genericToExcel");
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 30000 });
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-4-5-20250514";
 
 const upload = multer({
@@ -965,13 +965,18 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
     let finalReply = null;
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const response = await anthropic.messages.create({
+      console.log(`[AGENT] Claude round ${round + 1}, messages: ${currentMessages.length}`);
+      const claudeCall = anthropic.messages.create({
         model: CLAUDE_MODEL,
         max_tokens: 2000,
         system: systemPrompt,
         messages: currentMessages,
         tools: AGENT_TOOLS,
       });
+      const response = await Promise.race([
+        claudeCall,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Anthropic API timeout after 25s")), 25000)),
+      ]);
 
       // Extract text and tool_use blocks
       const textBlock = response.content.find((b) => b.type === "text");
