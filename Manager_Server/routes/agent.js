@@ -20,7 +20,12 @@ const ReceiptModel = require("../models/Receipt");
 const { genericToPdf } = require("../pdf/genericToPdf");
 const { genericToExcel } = require("../excel/genericToExcel");
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 30000 });
+const https = require("https");
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  timeout: 30000,
+  httpAgent: new https.Agent({ keepAlive: false }),
+});
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-4-5-20250514";
 
 const upload = multer({
