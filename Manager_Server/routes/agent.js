@@ -21,7 +21,7 @@ const { genericToPdf } = require("../pdf/genericToPdf");
 const { genericToExcel } = require("../excel/genericToExcel");
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-5-20241022";
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-4-5-20250514";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -901,6 +901,7 @@ async function executeTool(toolName, toolArgs, userId) {
 // ─── Chat ────────────────────────────────────────────────────────────────────
 
 router.post("/agent/chat", authMiddleware, async (req, res) => {
+  console.log("[AGENT] /chat hit — userId:", req.userId);
   try {
     const { conversationId, message } = req.body;
 
@@ -935,9 +936,11 @@ router.post("/agent/chat", authMiddleware, async (req, res) => {
       });
     }
 
+    console.log("[AGENT] building context for userId:", req.userId);
     const agent = await AgentModel.findById(conversation.agentId);
     const userContext = await buildUserContext(req.userId);
     const systemPrompt = buildSystemPrompt(agent, userContext);
+    console.log("[AGENT] context built, calling Claude model:", CLAUDE_MODEL);
 
     conversation.messages.push({ role: "user", content: message });
 
