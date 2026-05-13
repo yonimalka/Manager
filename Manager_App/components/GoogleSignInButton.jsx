@@ -71,17 +71,12 @@ export default function GoogleSignInButton() {
       // Save login token locally
       await AsyncStorage.setItem("token", token);
       const res = await api.get("/getUserDetails");
-       console.log(res.data);
-      if (!res.data.businessName || !res.data.businessId || !res.data.address) {
-            Alert.alert("Hi, please fill all required fields")
-            navigation.navigate("ProfileDetails");
-          } else {
-           // Navigate to home
-        navigation.reset({
-        index: 0,
-        routes: [{ name: "HomeScreen" }],
-      });
-          }
+      // New user: no business name or currency set yet → quick setup
+      if (!res.data.businessName || !res.data.currency) {
+        navigation.reset({ index: 0, routes: [{ name: "QuickSetup" }] });
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
+      }
       
 
     } catch (error) {
@@ -91,51 +86,46 @@ export default function GoogleSignInButton() {
 
   return (
     <Pressable
-      style={[styles.button, { flexDirection: !isRTL ? "row-reverse" : "row" }]}
+      style={[styles.button, !request && { opacity: 0.5 }]}
       disabled={!request}
       onPress={() => promptAsync()}
     >
-      {/* <Text style={styles.text}>Sign in with Google</Text> */}
       <Image
         source={require("../assets/google.png")}
         style={styles.icon}
       />
+      <Text style={styles.text}>Continue with Google</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: "#DADCE0",
-    // paddingVertical: 9,
-    // width: "100%",
-    alignSelf: "center",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    // paddingHorizontal: 10,
-    // Shadow
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    width: "100%",
+    gap: 12,
     elevation: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    marginHorizontal: 10,
-    marginTop: 20,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   icon: {
-    width: 60,
-    height: 60,
-    // borderWidth: 1,
-    
+    width: 25,
+    height: 25,
   },
   text: {
-    fontSize: 16,
-    color: "#3C4043",
+    fontSize: 15,
+    color: "#1E293B",
     fontWeight: "600",
-    marginLeft: 10,
   },
 });

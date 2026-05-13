@@ -2,6 +2,19 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "@env";
+import { CommonActions } from "@react-navigation/native";
+
+let _navigator = null;
+export const setNavigator = (ref) => { _navigator = ref; };
+
+const clearSessionAndRedirect = async () => {
+  await AsyncStorage.multiRemove(["token", "refreshToken"]);
+  if (_navigator) {
+    _navigator.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: "LoginScreen" }] })
+    );
+  }
+};
 console.log("");
 
 // Create Axios instance
@@ -61,9 +74,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         console.error("Refresh token failed:", refreshError);
-        // Optional: clear storage or navigate to login
-        await AsyncStorage.removeItem("token");
-        await AsyncStorage.removeItem("refreshToken");
+        await clearSessionAndRedirect();
       }
     }
 

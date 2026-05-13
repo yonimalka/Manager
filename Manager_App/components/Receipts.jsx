@@ -36,85 +36,84 @@ import {
 
 const isRTL = I18nManager.isRTL;
 
-// Predefined category suggestions
+// ─── Category data ────────────────────────────────────────────────
 const CATEGORY_SUGGESTIONS = [
-  { name: "Office Supplies", icon: "📎", color: "#3B82F6" },
-  { name: "Food & Dining", icon: "🍽️", color: "#F59E0B" },
-  { name: "Software", icon: "💻", color: "#8B5CF6" },
-  { name: "Travel", icon: "✈️", color: "#06B6D4" },
-  { name: "Utilities", icon: "⚡", color: "#10B981" },
-  { name: "Marketing", icon: "📢", color: "#EF4444" },
-  { name: "Equipment", icon: "🔧", color: "#6B7280" },
-  { name: "Other", icon: "📋", color: "#EC4899" },
+  { name: "Office Supplies", emoji: "📎" },
+  { name: "Food & Dining",   emoji: "🍽️" },
+  { name: "Software",        emoji: "💻" },
+  { name: "Travel",          emoji: "✈️" },
+  { name: "Utilities",       emoji: "⚡" },
+  { name: "Marketing",       emoji: "📢" },
+  { name: "Equipment",       emoji: "🔧" },
+  { name: "Other",           emoji: "🎁" },
 ];
 
+// ─── Sub-components ───────────────────────────────────────────────
+const SectionCard = ({ iconBg, icon, title, children }) => (
+  <View style={styles.card}>
+    <View style={styles.cardHeader}>
+      <View style={[styles.cardHeaderIcon, { backgroundColor: iconBg }]}>
+        {icon}
+      </View>
+      <Text style={styles.cardTitle}>{title}</Text>
+    </View>
+    <View style={styles.cardBody}>{children}</View>
+  </View>
+);
+
+const FieldLabel = ({ label, required, optional }) => (
+  <View style={styles.fieldLabelRow}>
+    <Text style={styles.fieldLabel}>{label}</Text>
+    {required && <Text style={styles.badgeRequired}>Required</Text>}
+    {optional && <Text style={styles.badgeOptional}>Optional</Text>}
+  </View>
+);
+
+// ─── Main Component ───────────────────────────────────────────────
 export default function Receipts({ onClose, projectId }) {
   const navigation = useNavigation();
   const route = useRoute();
-  // const projectId = route.params?.projectId;
   const { userId, userDetails } = useAuth();
 
-  const [image, setImage] = useState(null);
+  const [image, setImage]     = useState(null);
   const [category, setCategory] = useState("");
-  const [sum, setSum] = useState("");
-  const [notes, setNotes] = useState("");
+  const [sum, setSum]         = useState("");
+  const [notes, setNotes]     = useState("");
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]   = useState({});
   const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
 
-  // Animation values
   const progressAnim = useRef(new Animated.Value(0)).current;
-  const successAnim = useRef(new Animated.Value(0)).current;
+  const successAnim  = useRef(new Animated.Value(0)).current;
 
-  // -------------------------------
-  // Format currency input
-  // -------------------------------
+  // ── Helpers ──
   const formatCurrency = (value) => {
     const cleaned = value.replace(/[^0-9.]/g, "");
     const parts = cleaned.split(".");
-    if (parts.length > 2) {
-      return parts[0] + "." + parts.slice(1).join("");
-    }
-    if (parts[1] && parts[1].length > 2) {
-      return parts[0] + "." + parts[1].slice(0, 2);
-    }
+    if (parts.length > 2) return parts[0] + "." + parts.slice(1).join("");
+    if (parts[1] && parts[1].length > 2) return parts[0] + "." + parts[1].slice(0, 2);
     return cleaned;
   };
 
   const handleAmountChange = (value) => {
     const formatted = formatCurrency(value);
     setSum(formatted);
-    if (errors.sum) {
-      setErrors({ ...errors, sum: null });
-    }
+    if (errors.sum) setErrors({ ...errors, sum: null });
   };
 
-  // -------------------------------
-  // Validation
-  // -------------------------------
+  // ── Validation ──
   const validateForm = () => {
     const newErrors = {};
-
-    if (!image) {
-      newErrors.image = "Receipt image is required";
-    }
-
-    if (!category.trim()) {
-      newErrors.category = "Category is required";
-    }
-
-    if (!sum || isNaN(sum) || Number(sum) <= 0) {
-      newErrors.sum = "Please enter a valid amount";
-    }
-
+    if (!image)              newErrors.image    = "Receipt image is required";
+    if (!category.trim())    newErrors.category = "Category is required";
+    if (!sum || isNaN(sum) || Number(sum) <= 0)
+                             newErrors.sum      = "Please enter a valid amount";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // -------------------------------
-  // Image Picker
-  // -------------------------------
+  // ── Image Picker ──
   const pickImage = async (fromCamera = false) => {
     const permission = fromCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -129,122 +128,80 @@ export default function Receipts({ onClose, projectId }) {
     }
 
     const result = fromCamera
-      ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.8,
-          allowsEditing: true,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.8,
-          allowsEditing: true,
-        });
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8, allowsEditing: true })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8, allowsEditing: true });
 
     if (!result.canceled) {
       setImage(result.assets[0].uri);
-      if (errors.image) {
-        setErrors({ ...errors, image: null });
-      }
+      if (errors.image) setErrors({ ...errors, image: null });
     }
   };
 
-  // -------------------------------
-  // Category Selection
-  // -------------------------------
+  // ── Category ──
   const selectCategory = (categoryName) => {
     setCategory(categoryName);
     setShowCategorySuggestions(false);
-    if (errors.category) {
-      setErrors({ ...errors, category: null });
+    if (errors.category) setErrors({ ...errors, category: null });
+  };
+
+  // ── Upload ──
+  const uploadReceipt = async () => {
+    if (!validateForm()) {
+      Alert.alert("Validation Error", "Please fill all fields");
+      return;
+    }
+    try {
+      setLoading(true);
+      setProgress(0);
+
+      if (!auth.currentUser) await signInFirebase();
+
+      const compressed = await ImageManipulator.manipulateAsync(
+        image,
+        [{ resize: { width: 1200 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      const receiptRes = await api.post("/receipts/create", {
+        projectId, category, sumOfReceipt: Number(sum), notes,
+      });
+      const receipt = receiptRes.data;
+
+      const blob = await (await fetch(compressed.uri)).blob();
+      const fileRef = ref(storage, `users/${userId}/receipts/${receipt._id}.jpg`);
+      const uploadTask = uploadBytesResumable(fileRef, blob);
+
+      uploadTask.on(
+        "state_changed",
+        (snap) => {
+          const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+          setProgress(percent);
+        },
+        (error) => {
+          console.log(error);
+          Alert.alert("Upload failed");
+          setLoading(false);
+        },
+        async () => {
+          const url = await getDownloadURL(fileRef);
+          await api.patch(`/receipts/${receipt._id}/image`, { imageUrl: url });
+          setLoading(false);
+          onClose();
+        }
+      );
+    } catch (err) {
+      console.log("UPLOAD ERROR:", err?.response?.data || err);
+      Alert.alert("Upload Error", err?.response?.data?.message || "Failed to upload receipt");
+      setLoading(false);
     }
   };
 
-  // -------------------------------
-  // Upload Receipt
-  // -------------------------------
-  const uploadReceipt = async () => {
-
-  if (!validateForm()) {
-    Alert.alert("Validation Error", "Please fill all fields");
-    return;
-  }
-
-  try {
-
-    setLoading(true);
-    setProgress(0);
-
-    if (!auth.currentUser) {
-      await signInFirebase();
-    }
-
-    // compress image
-    const compressed = await ImageManipulator.manipulateAsync(
-      image,
-      [{ resize: { width: 1200 } }],
-      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-    );
-
-    // 1️⃣ create receipt first
-    const receiptRes = await api.post("/receipts/create", {
-      projectId,
-      category,
-      sumOfReceipt: Number(sum),
-      notes,
-    });
-
-    const receipt = receiptRes.data;
-
-    // 2️⃣ upload image
-    const blob = await (await fetch(compressed.uri)).blob();
-
-    const fileRef = ref(
-      storage,
-      `users/${userId}/receipts/${receipt._id}.jpg`
-    );
-
-    const uploadTask = uploadBytesResumable(fileRef, blob);
-    uploadTask.on(
-      "state_changed",
-      (snap) => {
-        const percent = Math.round(
-          (snap.bytesTransferred / snap.totalBytes) * 100
-        );
-        setProgress(percent);
-      },
-      (error) => {
-        console.log(error);
-        Alert.alert("Upload failed");
-        setLoading(false);
-      },
-      async () => {
-        const url = await getDownloadURL(fileRef);
-        // 3️⃣ save image URL
-        await api.patch(`/receipts/${receipt._id}/image`, {
-          imageUrl: url,
-        });
-        setLoading(false);
-        // Alert.alert("Success", "Receipt uploaded");
-        onClose();
-      }
-    );
-
-  } catch (err) {
-    console.log("UPLOAD ERROR:", err?.response?.data || err);
-    Alert.alert(
-      "Upload Error",
-      err?.response?.data?.message || "Failed to upload receipt"
-    );
-    setLoading(false);
-  }
-};
-
-  // Progress bar width
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 100],
     outputRange: ["0%", "100%"],
   });
 
+  // ─── Render ────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -257,199 +214,222 @@ export default function Receipts({ onClose, projectId }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.screen}>
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.title}>Upload Receipt</Text>
-              <Text style={styles.subtitle}>Add expense</Text>
+
+          {/* ── Header ── */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <View style={styles.headerIcon}>
+                <Upload size={22} color="#fff" />
+              </View>
+              <View>
+                <Text style={styles.title}>Upload Receipt</Text>
+                <Text style={styles.subtitle}>Track your project expenses</Text>
+              </View>
             </View>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.closeButton}
-              disabled={loading}
-            >
-              <X size={24} color="#6B7280" />
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} disabled={loading}>
+              <X size={16} color="#6B7280" />
             </TouchableOpacity>
           </View>
 
-          {/* Form Card */}
-          <View style={styles.card}>
-            {/* Category Section */}
-            <View style={styles.section}>
-              <Text style={styles.label}>
-                Category <Text style={styles.required}>*</Text>
-              </Text>
+          {/* ══════════════════════════════
+               1. CATEGORY
+          ══════════════════════════════ */}
+          <SectionCard
+            iconBg="#eff6ff"
+            icon={<Tag size={16} color="#2563EB" />}
+            title="Category"
+          >
+            <FieldLabel label="Select a category" required />
 
-              <TouchableOpacity
-                style={[styles.inputRow, errors.category && styles.inputError]}
-                onPress={() => setShowCategorySuggestions(!showCategorySuggestions)}
-                disabled={loading}
-              >
-                <Tag size={20} color="#6B7280" />
-                <Text
-                  style={[
-                    styles.inputText,
-                    !category && styles.placeholderText,
-                  ]}
+            {/* Selected badge */}
+            {category.trim() ? (
+              <View style={styles.selectedBadge}>
+                <CheckCircle2 size={16} color="#2563EB" />
+                <Text style={styles.selectedBadgeText}>{category}</Text>
+                <TouchableOpacity
+                  onPress={() => setCategory("")}
+                  style={styles.clearCatBtn}
                 >
-                  {category || "Select or type category..."}
-                </Text>
-              </TouchableOpacity>
+                  <X size={14} color="#2563EB" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
-              {errors.category && (
-                <Text style={styles.errorText}>{errors.category}</Text>
-              )}
+            {/* Chip grid */}
+            <View style={styles.chipsGrid}>
+              {CATEGORY_SUGGESTIONS.map((cat) => (
+                <TouchableOpacity
+                  key={cat.name}
+                  style={[styles.chip, category === cat.name && styles.chipActive]}
+                  onPress={() => selectCategory(cat.name)}
+                  disabled={loading}
+                >
+                  <Text style={styles.chipEmoji}>{cat.emoji}</Text>
+                  <Text
+                    style={[styles.chipLabel, category === cat.name && styles.chipLabelActive]}
+                    numberOfLines={2}
+                  >
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-              {/* Category Suggestions */}
-              {showCategorySuggestions && (
-                <View style={styles.suggestionsContainer}>
-                  {CATEGORY_SUGGESTIONS.map((cat, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.suggestionChip}
-                      onPress={() => selectCategory(cat.name)}
-                    >
-                      <Text style={styles.suggestionIcon}>{cat.icon}</Text>
-                      <Text style={styles.suggestionText}>{cat.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-              {/* Custom Category Input */}
+            {/* Custom input */}
+            <FieldLabel label="Or type a custom category" optional />
+            <View style={[styles.inputWrap, errors.category && styles.inputWrapError]}>
+              <View style={styles.inputIcon}>
+                <Tag size={16} color="#9CA3AF" />
+              </View>
               <TextInput
                 value={category}
                 onChangeText={(text) => {
                   setCategory(text);
-                  if (errors.category) {
-                    setErrors({ ...errors, category: null });
-                  }
+                  if (errors.category) setErrors({ ...errors, category: null });
                 }}
-                placeholder="Or type custom category..."
+                placeholder="e.g. Insurance, Subscriptions…"
                 placeholderTextColor="#9CA3AF"
-                style={styles.customInput}
+                style={styles.inputField}
                 textAlign={isRTL ? "right" : "left"}
                 editable={!loading}
               />
             </View>
+            {errors.category && (
+              <Text style={styles.fieldError}>{errors.category}</Text>
+            )}
+          </SectionCard>
 
-            {/* Amount Section */}
-            <View style={styles.section}>
-              <Text style={styles.label}>
-                Amount ({userDetails.currency}) <Text style={styles.required}>*</Text>
-              </Text>
-
-              <View style={[styles.inputRow, errors.sum && styles.inputError]}>
-                <DollarSign size={20} color="#16a34a" />
-                <TextInput
-                  value={sum}
-                  onChangeText={handleAmountChange}
-                  placeholder="0.00"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="decimal-pad"
-                  style={styles.input}
-                  textAlign={isRTL ? "right" : "left"}
-                  editable={!loading}
-                />
-              </View>
-
-              {errors.sum && (
-                <Text style={styles.errorText}>{errors.sum}</Text>
-              )}
-
-              {sum && !errors.sum && Number(sum) > 0 && (
-                <Text style={styles.helperText}>
-                  ${Number(sum).toFixed(2)} will be added to project expenses
-                </Text>
-              )}
+          {/* ══════════════════════════════
+               2. AMOUNT
+          ══════════════════════════════ */}
+          <SectionCard
+            iconBg="#eff6ff"
+            icon={<DollarSign size={16} color="#2563EB" />}
+            title="Amount"
+          >
+            <FieldLabel label="Expense amount" required />
+            <View style={[styles.inputWrap, errors.sum && styles.inputWrapError]}>
+              <Text style={styles.inputPrefix}>$</Text>
+              <TextInput
+                value={sum}
+                onChangeText={handleAmountChange}
+                placeholder="0.00"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="decimal-pad"
+                style={[styles.inputField, { paddingLeft: 6 }]}
+                textAlign={isRTL ? "right" : "left"}
+                editable={!loading}
+              />
+              <Text style={styles.currencyBadge}>{userDetails?.currency || "USD"}</Text>
             </View>
-
-            {/* Notes Section */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Notes (Optional)</Text>
-
-              <View style={styles.inputRow}>
-                <FileText size={20} color="#6B7280" />
-                <TextInput
-                  value={notes}
-                  onChangeText={setNotes}
-                  placeholder="Add description or notes..."
-                  placeholderTextColor="#9CA3AF"
-                  style={styles.input}
-                  textAlign={isRTL ? "right" : "left"}
-                  multiline
-                  numberOfLines={2}
-                  editable={!loading}
-                />
-              </View>
-            </View>
-
-            {/* Image Section */}
-            <View style={styles.section}>
-              <Text style={styles.label}>
-                Receipt Image <Text style={styles.required}>*</Text>
+            {errors.sum && (
+              <Text style={styles.fieldError}>{errors.sum}</Text>
+            )}
+            {sum && !errors.sum && Number(sum) > 0 && (
+              <Text style={styles.fieldHelper}>
+                ${Number(sum).toFixed(2)} will be added to project expenses
               </Text>
+            )}
+          </SectionCard>
 
-              {!image ? (
-                <>
+          {/* ══════════════════════════════
+               3. NOTES
+          ══════════════════════════════ */}
+          <SectionCard
+            iconBg="#f5f3ff"
+            icon={<FileText size={16} color="#7c3aed" />}
+            title="Notes"
+          >
+            <FieldLabel label="Description" optional />
+            <View style={[styles.inputWrap, { alignItems: "flex-start" }]}>
+              <View style={[styles.inputIcon, { paddingTop: 12 }]}>
+                <FileText size={16} color="#9CA3AF" />
+              </View>
+              <TextInput
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Add context, vendor name, or details…"
+                placeholderTextColor="#9CA3AF"
+                style={[styles.inputField, { paddingTop: 12, paddingBottom: 12 }]}
+                textAlign={isRTL ? "right" : "left"}
+                multiline
+                numberOfLines={3}
+                editable={!loading}
+              />
+            </View>
+          </SectionCard>
+
+          {/* ══════════════════════════════
+               4. RECEIPT IMAGE
+          ══════════════════════════════ */}
+          <SectionCard
+            iconBg="#fff1f2"
+            icon={<Camera size={16} color="#e11d48" />}
+            title="Receipt Image"
+          >
+            <FieldLabel label="Attach photo" required />
+
+            {!image ? (
+              <>
+                {/* Upload action buttons */}
+                <View style={styles.uploadActions}>
                   <TouchableOpacity
-                    style={[
-                      styles.primaryButton,
-                      errors.image && styles.buttonError,
-                    ]}
+                    style={styles.btnCamera}
                     onPress={() => pickImage(true)}
                     disabled={loading}
                   >
-                    <Camera color="#fff" size={22} />
-                    <Text style={styles.primaryText}>Take Photo</Text>
+                    <View style={styles.btnCameraIconWrap}>
+                      <Camera size={20} color="#fff" />
+                    </View>
+                    <Text style={styles.btnCameraText}>Take Photo</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[
-                      styles.secondaryButton,
-                      errors.image && styles.buttonError,
-                    ]}
+                    style={styles.btnGallery}
                     onPress={() => pickImage(false)}
                     disabled={loading}
                   >
-                    <ImageIcon size={22} color="#2563EB" />
-                    <Text style={styles.secondaryText}>Choose from Gallery</Text>
-                  </TouchableOpacity>
-
-                  {errors.image && (
-                    <View style={styles.errorBanner}>
-                      <AlertCircle size={16} color="#EF4444" />
-                      <Text style={styles.errorBannerText}>{errors.image}</Text>
+                    <View style={styles.btnGalleryIconWrap}>
+                      <ImageIcon size={20} color="#6B7280" />
                     </View>
-                  )}
-                </>
-              ) : (
-                <View style={styles.imagePreview}>
-                  <Image source={{ uri: image }} style={styles.previewImage} />
-
-                  {!loading && (
-                    <TouchableOpacity
-                      style={styles.removeBtn}
-                      onPress={() => setImage(null)}
-                    >
-                      <X size={18} color="#fff" />
-                    </TouchableOpacity>
-                  )}
-
-                  <View style={styles.imageOverlay}>
-                    <CheckCircle2 size={16} color="#fff" />
-                    <Text style={styles.overlayText}>Ready to upload</Text>
-                  </View>
+                    <Text style={styles.btnGalleryText}>From Gallery</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-            </View>
-          </View>
 
-          {/* Upload Button */}
+                <Text style={styles.uploadHintText}>PNG, JPG up to 10MB</Text>
+
+                {errors.image && (
+                  <View style={styles.imgErrorBanner}>
+                    <AlertCircle size={14} color="#EF4444" />
+                    <Text style={styles.imgErrorText}>{errors.image}</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              /* Image preview */
+              <View style={styles.imgPreviewWrap}>
+                <Image source={{ uri: image }} style={styles.previewImage} />
+                {!loading && (
+                  <TouchableOpacity
+                    style={styles.imgRemoveBtn}
+                    onPress={() => setImage(null)}
+                  >
+                    <X size={14} color="#fff" />
+                  </TouchableOpacity>
+                )}
+                <View style={styles.imgReadyBadge}>
+                  <CheckCircle2 size={14} color="#fff" />
+                  <Text style={styles.imgReadyText}>Ready to upload</Text>
+                </View>
+              </View>
+            )}
+          </SectionCard>
+
+          {/* ── Upload Button ── */}
           <TouchableOpacity
             style={[
-              styles.uploadButton,
-              (!image || !category || !sum || loading) && styles.uploadButtonDisabled,
+              styles.uploadBtn,
+              (!image || !category || !sum || loading) && styles.uploadBtnDisabled,
             ]}
             onPress={uploadReceipt}
             disabled={!image || !category || !sum || loading}
@@ -457,353 +437,526 @@ export default function Receipts({ onClose, projectId }) {
             {loading ? (
               <>
                 <ActivityIndicator color="#fff" size="small" />
-                <Text style={styles.uploadText}>Uploading...</Text>
+                <Text style={styles.uploadBtnText}>Uploading…</Text>
               </>
             ) : (
               <>
                 <Upload size={20} color="#fff" />
-                <Text style={styles.uploadText}>Upload Receipt</Text>
+                <Text style={styles.uploadBtnText}>Upload Receipt</Text>
               </>
             )}
           </TouchableOpacity>
 
-          {/* Progress Bar */}
+          {/* ── Progress ── */}
           {loading && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <Animated.View
-                  style={[
-                    styles.progressFill,
-                    { width: progressWidth },
-                  ]}
-                />
+            <View style={styles.progressCard}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressLabel}>Uploading receipt…</Text>
+                <Text style={styles.progressPct}>{progress}%</Text>
               </View>
-              <Text style={styles.progressText}>{progress}%</Text>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${progress}%` }]} />
+              </View>
             </View>
           )}
 
-          {/* Success Animation */}
+          {/* ── Success ── */}
           {loading && progress === 100 && (
             <Animated.View
               style={[
-                styles.successContainer,
+                styles.successCard,
                 {
                   opacity: successAnim,
-                  transform: [
-                    {
-                      scale: successAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.8, 1],
-                      }),
-                    },
-                  ],
+                  transform: [{
+                    scale: successAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }),
+                  }],
                 },
               ]}
             >
-              <CheckCircle2 size={48} color="#22C55E" />
-              <Text style={styles.successText}>Receipt Uploaded!</Text>
+              <View style={styles.successIconWrap}>
+                <CheckCircle2 size={30} color="#fff" />
+              </View>
+              <Text style={styles.successTitle}>Receipt Uploaded!</Text>
+              <Text style={styles.successSub}>
+                Your expense has been added to the project
+              </Text>
             </Animated.View>
           )}
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  // ── Layout ──
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#eff6ff",
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
+  scrollView: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
   screen: {
-    marginTop: 20,
-    padding: 20,
-    paddingBottom: 20,
+    padding: 16,
+    paddingTop: 32,
+    paddingBottom: 48,
   },
-  headerRow: {
+
+  // ── Header ──
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  closeButton: {
-    padding: 4,
-  },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 10,
-  },
-  required: {
-    color: "#EF4444",
-  },
-  inputRow: {
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    gap: 12,
   },
-  inputError: {
-    borderColor: "#EF4444",
-    backgroundColor: "#FEF2F2",
-  },
-  input: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    color: "#111827",
-  },
-  inputText: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    color: "#111827",
-  },
-  placeholderText: {
-    color: "#9CA3AF",
-  },
-  customInput: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 10,
-    fontSize: 14,
-    color: "#111827",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#EF4444",
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  helperText: {
-    fontSize: 12,
-    color: "#16a34a",
-    marginTop: 6,
-    marginLeft: 4,
-    fontWeight: "500",
-  },
-  suggestionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 12,
-    gap: 8,
-  },
-  suggestionChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    gap: 6,
-  },
-  suggestionIcon: {
-    fontSize: 16,
-  },
-  suggestionText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#374151",
-  },
-  primaryButton: {
+  headerIcon: {
+    width: 44,
+    height: 44,
     backgroundColor: "#2563EB",
     borderRadius: 12,
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
+    justifyContent: "center",
     shadowColor: "#2563EB",
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-  primaryText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+    lineHeight: 26,
   },
-  secondaryButton: {
-    backgroundColor: "#EFF6FF",
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: "row",
+  subtitle: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    backgroundColor: "#fff",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 18,
+    alignItems: "center",
     justifyContent: "center",
+  },
+
+  // ── Section Card ──
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    overflow: "hidden",
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  cardHeader: {
+    flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    borderWidth: 1.5,
-    borderColor: "#2563EB",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    backgroundColor: "#F9FAFB",
   },
-  secondaryText: {
+  cardHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardTitle: {
+    fontSize: 14,
     fontWeight: "700",
-    fontSize: 16,
-    color: "#2563EB",
+    color: "#111827",
   },
-  buttonError: {
-    borderColor: "#EF4444",
+  cardBody: {
+    padding: 16,
   },
-  errorBanner: {
+
+  // ── Field label ──
+  fieldLabelRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  badgeRequired: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#2563EB",
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    overflow: "hidden",
+  },
+  badgeOptional: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#9CA3AF",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  fieldError: {
+    fontSize: 12,
+    color: "#EF4444",
+    marginTop: 5,
+  },
+  fieldHelper: {
+    fontSize: 12,
+    color: "#2563EB",
+    marginTop: 5,
+    fontWeight: "500",
+  },
+
+  // ── Input wrap ──
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    backgroundColor: "#fff",
+  },
+  inputWrapError: {
+    borderColor: "#EF4444",
+    backgroundColor: "#FEF2F2",
+  },
+  inputIcon: {
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inputField: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingRight: 14,
+    fontSize: 15,
+    color: "#111827",
+  },
+  inputPrefix: {
+    paddingLeft: 14,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  currencyBadge: {
+    paddingRight: 14,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#9CA3AF",
+  },
+
+  // ── Category: selected badge ──
+  selectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1.5,
+    borderColor: "#2563EB",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  selectedBadgeText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1D4ED8",
+  },
+  clearCatBtn: {
+    padding: 2,
+  },
+
+  // ── Category: chip grid ──
+  chipsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
+  },
+  chip: {
+    width: "22%",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    backgroundColor: "#fff",
+  },
+  chipActive: {
+    borderColor: "#2563EB",
+    backgroundColor: "#EFF6FF",
+  },
+  chipEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  chipLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#6B7280",
+    textAlign: "center",
+  },
+  chipLabelActive: {
+    color: "#1D4ED8",
+  },
+
+  // ── Image upload ──
+  uploadActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 10,
+  },
+  btnCamera: {
+    flex: 1,
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 20,
+    borderRadius: 12,
+    backgroundColor: "#2563EB",
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  btnCameraIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnCameraText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  btnGallery: {
+    flex: 1,
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 20,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+  },
+  btnGalleryIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnGalleryText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#374151",
+  },
+  uploadHintText: {
+    textAlign: "center",
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginBottom: 4,
+  },
+  imgErrorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     backgroundColor: "#FEF2F2",
     padding: 12,
     borderRadius: 8,
-    marginTop: 12,
-    gap: 8,
-    borderLeftWidth: 4,
+    marginTop: 10,
+    borderLeftWidth: 3,
     borderLeftColor: "#EF4444",
   },
-  errorBannerText: {
+  imgErrorText: {
     fontSize: 13,
     color: "#EF4444",
     fontWeight: "600",
     flex: 1,
   },
-  imagePreview: {
+
+  // ── Image preview ──
+  imgPreviewWrap: {
     borderRadius: 12,
     overflow: "hidden",
-    marginTop: 4,
     backgroundColor: "#F3F4F6",
+    position: "relative",
   },
   previewImage: {
     width: "100%",
-    height: 240,
+    height: 220,
     backgroundColor: "#E5E7EB",
   },
-  removeBtn: {
+  imgRemoveBtn: {
     position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: "#EF4444",
-    borderRadius: 20,
-    padding: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  imageOverlay: {
+  imgReadyBadge: {
     position: "absolute",
-    bottom: 12,
-    right: 12,
-    backgroundColor: "rgba(34, 197, 94, 0.95)",
+    bottom: 10,
+    right: 10,
+    backgroundColor: "rgba(37,99,235,0.95)",
     borderRadius: 20,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
   },
-  overlayText: {
+  imgReadyText: {
     color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  // ── Upload button ──
+  uploadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "#2563EB",
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  uploadBtnDisabled: {
+    backgroundColor: "#E5E7EB",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  uploadBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+
+  // ── Progress ──
+  progressCard: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  progressHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  progressLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  progressPct: {
     fontSize: 13,
     fontWeight: "700",
+    color: "#2563EB",
   },
-  uploadButton: {
-    backgroundColor: "#2563EB",
-    marginTop: 20,
-    borderRadius: 12,
-    padding: 18,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-    shadowColor: "#2563EB",
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 6,
-  },
-  uploadButtonDisabled: {
-    backgroundColor: "#9CA3AF",
-    shadowOpacity: 0.1,
-  },
-  uploadText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  progressContainer: {
-    marginTop: 16,
-    alignItems: "center",
-  },
-  progressBar: {
+  progressTrack: {
     width: "100%",
-    height: 8,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 3,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
     backgroundColor: "#2563EB",
-    borderRadius: 4,
+    borderRadius: 3,
   },
-  progressText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#6B7280",
-    fontWeight: "600",
-  },
-  successContainer: {
+
+  // ── Success ──
+  successCard: {
     alignItems: "center",
-    marginTop: 20,
-    padding: 20,
-    backgroundColor: "#F0FDF4",
-    borderRadius: 12,
     gap: 12,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 16,
+    padding: 28,
+    marginTop: 12,
   },
-  successText: {
+  successIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#2563EB",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  successTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#22C55E",
+    fontWeight: "800",
+    color: "#1D4ED8",
+  },
+  successSub: {
+    fontSize: 13,
+    color: "#2563EB",
+    textAlign: "center",
   },
 });

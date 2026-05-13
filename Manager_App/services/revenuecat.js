@@ -44,9 +44,6 @@ function getOfferingPackages(offering) {
 export async function configureRevenueCat(appUserId) {
   const apiKey = getApiKey();
 
-  console.log("[RC] apiKey:", apiKey);
-  console.log("[RC] appUserId:", appUserId);
-
   if (!apiKey || !appUserId) {
     console.warn("[RC] Missing apiKey or appUserId — aborting");
     return { configured: false };

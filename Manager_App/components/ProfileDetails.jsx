@@ -22,6 +22,7 @@ import { useAuth } from "./useAuth";
 import api from "../services/api";
 import { Ionicons } from "@expo/vector-icons";
 import { Camera, Trash2, Pencil  } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
 import SubscriptionCard from "./SubscriptionCard";
@@ -206,8 +207,13 @@ export default function ProfileDetails() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await api.delete(`/deleteUser/${userId}`);
-            navigation.navigate("LoginScreen");
+            try {
+              await api.delete(`/deleteUser/${userId}`);
+            } catch (e) {
+              console.error("Delete account error:", e);
+            }
+            await AsyncStorage.multiRemove(["token", "refreshToken"]);
+            navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
           },
         },
       ]

@@ -1,13 +1,12 @@
 import React from "react";
 import {
   TouchableOpacity,
-  View,
   Text,
-  Image,
   StyleSheet,
-  Alert,
+  Image,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import Svg, { Path } from "react-native-svg";
+import { useNavigation } from "@react-navigation/native";
 import * as AppleAuthentication from "expo-apple-authentication";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -58,21 +57,13 @@ const signInWithApple = async () => {
     const res =  await api.get(`/getUserDetails`);
    
     
-    if (!res.data.businessName || !res.data.businessId || !res.data.address) {
-      Alert.alert("Hi, please fill all required fields")
-      navigation.navigate("ProfileDetails");
+    // New user: no business name or currency set yet → quick setup
+    if (!res.data.businessName || !res.data.currency) {
+      navigation.reset({ index: 0, routes: [{ name: "QuickSetup" }] });
     } else {
-     // Navigate to home
-        navigation.reset({
-        index: 0,
-        routes: [{ name: "HomeScreen" }],
-      });
-    return {
-      success: true,
-      token,
-      refreshToken,
-    };
-  }
+      navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
+    }
+    return { success: true, token, refreshToken };
   } catch (error) {
 
     if (error.code === "ERR_CANCELED") {
@@ -105,61 +96,43 @@ const handleLogin = async () => {
   };
 
   return (
-    <TouchableOpacity style={styles.button} onPress={handleLogin}>
-      
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        
-        <Image
-          source={require("../assets/apple-logo.png")}
-          style={styles.icon}
-          resizeMode="contain"
-        />
-
-        {/* <Text style={styles.text}>
-          Sign in with Apple
-        </Text> */}
-
-      </View>
-
+    <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85}>
+      {/* <AppleLogo /> */}
+      <Image
+        source={require("../assets/apple-logo.png")}
+        style={styles.icon}
+      />
+      <Text style={styles.text}>Continue with Apple</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-
   button: {
-    backgroundColor: "#0000",
-    borderRadius: 38,
-    borderWidth: 1,
-    borderColor: "#DADCE0",
-    // paddingVertical: 9,
-    alignSelf: "center",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    // paddingHorizontal: 10,
-
+    backgroundColor: "#000000",
+    borderRadius: 14,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    width: "100%",
+    gap: 12,
     elevation: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    marginHorizontal: 10,
-    marginTop: 20,
-    marginBottom: 20,
+    marginBottom: 12,
   },
-
   icon: {
-    width: 60,
-    height: 60,
-    // borderWidth: 1,
-    borderRadius: 50,
+    width: 25,
+    height: 25,
+    transform: [{ scale: 1.8 }],
   },
-
   text: {
-    fontSize: 16,
-    color: "#3C4043",
+    fontSize: 15,
+    color: "#FFFFFF",
     fontWeight: "600",
-    marginLeft: 10,
   },
-
 });

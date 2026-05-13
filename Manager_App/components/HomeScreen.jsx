@@ -36,6 +36,7 @@ import { signInAnonymously } from "firebase/auth";
 import { auth } from "./firebase";
 import { formatCurrency } from "../services/formatCurrency";
 import { refreshSubscriptionStatus, hasProAccess } from "../services/subscription";
+import { presentRevenueCatPaywallIfNeeded } from "../services/revenuecat";
 
 const { width } = Dimensions.get("window");
 
@@ -197,14 +198,18 @@ const HomeScreen = () => {
   const handleAgentPress = async () => {
     // navigation.navigate("AgentScreen");
     try {
-    const subscription = await refreshSubscriptionStatus();
-    if (hasProAccess(subscription)) {
-    navigation.navigate("AgentScreen");
-    } else {
-    navigation.navigate("SubscriptionScreen");
-    }
+      const subscription = await refreshSubscriptionStatus();
+      if (hasProAccess(subscription)) {
+        navigation.navigate("AgentScreen");
+      } else {
+        try {
+          await presentRevenueCatPaywallIfNeeded();
+        } catch {
+          navigation.navigate("SubscriptionScreen");
+        }
+      }
     } catch (err) {
-    navigation.navigate("AgentScreen");
+      navigation.navigate("AgentScreen");
     }
   };
   return (
@@ -460,20 +465,21 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   avatar: {
-    width: 48,
-    height: 48,
-    alignSelf: "center"
+    width: 52,
+    height: 52,
+    alignSelf: "center",
+    borderRadius: 50,
   },
-  avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E0F2FE",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "#fff",
-  },
+  // avatarPlaceholder: {
+  //   width: 48,
+  //   height: 48,
+  //   borderRadius: 24,
+  //   backgroundColor: "#E0F2FE",
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   borderWidth: 3,
+  //   borderColor: "#fff",
+  // },
 
   // Scroll Content
   scrollContent: {

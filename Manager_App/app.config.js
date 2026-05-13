@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-const version = "1.2.3";
+const version = "1.2.4";
 
 export default {
   expo: {
@@ -20,7 +20,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: "com.yonatanmalka.Manager",
       usesAppleSignIn: true,
-      buildNumber: "6",
+      buildNumber: "7",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
          NSCameraUsageDescription: "This app needs access to your camera to take receipts.",

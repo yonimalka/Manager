@@ -15,8 +15,11 @@ import { NavigationContainer, useFocusEffect } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import axios from "axios";
 import { SERVER_URL } from "@env";
+import { setNavigator } from "../services/api";
 
 // Import Screens
+import OnboardingScreen from "./OnboardingScreen";
+import QuickSetupScreen from "./QuickSetupScreen";
 import HomeScreen from "./HomeScreen";
 import Incomes from "./Incomes";
 import Expenses from "./Expenses";
@@ -45,6 +48,24 @@ import AgentTasks from "./AgentTasks";
 const Stack = createStackNavigator();
 
 const MainApp = () => {
+  const [initialRoute, setInitialRoute] = useState(null);
+
+  useEffect(() => {
+    const getInitialRoute = async () => {
+      const onboardingComplete = await AsyncStorage.getItem("onboardingComplete");
+      const token = await AsyncStorage.getItem("token");
+      if (!onboardingComplete) {
+        setInitialRoute("Onboarding");
+      } else if (token) {
+        setInitialRoute("HomeScreen");
+      } else {
+        setInitialRoute("LoginScreen");
+      }
+    };
+    getInitialRoute();
+  }, []);
+
+  if (!initialRoute) return null;
 
   // useEffect(() => {
   //   if (!I18nManager.isRTL) {
@@ -66,8 +87,10 @@ const MainApp = () => {
 
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="LoginScreen">
+    <NavigationContainer ref={(nav) => setNavigator(nav)}>
+      <Stack.Navigator initialRouteName={initialRoute}>
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }}/>
+        <Stack.Screen name="QuickSetup" component={QuickSetupScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="PdfPreview" component={PdfPreview} options={{ headerShown: false }}/>
         <Stack.Screen name="ProfileDetails" component={ProfileDetails} options={{ headerShown: false }}/>
         <Stack.Screen name="LoginScreen" component={LoginScreen} options={{ headerShown: false }}/>

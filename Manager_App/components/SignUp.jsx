@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { SERVER_URL } from "@env";
 import { useNavigation } from "@react-navigation/native";
@@ -72,12 +73,9 @@ export default function SignUp() {
   };
 
   const validateStep2 = () => {
-    const e = {};
-    if (!formData.businessName) e.businessName = "Business name is required";
-    if (!formData.businessId) e.businessId = "Business ID is required";
-    if (!formData.address) e.address = "Address is required";
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    // Business name and logo are optional — nothing is required in step 2
+    setErrors({});
+    return true;
   };
 
   const handleSignUp = async () => {
@@ -162,6 +160,9 @@ export default function SignUp() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.iconCircle}>
@@ -173,7 +174,7 @@ export default function SignUp() {
               <Text style={styles.headerSubtitle}>
                 {step === 1
                   ? "Create your account to get started"
-                  : "Tell us about your business"}
+                  : "Almost done — just one more step"}
               </Text>
             </View>
 
@@ -299,57 +300,23 @@ export default function SignUp() {
                 </>
               ) : (
                 <>
+                  <View style={styles.optionalNote}>
+                    <Text style={styles.optionalNoteText}>
+                      Everything here is optional — you can add it later from your profile.
+                    </Text>
+                  </View>
+
                   <Input
-                    label="Business Name"
+                    label="Business Name (optional)"
                     icon="business-outline"
-                    error={errors.businessName}
                   >
                     <TextInput
-                      style={[
-                        styles.input,
-                        errors.businessName && styles.inputError,
-                      ]}
+                      style={styles.input}
                       value={formData.businessName}
-                      placeholder="Acme Corporation"
+                      placeholder="Your business or trading name"
                       placeholderTextColor="#9CA3AF"
                       onChangeText={(t) =>
                         setFormData({ ...formData, businessName: t })
-                      }
-                    />
-                  </Input>
-
-                  <Input
-                    label="Business ID"
-                    icon="card-outline"
-                    error={errors.businessId}
-                  >
-                    <TextInput
-                      style={[
-                        styles.input,
-                        errors.businessId && styles.inputError,
-                      ]}
-                      value={formData.businessId}
-                      keyboardType="number-pad"
-                      placeholder="123456789"
-                      placeholderTextColor="#9CA3AF"
-                      onChangeText={(t) =>
-                        setFormData({ ...formData, businessId: t })
-                      }
-                    />
-                  </Input>
-
-                  <Input
-                    label="Address"
-                    icon="location-outline"
-                    error={errors.address}
-                  >
-                    <TextInput
-                      style={[styles.input, errors.address && styles.inputError]}
-                      placeholder="123 Main St, City, ZIP"
-                      placeholderTextColor="#9CA3AF"
-                      value={formData.address}
-                      onChangeText={(t) =>
-                        setFormData({ ...formData, address: t })
                       }
                     />
                   </Input>
@@ -433,6 +400,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
+    backButton: {
+    width: 40,
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: "rgba(35, 31, 31, 0.2)", 
+    alignItems: "center", 
+    justifyContent: "center",
+    marginTop: 15,
+},
   content: {
     width: "100%",
     maxWidth: 440,
@@ -667,12 +643,26 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     justifyContent: "center",
-    // flexDirection: "row",
     gap: 8,
     shadowColor: "#3B82F6",
     shadowOpacity: 0.3,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
+  },
+  optionalNote: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  optionalNoteText: {
+    fontSize: 13,
+    color: "#166534",
+    fontWeight: "500",
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

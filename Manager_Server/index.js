@@ -1758,15 +1758,27 @@ app.delete("/deleteProject/:projectId", authMiddleware, async (req, res) => {
 });
 
 app.delete("/deleteUser/:userId", async (req, res) => {
- const userId = req.params.userId;
+  const userId = req.params.userId;
 
- 
- const deleteUser = await UserModel.findByIdAndDelete(userId);
- if (!deleteUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.json({ message: 'User deleted successfully', user: deleteUser });
+  const deletedUser = await UserModel.findByIdAndDelete(userId);
+  if (!deletedUser) {
+    return res.status(404).json({ message: 'User not found' });
+  }
 
+  // Cascade-delete all data belonging to this user
+  await Promise.all([
+    ProjectModel.deleteMany({ userId }),
+    ReceiptModel.deleteMany({ userId }),
+    IncomeReceipt.deleteMany({ userId }),
+    IncomeModel.deleteMany({ userId }),
+    FixedExpenseModel.deleteMany({ userId }),
+    MaterialPriceHistory.deleteMany({ userId }),
+    mongoose.connection.collection("agents").deleteMany({ userId: new mongoose.Types.ObjectId(userId) }),
+    mongoose.connection.collection("agenttasks").deleteMany({ userId: new mongoose.Types.ObjectId(userId) }),
+    mongoose.connection.collection("conversations").deleteMany({ userId: new mongoose.Types.ObjectId(userId) }),
+  ]);
+
+  res.json({ message: 'User and all related data deleted successfully' });
 })
 
 app.get("/subscription/status", authMiddleware, async (req, res) => {

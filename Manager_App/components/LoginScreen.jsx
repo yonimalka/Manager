@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Animated,
 } from "react-native";
 import { SERVER_URL } from "@env";
 import axios from "axios";
@@ -50,6 +51,25 @@ const LoginScreen = () => {
   const [passwordError, setPasswordError] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const animMaxHeight = useRef(new Animated.Value(0)).current;
+
+  const toggleEmailForm = () => {
+    if (!showEmailForm) {
+      setShowEmailForm(true);
+      Animated.timing(animMaxHeight, {
+        toValue: 600,
+        duration: 350,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(animMaxHeight, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: false,
+      }).start(() => setShowEmailForm(false));
+    }
+  };
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -135,117 +155,130 @@ const LoginScreen = () => {
             source={require("../assets/MaggoLogo-transparent.png")}
             style={styles.logo}
           />
-          <Text style={styles.tagline}>Welcome back</Text>
+          <Text style={styles.headline}>Your business,{"\n"}under control.</Text>
+          <Text style={styles.tagline}>Invoices · Jobs · Cash flow · AI</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
 
-          {validation && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{validation}</Text>
-            </View>
-          )}
-
-          {/* Email */}
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <TextInput
-              placeholder="your@email.com"
-              placeholderTextColor="#C0CADB"
-              value={email}
-              onChangeText={handleEmailChange}
-              onFocus={() => setEmailFocused(true)}
-              onBlur={() => setEmailFocused(false)}
-              style={[
-                styles.input,
-                emailFocused && styles.inputFocused,
-                emailError && styles.inputError,
-              ]}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading}
-            />
-            {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
-          </View>
-
-          {/* Password */}
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Password</Text>
-            <View style={styles.passwordWrap}>
-              <TextInput
-                placeholder="••••••••"
-                placeholderTextColor="#C0CADB"
-                value={password}
-                secureTextEntry={!showPassword}
-                onChangeText={handlePasswordChange}
-                onFocus={() => setPasswordFocused(true)}
-                onBlur={() => setPasswordFocused(false)}
-                style={[
-                  styles.input,
-                  styles.passwordInput,
-                  passwordFocused && styles.inputFocused,
-                  passwordError && styles.inputError,
-                ]}
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                <EyeIcon visible={showPassword} />
-              </TouchableOpacity>
-            </View>
-            {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
-          </View>
-
-          {/* Forgot Password */}
-          <TouchableOpacity
-            style={styles.forgotWrap}
-            onPress={() => navigation.navigate("ForgotPassword")}
-            disabled={isLoading}
-          >
-            <Text style={styles.forgotText}>Forgot password?</Text>
-          </TouchableOpacity>
-
-          {/* Sign In Button */}
-          <TouchableOpacity
-            style={[styles.signInBtn, isLoading && styles.signInBtnDisabled]}
-            onPress={handleSignIn}
-            disabled={isLoading}
-            activeOpacity={0.85}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.signInBtnText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerLabel}>or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social */}
-          <View style={styles.socialRow}>
-            <GoogleSignInButton disabled={isLoading} />
-            <AppleSignInButton />
-          </View>
+          {/* Social — primary CTA */}
+          <GoogleSignInButton disabled={isLoading} />
+          <AppleSignInButton />
 
           {/* Sign Up */}
-          <View style={styles.signUpRow}>
-            <Text style={styles.signUpText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate("SignUp")} disabled={isLoading}>
-              <Text style={styles.signUpLink}>Sign up</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.signUpRow}
+            onPress={() => navigation.navigate("SignUp")}
+            disabled={isLoading}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.signUpText}>New here? </Text>
+            <Text style={styles.signUpLink}>Create a free account →</Text>
+          </TouchableOpacity>
+
+          {/* Email toggle */}
+          <TouchableOpacity
+            style={styles.emailToggle}
+            onPress={toggleEmailForm}
+            activeOpacity={0.7}
+          >
+            <View style={styles.dividerLine} />
+            <Text style={styles.emailToggleText}>
+              {showEmailForm ? "Hide email sign in ▲" : "Sign in with email ▼"}
+            </Text>
+            <View style={styles.dividerLine} />
+          </TouchableOpacity>
+
+          {/* Collapsible email form */}
+          <Animated.View style={{ maxHeight: animMaxHeight, overflow: "hidden" }}>
+            <View style={styles.emailForm}>
+              {validation && (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorBannerText}>{validation}</Text>
+                </View>
+              )}
+
+              {/* Email */}
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Email</Text>
+                <TextInput
+                  placeholder="your@email.com"
+                  placeholderTextColor="#C0CADB"
+                  value={email}
+                  onChangeText={handleEmailChange}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                  style={[
+                    styles.input,
+                    emailFocused && styles.inputFocused,
+                    emailError && styles.inputError,
+                  ]}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+                {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
+              </View>
+
+              {/* Password */}
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Password</Text>
+                <View style={styles.passwordWrap}>
+                  <TextInput
+                    placeholder="••••••••"
+                    placeholderTextColor="#C0CADB"
+                    value={password}
+                    secureTextEntry={!showPassword}
+                    onChangeText={handlePasswordChange}
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
+                    style={[
+                      styles.input,
+                      styles.passwordInput,
+                      passwordFocused && styles.inputFocused,
+                      passwordError && styles.inputError,
+                    ]}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                  >
+                    <EyeIcon visible={showPassword} />
+                  </TouchableOpacity>
+                </View>
+                {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
+              </View>
+
+              {/* Forgot Password */}
+              <TouchableOpacity
+                style={styles.forgotWrap}
+                onPress={() => navigation.navigate("ForgotPassword")}
+                disabled={isLoading}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </TouchableOpacity>
+
+              {/* Sign In Button */}
+              <TouchableOpacity
+                style={[styles.signInBtn, isLoading && styles.signInBtnDisabled]}
+                onPress={handleSignIn}
+                disabled={isLoading}
+                activeOpacity={0.85}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.signInBtnText}>Sign In</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
 
         </View>
       </ScrollView>
@@ -260,27 +293,38 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
+    justifyContent: "center",
     paddingHorizontal: 28,
-    paddingTop: Platform.OS === "ios" ? 70 : 50,
-    paddingBottom: 40,
+    paddingVertical: 48,
   },
 
   // ── Logo ─────────────────────────────────────────────────
   logoSection: {
     alignItems: "center",
-    marginBottom: 44,
+    marginBottom: 40,
   },
   logo: {
-    width: 200,
-    height: 200,
+    width: 80,
+    height: 80,
     resizeMode: "contain",
-    marginBottom: 4,
+    marginBottom: 18,
+    transform: [{ scale: 1.9}]
+  },
+  headline: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.5,
+    textAlign: "center",
+    lineHeight: 36,
+    marginBottom: 10,
   },
   tagline: {
-    fontSize: 17,
+    fontSize: 13,
     color: "#94A3B8",
     fontWeight: "500",
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
+    textAlign: "center",
   },
 
   // ── Form ─────────────────────────────────────────────────
@@ -399,30 +443,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // ── Divider ──────────────────────────────────────────────
-  divider: {
+  // ── Email toggle ─────────────────────────────────────────
+  emailToggle: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
-    gap: 12,
+    marginTop: 20,
+    marginBottom: 4,
+    gap: 10,
   },
   dividerLine: {
     flex: 1,
     height: 1,
     backgroundColor: "#E8EDF5",
   },
-  dividerLabel: {
+  emailToggleText: {
     fontSize: 13,
     color: "#94A3B8",
-    fontWeight: "500",
+    fontWeight: "600",
+    flexShrink: 0,
   },
 
-  // ── Social ───────────────────────────────────────────────
-  socialRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 12,
-    marginBottom: 32,
+  // ── Collapsible email form ────────────────────────────────
+  emailForm: {
+    marginTop: 20,
   },
 
   // ── Sign Up ──────────────────────────────────────────────
@@ -430,13 +473,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 14,
+    marginBottom: 4,
+    paddingVertical: 6,
   },
   signUpText: {
-    fontSize: 14,
-    color: "#94A3B8",
+    fontSize: 15,
+    color: "#64748B",
   },
   signUpLink: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#2563EB",
     fontWeight: "700",
   },
