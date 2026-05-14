@@ -1410,6 +1410,12 @@ app.post("/updatePayment/:projectId", authMiddleware, async (req, res) => {
 });
 
 
+const normalizeCategory = (str) => {
+  if (!str || !str.trim()) return "General";
+  const s = str.trim().toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
 app.get("/getCashFlowIncomes", authMiddleware, async (req, res) => {
   try {
     const userId = req.userId;
@@ -1503,7 +1509,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
     return {
       payments: {
         sumOfReceipt: receipt.sumOfReceipt,
-        category: receipt.category,
+        category: normalizeCategory(receipt.category),
         date: receipt.createdAt,
         isFixed
       },
@@ -1570,7 +1576,7 @@ app.get("/getCashFlowExpenses", authMiddleware, async (req, res) => {
             fixedExpenseItems.push({
               payments: {
                 sumOfReceipt: fe.amount,
-                category: fe.title,
+                category: normalizeCategory(fe.category || fe.title),
                 date: new Date(occurrenceDate),
                 isFixed: true,
               },

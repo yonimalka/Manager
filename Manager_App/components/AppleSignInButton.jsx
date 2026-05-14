@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   icon: {
     width: 25,
     height: 25,
-    transform: [{ scale: 1.8 }],
+    transform: [{ scale: 1.6 }],
   },
   text: {
     fontSize: 15,

@@ -31,6 +31,29 @@ import api from "../services/api";
 import { useAuth } from "./useAuth";
 import { formatCurrency } from "../services/formatCurrency";
 
+const CATEGORY_COLORS = {
+  materials: "#F59E0B",
+  labor:     "#8B5CF6",
+  wages:     "#8B5CF6",
+  equipment: "#06B6D4",
+  tools:     "#06B6D4",
+  fuel:      "#EF4444",
+  gas:       "#EF4444",
+  rent:      "#3B82F6",
+  fixed:     "#6366F1",
+  software:  "#10B981",
+  subscriptions: "#10B981",
+  general:   "#94A3B8",
+};
+
+const getCategoryColor = (cat) =>
+  CATEGORY_COLORS[(cat || "").toLowerCase().trim()] || "#94A3B8";
+
+const getCategoryBg = (cat) => {
+  const color = getCategoryColor(cat);
+  return color + "22";
+};
+
 export default function CashFlow() {
   const { userId, userDetails } = useAuth();
   if (!userDetails){
@@ -45,6 +68,7 @@ export default function CashFlow() {
 
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [chartMode, setChartMode] = useState("overview");
 
   useEffect(() => {
     if (!userId) return;
@@ -86,13 +110,41 @@ export default function CashFlow() {
   };
 
   const netCashFlow = totalIncome - totalExpenses;
-   
+
+  const expenseRatio = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 0;
+  const ratioColor = expenseRatio < 60 ? "#16A34A" : expenseRatio < 85 ? "#D97706" : "#E11D48";
+  const ratioBg    = expenseRatio < 60 ? "#DCFCE7" : expenseRatio < 85 ? "#FEF3C7" : "#FFE4E6";
+
   /* ---------------- CHART DATA ---------------- */
 
   const donutData = useMemo(() => [
-  { x: "Income", y: totalIncome },
-  { x: "Expenses", y: totalExpenses },
-], [totalIncome, totalExpenses]);
+    { x: "Income",   y: totalIncome   || 0.001 },
+    { x: "Expenses", y: totalExpenses || 0.001 },
+  ], [totalIncome, totalExpenses]);
+
+  const expenseByCategory = useMemo(() => {
+    const map = {};
+    expenses.forEach((item) => {
+      const cat = item.payments.category || "General";
+      map[cat] = (map[cat] || 0) + (Number(item.payments.sumOfReceipt) || 0);
+    });
+    return Object.entries(map)
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
+        color: getCategoryColor(category),
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [expenses, totalExpenses]);
+
+  const breakdownData = expenseByCategory.length > 0
+    ? expenseByCategory.map((c) => ({ x: c.category, y: c.amount }))
+    : [{ x: "No data", y: 1 }];
+
+  const breakdownColors = expenseByCategory.length > 0
+    ? expenseByCategory.map((c) => c.color)
+    : ["#E5E7EB"];
 
 const Skeleton = ({ width, height, radius = 12, style }) => (
   <View
@@ -122,30 +174,31 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
         </Text>
       </View>
 
-      {/* SUMMARY CARDS */}
+      {/* SUMMARY CARDS — 2×2 grid */}
       <View style={styles.summaryRow}>
-        <SummaryCard
-          title="Total Income"
-          value={totalIncome}
-          icon="trending-up"
-          color="#34C759"
-          userDetails={userDetails}
-          // style={{width: 40, backgroundColor: "#34C759"}}
-        />
-        <SummaryCard
-          title="Total Expenses"
-          value={totalExpenses}
-          icon="trending-down"
-          color="#FF3B30"
-          userDetails={userDetails}
-        />
-        <SummaryCard
-          title="Net Cash Flow"
-          value={netCashFlow}
-          icon="attach-money"
-          color="#0A84FF"
-          userDetails={userDetails}
-        />
+        <View style={styles.summaryTwoCol}>
+          <SummaryCard title="Total Income"    value={totalIncome}    icon="trending-up"   color="#34C759" userDetails={userDetails} compact />
+          <SummaryCard title="Total Expenses"  value={totalExpenses}  icon="trending-down" color="#FF3B30" userDetails={userDetails} compact />
+        </View>
+        <View style={styles.summaryTwoCol}>
+          <SummaryCard title="Net Cash Flow"   value={netCashFlow}    icon="attach-money"  color="#0A84FF" userDetails={userDetails} compact />
+          {/* Expense Ratio */}
+          <View style={[styles.summaryCard, styles.summaryCardCompact, { flex: 1 }]}>
+            <View style={styles.summaryTop}>
+              <Text style={[styles.summaryTitle, styles.summaryTitleCompact]}>Expense Ratio</Text>
+              <View style={[styles.iconCircle, { backgroundColor: ratioBg }]}>
+                <MaterialIcons name="percent" size={16} color={ratioColor} />
+              </View>
+            </View>
+            <Text style={[styles.summaryValue, styles.summaryValueCompact, { color: ratioColor }]}>
+              {expenseRatio}%
+            </Text>
+            <View style={styles.ratioTrack}>
+              <View style={[styles.ratioFill, { width: `${Math.min(expenseRatio, 100)}%`, backgroundColor: ratioColor }]} />
+            </View>
+            <Text style={[styles.summaryTitle, { fontSize: 10, marginLeft: 0, marginTop: 3 }]}>of income spent</Text>
+          </View>
+        </View>
       </View>
 
       {/* CHART */}
@@ -169,6 +222,22 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
           </View>
         </View>
 
+        {/* Chart mode toggle */}
+        <View style={styles.chartModeRow}>
+          {[["overview", "Income vs Expenses"], ["breakdown", "Expense Breakdown"]].map(([mode, label]) => (
+            <TouchableOpacity
+              key={mode}
+              style={[styles.chartModeBtn, chartMode === mode && styles.chartModeBtnActive]}
+              onPress={() => setChartMode(mode)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.chartModeBtnText, chartMode === mode && styles.chartModeBtnTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {loading ? (
           <View style={{ alignItems: "center", paddingVertical: 28 }}>
             <Skeleton width={220} height={220} radius={110} />
@@ -180,71 +249,91 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
             {/* Donut */}
             <View style={styles.donutWrapper}>
               <VictoryPie
-                data={donutData}
+                data={chartMode === "overview" ? donutData : breakdownData}
                 width={240}
                 height={240}
                 innerRadius={82}
                 radius={110}
                 padAngle={2.5}
                 labels={() => null}
-                colorScale={["#22C55E", "#F43F5E"]}
+                colorScale={chartMode === "overview" ? ["#22C55E", "#F43F5E"] : breakdownColors}
                 style={{ parent: { overflow: "hidden" } }}
               />
               {/* Center */}
               <View style={styles.donutCenter}>
-                <Text style={styles.donutCenterLabel}>Net Cash Flow</Text>
-                <Text
-                  style={[
-                    styles.donutCenterValue,
-                    { color: netCashFlow >= 0 ? "#16A34A" : "#E11D48" },
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {formatCurrency(
-                    netCashFlow || 0,
-                    userDetails?.currency || "USD",
-                    userDetails?.locale || "en-US"
-                  )}
-                </Text>
-                <View style={[
-                  styles.donutCenterBadge,
-                  { backgroundColor: netCashFlow >= 0 ? "#DCFCE7" : "#FFE4E6" }
-                ]}>
-                  <Text style={[
-                    styles.donutCenterBadgeText,
-                    { color: netCashFlow >= 0 ? "#16A34A" : "#E11D48" }
-                  ]}>
-                    {netCashFlow >= 0 ? "▲ Positive" : "▼ Negative"}
-                  </Text>
-                </View>
+                {chartMode === "overview" ? (
+                  <>
+                    <Text style={styles.donutCenterLabel}>Net Cash Flow</Text>
+                    <Text
+                      style={[styles.donutCenterValue, { color: netCashFlow >= 0 ? "#16A34A" : "#E11D48" }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {formatCurrency(netCashFlow || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+                    </Text>
+                    <View style={[styles.donutCenterBadge, { backgroundColor: netCashFlow >= 0 ? "#DCFCE7" : "#FFE4E6" }]}>
+                      <Text style={[styles.donutCenterBadgeText, { color: netCashFlow >= 0 ? "#16A34A" : "#E11D48" }]}>
+                        {netCashFlow >= 0 ? "▲ Positive" : "▼ Negative"}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.donutCenterLabel}>Total Expenses</Text>
+                    <Text style={[styles.donutCenterValue, { color: "#E11D48" }]} numberOfLines={1} adjustsFontSizeToFit>
+                      {formatCurrency(totalExpenses || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+                    </Text>
+                    <View style={[styles.donutCenterBadge, { backgroundColor: "#FFF1F2" }]}>
+                      <Text style={[styles.donutCenterBadgeText, { color: "#E11D48" }]}>
+                        {expenseByCategory.length} categories
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
 
-            {/* Legend */}
-            <View style={styles.donutLegend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#22C55E" }]} />
-                <View>
-                  <Text style={styles.legendLabel}>Income</Text>
-                  <Text style={styles.legendValue}>
-                    {formatCurrency(totalIncome || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
-                  </Text>
-                </View>
+            {/* Legend — Overview */}
+            {chartMode === "overview" && (
+              <View style={styles.donutLegend}>
+                {[
+                  { label: "Income",   value: totalIncome,    color: "#22C55E", pct: totalIncome + totalExpenses > 0 ? Math.round(totalIncome / (totalIncome + totalExpenses) * 100) : 0 },
+                  { label: "Expenses", value: totalExpenses,  color: "#F43F5E", pct: totalIncome + totalExpenses > 0 ? Math.round(totalExpenses / (totalIncome + totalExpenses) * 100) : 0 },
+                ].map((item, i) => (
+                  <React.Fragment key={item.label}>
+                    {i > 0 && <View style={styles.legendDivider} />}
+                    <View style={styles.legendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                      <View>
+                        <Text style={styles.legendLabel}>{item.label}</Text>
+                        <Text style={styles.legendValue}>
+                          {formatCurrency(item.value || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+                        </Text>
+                        <Text style={styles.legendPct}>{item.pct}%</Text>
+                      </View>
+                    </View>
+                  </React.Fragment>
+                ))}
               </View>
+            )}
 
-              <View style={styles.legendDivider} />
-
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: "#F43F5E" }]} />
-                <View>
-                  <Text style={styles.legendLabel}>Expenses</Text>
-                  <Text style={styles.legendValue}>
-                    {formatCurrency(totalExpenses || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
-                  </Text>
-                </View>
+            {/* Legend — Breakdown (grid) */}
+            {chartMode === "breakdown" && (
+              <View style={styles.breakdownLegend}>
+                {expenseByCategory.map((cat) => (
+                  <View key={cat.category} style={styles.breakdownLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: cat.color, width: 10, height: 10 }]} />
+                    <View>
+                      <Text style={styles.legendLabel}>{cat.category}</Text>
+                      <Text style={styles.legendValue}>
+                        {formatCurrency(cat.amount, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+                      </Text>
+                      <Text style={styles.legendPct}>{cat.percentage}%</Text>
+                    </View>
+                  </View>
+                ))}
               </View>
-            </View>
+            )}
           </View>
         )}
       </View>
@@ -274,21 +363,17 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
 
 /* ---------------- SUB COMPONENTS ---------------- */
 
-const SummaryCard = ({ title, value, icon, color, userDetails }) => (
-  <View style={styles.summaryCard}>
+const SummaryCard = ({ title, value, icon, color, userDetails, compact }) => (
+  <View style={[styles.summaryCard, compact && styles.summaryCardCompact, compact && { flex: 1 }]}>
     <View style={styles.summaryTop}>
-      <Text style={styles.summaryTitle}>{title}</Text>
+      <Text style={[styles.summaryTitle, compact && styles.summaryTitleCompact]}>{title}</Text>
       <View style={[styles.iconCircle, { backgroundColor: `${color}22` }]}>
-        <MaterialIcons name={icon} size={18} color={color} />
+        <MaterialIcons name={icon} size={compact ? 15 : 18} color={color} />
       </View>
     </View>
-    <Text style={styles.summaryValue}>{
-      formatCurrency(
-       value || 0,
-       userDetails?.currency || "USD",
-       userDetails?.locale || "en-US"
-      )
-    }</Text>
+    <Text style={[styles.summaryValue, compact && styles.summaryValueCompact]}>
+      {formatCurrency(value || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+    </Text>
   </View>
 );
 
@@ -327,17 +412,24 @@ const TransactionSection = ({ title, data, amountKey, color, icon, userDetails }
                 {item.projectName || "Unknown"}
               </Text>
               <View style={styles.transactionDetails}>
-              <Calendar size={12} color={"#94A3B8"}/>
-              {/* <Text style={styles.transactionDate}>
-                {item?.payments?.date || ""}
-              </Text> */}
-              <Text style={styles.transactionDate}>{new Date(item.payments.date).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })?? ''}</Text>
-              <Tag size={12} color="#94A3B8"/>
-              <Text style={styles.transactionAbout}>{handleTransactionType(item)}</Text>
+                <Calendar size={12} color={"#94A3B8"}/>
+                <Text style={styles.transactionDate}>{new Date(item.payments.date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  }) ?? ''}</Text>
+                {item.type === "expense" && item.payments.category ? (
+                  <View style={[styles.categoryPill, { backgroundColor: getCategoryBg(item.payments.category) }]}>
+                    <Text style={[styles.categoryPillText, { color: getCategoryColor(item.payments.category) }]}>
+                      {item.payments.category}
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Tag size={12} color="#94A3B8"/>
+                    <Text style={styles.transactionAbout}>{handleTransactionType(item)}</Text>
+                  </>
+                )}
               </View>
             </View>
 
@@ -565,6 +657,12 @@ const styles = StyleSheet.create({
     height: 36,
     backgroundColor: "#E2E8F0",
   },
+  legendPct: {
+    fontSize: 11,
+    color: "#94A3B8",
+    fontWeight: "600",
+    marginTop: 1,
+  },
 section : { 
   marginTop: 28, 
   paddingHorizontal: 20, 
@@ -618,4 +716,100 @@ section : {
   },
   transactionDate: { fontSize: 12, color: "grey", marginLeft: 5, marginRight: 7 },
   transactionAmount: { fontSize: 15, fontWeight: "700" },
+
+  // ── Summary 2×2 grid ──
+  summaryTwoCol: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  summaryCardCompact: {
+    padding: 12,
+    paddingHorizontal: 14,
+  },
+  summaryTitleCompact: {
+    fontSize: 12,
+    marginLeft: 0,
+    marginTop: 0,
+  },
+  summaryValueCompact: {
+    fontSize: 20,
+    marginLeft: 0,
+    marginTop: 6,
+  },
+
+  // ── Expense ratio bar ──
+  ratioTrack: {
+    height: 5,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 99,
+    marginTop: 6,
+    overflow: "hidden",
+  },
+  ratioFill: {
+    height: "100%",
+    borderRadius: 99,
+  },
+
+  // ── Chart mode toggle ──
+  chartModeRow: {
+    flexDirection: "row",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 16,
+    gap: 2,
+  },
+  chartModeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  chartModeBtnActive: {
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  chartModeBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#94A3B8",
+  },
+  chartModeBtnTextActive: {
+    color: "#0F172A",
+  },
+
+  // ── Breakdown legend grid ──
+  breakdownLegend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    width: "100%",
+    gap: 14,
+  },
+  breakdownLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "45%",
+  },
+
+  // ── Category pill on transaction rows ──
+  categoryPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 99,
+    marginLeft: 6,
+  },
+  categoryPillText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
 });

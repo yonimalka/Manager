@@ -155,7 +155,7 @@ const LoginScreen = () => {
             source={require("../assets/MaggoLogo-transparent.png")}
             style={styles.logo}
           />
-          <Text style={styles.headline}>Your business,{"\n"}under control.</Text>
+          <Text style={styles.headline}>Less paperwork.{"\n"} More work.</Text>
           <Text style={styles.tagline}>Invoices · Jobs · Cash flow · AI</Text>
         </View>
 
