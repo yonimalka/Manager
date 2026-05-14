@@ -12,13 +12,14 @@ import {
   Platform,
   Dimensions,
   I18nManager,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
-import { Folder, Calendar, DollarSign, Package, CheckSquare, Plus, X } from "lucide-react-native";
+import { Folder, Calendar, DollarSign, Package, CheckSquare, Plus, X, Check } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 const isRTL = I18nManager.isRTL;
@@ -42,12 +43,16 @@ const NewProject = () => {
   const [taskDetails, setTaskDetails] = useState("");
   const [taskList, setTaskList] = useState([]);
 
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+
   const handleSubmit = async () => {
     if (!details.name || !details.days || !details.payment) {
       Alert.alert("Missing Fields", "Please fill in all main project details.");
       return;
     }
 
+    setSubmitting(true);
     try {
       const token = await AsyncStorage.getItem("token");
       await api.post("/newProject", {
@@ -57,9 +62,11 @@ const NewProject = () => {
         userId,
       });
 
-      Alert.alert("Success", "Project added successfully!");
-      navigation.goBack();
+      setSubmitting(false);
+      setSuccess(true);
+      setTimeout(() => navigation.goBack(), 900);
     } catch (err) {
+      setSubmitting(false);
       if (err.response?.status === 402) {
         try {
           const { presentRevenueCatPaywallIfNeeded } = await import("../services/revenuecat");
@@ -159,8 +166,25 @@ const NewProject = () => {
           ))}
         </View>
 
-        <TouchableOpacity style={[styles.submitButton, !(details.name && details.days && details.payment) && { opacity: 0.4 }]} disabled={!(details.name && details.days && details.payment)} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Create Project</Text>
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            success && styles.submitButtonSuccess,
+            (!(details.name && details.days && details.payment) || submitting) && { opacity: 0.4 },
+          ]}
+          disabled={!(details.name && details.days && details.payment) || submitting || success}
+          onPress={handleSubmit}
+        >
+          {success ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Check size={22} color="#fff" strokeWidth={3} />
+              <Text style={styles.submitText}>Project Created!</Text>
+            </View>
+          ) : submitting ? (
+            <Text style={styles.submitText}>Creating...</Text>
+          ) : (
+            <Text style={styles.submitText}>Create Project</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -346,6 +370,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     alignItems: "center",
+  },
+  submitButtonSuccess: {
+    backgroundColor: "#16A34A",
+    shadowColor: "#16A34A",
   },
   submitText: {
     color: "#FFFFFF",

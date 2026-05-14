@@ -478,12 +478,12 @@ app.post("/newProject", authMiddleware, async (req, res) => {
     const existingProjectsCount = await ProjectModel.countDocuments({ userId: req.userId });
     const isPro = hasActiveEntitlement(user.subscription || {}, "MaggoPro");
 
-    if (!isPro && existingProjectsCount >= 1) {
+    if (!isPro && existingProjectsCount >= 2) {
       return res.status(402).json({
         message: "Maggo Pro is required for unlimited projects",
         code: "SUBSCRIPTION_REQUIRED",
         feature: "unlimited_projects",
-        freeProjectLimit: 1,
+        freeProjectLimit: 2,
         currentProjectCount: existingProjectsCount,
       });
     }
@@ -1805,7 +1805,7 @@ app.get("/subscription/status", authMiddleware, async (req, res) => {
       name: user.name,
       subscription: subResponse,
       limits: {
-        freeProjectLimit: 1,
+        freeProjectLimit: 2,
         projectCount,
       },
     });

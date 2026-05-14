@@ -41,6 +41,8 @@ const AboutProject = () => {
   const [detailsValue, setDetailsValue] = useState("");
   const [activeTab, setActiveTab] = useState("tasks");
   const [scrollY] = useState(new Animated.Value(0));
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchProject = async () => {
     try {
@@ -130,22 +132,15 @@ const AboutProject = () => {
   }
 
   const handleProjectDelete = async () => {
-    Alert.alert("Delete Project", "Are you sure you want to delete this project?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete", style: "destructive",
-        onPress: async () => {
-          try {
-            const res = await api.delete(`/deleteProject/${projectId}`);
-            Alert.alert("Success", res.data.message);
-            navigation.goBack();
-          } catch (error) {
-            console.error("Failed to delete project:", error);
-            Alert.alert("Error", "Failed to delete project.");
-          }
-        },
-      },
-    ]);
+    setDeleting(true);
+    try {
+      await api.delete(`/deleteProject/${projectId}`);
+      setDeleteConfirmVisible(false);
+      navigation.goBack();
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+      setDeleting(false);
+    }
   };
   const renderRightActions = (materialId) => (
   <TouchableOpacity
@@ -453,7 +448,7 @@ const removeMaterial = async (materialId) => {
   </TouchableOpacity>
 </View>
 
-        <TouchableOpacity style={s.deleteButton} onPress={handleProjectDelete}>
+        <TouchableOpacity style={s.deleteButton} onPress={() => setDeleteConfirmVisible(true)}>
           <Ionicons name="trash-outline" size={20} color="#EF4444" />
           <Text style={s.deleteText}>Delete Project</Text>
         </TouchableOpacity>
@@ -471,6 +466,37 @@ const removeMaterial = async (materialId) => {
         <View style={s.modalBackdrop}>
           <View style={s.modalCard}>
             <Receipts onClose={() => setReceiptModalVisible(false)} projectId={projectId} />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal visible={deleteConfirmVisible} transparent animationType="fade" statusBarTranslucent>
+        <View style={s.modalBackdrop}>
+          <View style={s.deleteModal}>
+            <View style={s.deleteModalIcon}>
+              <Ionicons name="trash-outline" size={32} color="#EF4444" />
+            </View>
+            <Text style={s.deleteModalTitle}>Delete Project?</Text>
+            <Text style={s.deleteModalBody}>
+              This will permanently remove "{project?.name}" and all its data. This action cannot be undone.
+            </Text>
+            <TouchableOpacity
+              style={[s.deleteModalConfirm, deleting && { opacity: 0.6 }]}
+              onPress={handleProjectDelete}
+              disabled={deleting}
+            >
+              <Text style={s.deleteModalConfirmText}>
+                {deleting ? "Deleting…" : "Yes, Delete"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.deleteModalCancel}
+              onPress={() => setDeleteConfirmVisible(false)}
+              disabled={deleting}
+            >
+              <Text style={s.deleteModalCancelText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -594,6 +620,14 @@ materialDeleteButton: {
 },
   deleteButton: { marginHorizontal: 20, marginBottom: 30, backgroundColor: "#FEF2F2", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "#FEE2E2" },
   deleteText: { color: "#EF4444", fontSize: 16, fontWeight: "600" },
+  deleteModal: { width: "82%", backgroundColor: "#fff", borderRadius: 24, padding: 28, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 20, elevation: 10 },
+  deleteModalIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#FEF2F2", alignItems: "center", justifyContent: "center", marginBottom: 16 },
+  deleteModalTitle: { fontSize: 20, fontWeight: "800", color: "#111827", marginBottom: 10 },
+  deleteModalBody: { fontSize: 14, color: "#6B7280", textAlign: "center", lineHeight: 20, marginBottom: 24 },
+  deleteModalConfirm: { width: "100%", backgroundColor: "#EF4444", borderRadius: 14, paddingVertical: 15, alignItems: "center", marginBottom: 10 },
+  deleteModalConfirmText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  deleteModalCancel: { width: "100%", backgroundColor: "#F3F4F6", borderRadius: 14, paddingVertical: 15, alignItems: "center" },
+  deleteModalCancelText: { color: "#374151", fontSize: 16, fontWeight: "600" },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   modalCard: { width: "92%", height: "90%", backgroundColor: "#ffffff", borderRadius: 24, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 12, overflow: "hidden" },
 });
