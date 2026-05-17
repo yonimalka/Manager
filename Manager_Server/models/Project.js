@@ -14,6 +14,7 @@ const ProjectSchema = new mongoose.Schema({
       days: {type: Number, required: true},
       materials: MaterialsSchema,
       toDoList: [toDoListSchema],
+      isDemo: { type: Boolean, default: false },
       estimatedCost: Number,
       actualCost: Number,
        createdAt: {

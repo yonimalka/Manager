@@ -43,6 +43,7 @@ const AboutProject = () => {
   const [scrollY] = useState(new Animated.Value(0));
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [demoBannerVisible, setDemoBannerVisible] = useState(false);
 
   const fetchProject = async () => {
     try {
@@ -61,6 +62,18 @@ const AboutProject = () => {
     setToDoList(project?.toDoList || []);
     setMaterialsArray(project?.materials?.items || []);
   }, [project]);
+
+  useEffect(() => {
+    if (!project?.isDemo) return;
+    AsyncStorage.getItem("maggo_demo_banner_dismissed").then((v) => {
+      if (!v) setDemoBannerVisible(true);
+    });
+  }, [project?.isDemo]);
+
+  const dismissDemoBanner = async () => {
+    await AsyncStorage.setItem("maggo_demo_banner_dismissed", "true");
+    setDemoBannerVisible(false);
+  };
 
   useEffect(() => {
     if (!shouldRefresh) {
@@ -263,6 +276,16 @@ const removeMaterial = async (materialId) => {
             </LinearGradient>
           </View>
         </View>
+
+        {demoBannerVisible && (
+          <View style={s.demoBanner}>
+            <Ionicons name="information-circle-outline" size={18} color="#92400E" style={{ marginTop: 1 }} />
+            <Text style={s.demoBannerText}>This is a demo — edit it or create your own.</Text>
+            <TouchableOpacity onPress={dismissDemoBanner} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close" size={18} color="#92400E" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={s.tabContainer}>
           {["tasks", "materials", "receipts"].map((tab) => (
@@ -618,6 +641,25 @@ materialDeleteButton: {
   marginVertical: 10,
   borderRadius: 12
 },
+  demoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: "#FEF3C7",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  demoBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#92400E",
+  },
   deleteButton: { marginHorizontal: 20, marginBottom: 30, backgroundColor: "#FEF2F2", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "#FEE2E2" },
   deleteText: { color: "#EF4444", fontSize: 16, fontWeight: "600" },
   deleteModal: { width: "82%", backgroundColor: "#fff", borderRadius: 24, padding: 28, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 20, elevation: 10 },

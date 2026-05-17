@@ -37,6 +37,7 @@ locale: {
   default: "en-US"
 },
   employees: [EmployeeSchema],
+  userType: { type: String, enum: ["freelancer", "agency", "trades", "other"], default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);

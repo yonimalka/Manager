@@ -390,6 +390,7 @@ app.post("/updateUser", authMiddleware, async (req, res) => {
       "logo",
       "currency",
       "taxSettings",
+      "userType",
     ];
 
     const updateData = {};
@@ -468,7 +469,7 @@ res.json({
 
 app.post("/newProject", authMiddleware, async (req, res) => {
   try {
-    const { name, payment, days, materialsList, toDoList } = req.body;
+    const { name, payment, days, materialsList, toDoList, isDemo } = req.body;
 
     const user = await UserModel.findById(req.userId).select("subscription");
     if (!user) {
@@ -495,6 +496,7 @@ app.post("/newProject", authMiddleware, async (req, res) => {
       days,
       materials: { items: materialsList || [] },
       toDoList: toDoList || [],
+      isDemo: !!isDemo,
       expenses: 0,
       paid: 0,
       paymentDetails: [],

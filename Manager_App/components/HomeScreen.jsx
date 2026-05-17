@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -37,6 +37,7 @@ import { auth } from "./firebase";
 import { formatCurrency } from "../services/formatCurrency";
 import { refreshSubscriptionStatus, hasProAccess } from "../services/subscription";
 import { presentRevenueCatPaywallIfNeeded } from "../services/revenuecat";
+import WelcomeModal from "./WelcomeModal";
 
 const { width } = Dimensions.get("window");
 
@@ -57,9 +58,17 @@ const HomeScreen = () => {
   const [userName, setUserName] = useState(null);
   const [userLogo, setUserLogo] = useState(null);
   const [projectDetails, setProjectDetails] = useState([]);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [totalIncomes, setTotalIncomes] = useState(0);
   const [scrollY] = useState(new Animated.Value(0));
-  const [incomeModalVisible ,setIncomeModalVisible] = useState(false);
+  const [incomeModalVisible, setIncomeModalVisible] = useState(false);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+
+  // First-run onboarding
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const [checklistDismissed, setChecklistDismissed] = useState(true);
+  const checklistSuccessAnim = useRef(new Animated.Value(0)).current;
+  const [checklistAllDone, setChecklistAllDone] = useState(false);
 
   const fetchData = async (isRefresh = false) => {
     try {
@@ -81,6 +90,8 @@ const HomeScreen = () => {
       setUserName(response.data?.name ?? "User");
       setUserLogo(response.data.logo);
       setProjectDetails(response.data?.projects ?? []);
+      setTotalExpenses(response.data?.totalExpenses ?? 0);
+      setTotalIncomes(response.data?.totalIncomes ?? 0);
     } catch (err) {
       console.error("Error fetching user data: ", err);
       Alert.alert("Error", "Failed to load data. Please try again.");
@@ -112,6 +123,70 @@ const HomeScreen = () => {
       fetchData();
     }
   }, [isFocused]);
+
+  // First-run: check whether to show welcome modal and/or checklist
+  useEffect(() => {
+    const checkFirstRun = async () => {
+      const [onboardingDone, checklistDone] = await Promise.all([
+        AsyncStorage.getItem("maggo_onboarding_complete"),
+        AsyncStorage.getItem("maggo_checklist_dismissed"),
+      ]);
+      if (!onboardingDone) setWelcomeVisible(true);
+      if (!checklistDone) setChecklistDismissed(false);
+    };
+    checkFirstRun();
+  }, []);
+
+  // Demo project creation triggered after welcome modal completes
+  const DEMO_PROJECTS = {
+    freelancer: { name: "Brand identity for Acme Co.", task: "Initial concepts" },
+    agency:     { name: "Q3 campaign — Northfield",    task: "Creative brief"    },
+    trades:     { name: "Kitchen renovation — Unit 4B", task: "Materials quote"  },
+    other:      { name: "My first project",             task: "First task"       },
+  };
+
+  const handleWelcomeComplete = async (userType) => {
+    setWelcomeVisible(false);
+    const demo = DEMO_PROJECTS[userType] || DEMO_PROJECTS.other;
+    try {
+      await api.post("/newProject", {
+        name: demo.name,
+        payment: 0,
+        days: 30,
+        toDoList: [{ task: demo.task, details: "" }],
+        isDemo: true,
+      });
+      fetchData();
+    } catch (e) {
+      console.error("Demo project creation failed:", e);
+    }
+  };
+
+  // Checklist logic
+  const hasRealProject = projectDetails.some((p) => !p.isDemo);
+  const hasExpense     = (totalExpenses ?? 0) > 0;
+  const hasInvoice     = (totalIncomes  ?? 0) > 0;
+
+  useEffect(() => {
+    if (!checklistDismissed && hasRealProject && hasExpense && hasInvoice) {
+      setChecklistAllDone(true);
+      Animated.timing(checklistSuccessAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }).start();
+      const t = setTimeout(async () => {
+        await AsyncStorage.setItem("maggo_checklist_dismissed", "true");
+        setChecklistDismissed(true);
+      }, 2000);
+      return () => clearTimeout(t);
+    }
+  }, [checklistDismissed, hasRealProject, hasExpense, hasInvoice]);
+
+  const handleDismissChecklist = async () => {
+    await AsyncStorage.setItem("maggo_checklist_dismissed", "true");
+    setChecklistDismissed(true);
+  };
 
   if (authLoading) {
     return (
@@ -169,9 +244,9 @@ const HomeScreen = () => {
       <View style={styles.emptyIconCircle}>
         <Ionicons name="briefcase-outline" size={48} color="#9CA3AF" />
       </View>
-      <Text style={styles.emptyTitle}>No Projects Yet</Text>
+      <Text style={styles.emptyTitle}>Track your projects</Text>
       <Text style={styles.emptySubtitle}>
-        Start by creating your first project
+        Manage tasks, invoices, and expenses in one place
       </Text>
       <TouchableOpacity
         style={styles.emptyButton}
@@ -182,7 +257,7 @@ const HomeScreen = () => {
           style={styles.emptyButtonGradient}
         >
           <Ionicons name="add-circle-outline" size={20} color="#fff" />
-          <Text style={styles.emptyButtonText}>Create Project</Text>
+          <Text style={styles.emptyButtonText}>Create your first project</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -214,6 +289,7 @@ const HomeScreen = () => {
   };
   return (
     <View style={styles.screen}>
+      <WelcomeModal visible={welcomeVisible} onComplete={handleWelcomeComplete} />
       {/* Animated Header Background */}
       <Animated.View style={[styles.headerBackground, { opacity: headerOpacity }]}>
         <LinearGradient
@@ -273,6 +349,30 @@ const HomeScreen = () => {
         }
       >
         <ValueProvider>
+          {/* Activation Checklist */}
+          {!checklistDismissed && (
+            <View style={styles.checklistCard}>
+              {checklistAllDone ? (
+                <Animated.View style={[styles.checklistSuccess, { opacity: checklistSuccessAnim }]}>
+                  <Ionicons name="checkmark-circle" size={28} color="#10B981" />
+                  <Text style={styles.checklistSuccessText}>You're all set!</Text>
+                </Animated.View>
+              ) : (
+                <>
+                  <View style={styles.checklistHeader}>
+                    <Text style={styles.checklistTitle}>Get started</Text>
+                    <TouchableOpacity onPress={handleDismissChecklist} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Ionicons name="close" size={18} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
+                  <ChecklistItem done={hasRealProject} label="Add a project" />
+                  <ChecklistItem done={hasExpense}     label="Log an expense" />
+                  <ChecklistItem done={hasInvoice}     label="Create an invoice" />
+                </>
+              )}
+            </View>
+          )}
+
           {/* Financial Overview Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -628,6 +728,74 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
   },
 
+  // Activation Checklist
+  checklistCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 28,
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#E0F2FE",
+  },
+  checklistHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  checklistTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  checklistItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 9,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  checklistDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checklistDotDone: {
+    backgroundColor: "#10B981",
+    borderColor: "#10B981",
+  },
+  checklistItemText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  checklistItemTextDone: {
+    color: "#9CA3AF",
+    textDecorationLine: "line-through",
+  },
+  checklistSuccess: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 10,
+  },
+  checklistSuccessText: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#10B981",
+  },
+
   // Empty State
   emptyState: {
     alignItems: "center",
@@ -720,5 +888,14 @@ const styles = StyleSheet.create({
       fontWeight: "400",
     },
 });
+
+const ChecklistItem = ({ done, label }) => (
+  <View style={styles.checklistItem}>
+    <View style={[styles.checklistDot, done && styles.checklistDotDone]}>
+      {done && <Ionicons name="checkmark" size={12} color="#fff" />}
+    </View>
+    <Text style={[styles.checklistItemText, done && styles.checklistItemTextDone]}>{label}</Text>
+  </View>
+);
 
 export default HomeScreen;
