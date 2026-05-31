@@ -27,6 +27,7 @@ const IncomeReceipt = require('./models/IncomeReceipt');
 const IncomeModel = require("./models/Incomes");
 const MaterialPriceHistory = require("./models/MaterialPriceHistory");
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
+const { calcIncomesForPeriod, calcExpensesForPeriod } = require("./utils/financialCalculations");
 const { ACTIVE_STATUSES, requireSubscription, hasActiveEntitlement } = require('./middleware/requireSubscription');
 
 const app = express();
@@ -391,6 +392,7 @@ app.post("/updateUser", authMiddleware, async (req, res) => {
       "currency",
       "taxSettings",
       "userType",
+      "zip",
     ];
 
     const updateData = {};
@@ -400,6 +402,19 @@ app.post("/updateUser", authMiddleware, async (req, res) => {
         updateData[field] = req.body[field];
       }
     });
+
+    // Map top-level zip into address.zip
+    if (req.body.zip) {
+      updateData.address = {
+        ...updateData.address,
+        zip: req.body.zip,
+      };
+    }
+
+    // Convert businessId to Number if present
+    if (updateData.businessId !== undefined) {
+      updateData.businessId = Number(updateData.businessId);
+    }
 
     // 🔹 Auto-sync businessState from address if taxSettings exists
     if (updateData.address?.state) {
@@ -450,17 +465,37 @@ app.put("/updateCurrency", authMiddleware, async (req, res) => {
 // JWT-protected route
 app.get("/getUser", authMiddleware, async (req, res) => {
   try {
-    // console.log(req.userId);
-    
-   const user = await UserModel.findById(req.userId)
-  .select("-password");
+    const user = await UserModel.findById(req.userId).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
-   const projects = await ProjectModel.find({ userId: req.userId });
 
-res.json({
-  ...user.toObject(),
-  projects
-});
+    const projects = await ProjectModel.find({ userId: req.userId });
+
+    const now        = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const yearStart  = new Date(now.getFullYear(), 0, 1);
+    const yearEnd    = new Date(now.getFullYear() + 1, 0, 1);
+
+    const [
+      totalIncomes,
+      totalExpenses,
+      monthlyIncomes,
+      monthlyExpenses,
+    ] = await Promise.all([
+      calcIncomesForPeriod(req.userId, yearStart, yearEnd),
+      calcExpensesForPeriod(req.userId, yearStart, yearEnd),
+      calcIncomesForPeriod(req.userId, monthStart, monthEnd),
+      calcExpensesForPeriod(req.userId, monthStart, monthEnd),
+    ]);
+
+    res.json({
+      ...user.toObject(),
+      projects,
+      totalIncomes,
+      totalExpenses,
+      monthlyIncomes,
+      monthlyExpenses,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
