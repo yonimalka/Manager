@@ -1,5 +1,4 @@
 const mongoose          = require("mongoose");
-const IncomeReceipt     = require("../models/IncomeReceipt");
 const IncomeModel       = require("../models/Incomes");
 const ReceiptModel      = require("../models/Receipt");
 const FixedExpenseModel = require("../models/FixedExpense");
@@ -15,18 +14,12 @@ async function calcIncomesForPeriod(userId, startDate, endDate) {
   const start = new Date(startDate);
   const end   = new Date(endDate);
 
-  const [incomeReceiptResult, incomeResult] = await Promise.all([
-    IncomeReceipt.aggregate([
-      { $match: { userId: userId, createdAt: { $gte: start, $lt: end } } },
-      { $group: { _id: null, total: { $sum: "$total" } } },
-    ]),
-    IncomeModel.aggregate([
-      { $match: { userId: userObjectId, date: { $gte: start, $lt: end } } },
-      { $group: { _id: null, total: { $sum: "$total" } } },
-    ]),
+  const result = await IncomeModel.aggregate([
+    { $match: { userId: userObjectId, date: { $gte: start, $lt: end } } },
+    { $group: { _id: null, total: { $sum: "$total" } } },
   ]);
 
-  return (incomeReceiptResult[0]?.total ?? 0) + (incomeResult[0]?.total ?? 0);
+  return result[0]?.total ?? 0;
 }
 
 async function calcExpensesForPeriod(userId, startDate, endDate) {
