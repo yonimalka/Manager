@@ -1240,7 +1240,8 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
     }
     // Build query
     let query = {
-      userId: new mongoose.Types.ObjectId(req.userId),
+      userId: req.userId,
+      pdfUrl: { $ne: null },
       // status: "uploaded",
       // imageUrl: { $ne: null },
     };
@@ -1260,13 +1261,14 @@ const receipts = await IncomeReceipt.find(query);
 
    for (const r of receipts) {
 
-  const response = await fetch(r.pdfUrl);
-
-  const buffer = await response.buffer();
-
-  const fileName = `${r.receiptNumber}.pdf`;
-
-  archive.append(buffer, { name: fileName });
+  try {
+    const response = await fetch(r.pdfUrl);
+    const buffer = await response.buffer();
+    const fileName = `${r.receiptNumber || r._id}.pdf`;
+    archive.append(buffer, { name: fileName });
+  } catch (fetchErr) {
+    console.error("Skipping receipt, fetch failed:", r._id, fetchErr.message);
+  }
 }
 
     await archive.finalize();
