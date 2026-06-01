@@ -1003,13 +1003,13 @@ app.patch("/incomeReceipt/:id/pdf", authMiddleware, async (req, res) => {
     if (!pdfUrl) {
       return res.status(400).json({ error: "pdfUrl is required" });
     }
-
+    console.log("[PDF] PATCH called — id:", req.params.id, "userId:", req.userId, "pdfUrl:", pdfUrl);
     const receipt = await IncomeReceipt.findOneAndUpdate(
       { _id: req.params.id, userId: req.userId },
       { pdfUrl },
       { new: true }
     );
-
+    console.log("[PDF] findOneAndUpdate result:", receipt ? "found" : "NOT FOUND");
     if (!receipt) {
       return res.status(404).json({ error: "Receipt not found" });
     }
