@@ -1241,8 +1241,8 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
     // Build query
     let query = {
       userId: new mongoose.Types.ObjectId(req.userId),
-      status: "uploaded",
-      imageUrl: { $ne: null },
+      // status: "uploaded",
+      // imageUrl: { $ne: null },
     };
     if (fromDate && toDate) {
       query.createdAt = { $gte: fromDate, $lte: toDate };
