@@ -1241,7 +1241,7 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
     // Build query
     let query = {
       userId: req.userId,
-      pdfUrl: { $ne: null },
+      // pdfUrl: { $ne: null },
       // status: "uploaded",
       // imageUrl: { $ne: null },
     };
