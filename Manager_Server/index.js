@@ -1183,7 +1183,11 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
 
     const fromDate = from ? new Date(from) : null;
     const toDate = to ? new Date(to) : null;
-
+    
+    // Push toDate to end of day so the full day is included
+    if (toDate) {
+     toDate.setHours(23, 59, 59, 999);
+    }
     // Build query
     let query = {
       userId: new mongoose.Types.ObjectId(req.userId),
@@ -1210,7 +1214,7 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
 
       const buffer = await response.buffer();
 
-      const fileName = `${r.category}_${Date.now()}.jpg`;
+      const fileName = `${r.category}_${r.sumOfReceipt}.jpg`;
       archive.append(buffer, { name: fileName });
       // console.log("Appended:", fileName);
     }
@@ -1230,11 +1234,16 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
      
     const fromDate = from ? new Date(from) : null;
     const toDate = to ? new Date(to) : null;
-
+    // Push toDate to end of day so the full day is included
+    if (toDate) {
+     toDate.setHours(23, 59, 59, 999);
+    }
     // Build query
     let query = {
-  userId: req.userId
-};;
+      userId: new mongoose.Types.ObjectId(req.userId),
+      status: "uploaded",
+      imageUrl: { $ne: null },
+    };
     if (fromDate && toDate) {
       query.createdAt = { $gte: fromDate, $lte: toDate };
     }
