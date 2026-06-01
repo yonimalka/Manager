@@ -1175,8 +1175,8 @@ app.get('/getTotalIncomes', authMiddleware, async (req, res) => {
   //   res.json(getIncomes)
   // })
 })
-
-app.get("/downloadReceiptsZip", authMiddleware, requireSubscription("MaggoPro"), async (req, res) => {
+// requireSubscription("MaggoPro"),
+app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
   try {
   
     const { from, to } = req.query;
@@ -1219,7 +1219,8 @@ app.get("/downloadReceiptsZip", authMiddleware, requireSubscription("MaggoPro"),
     res.status(500).json({ message: "Server error while creating ZIP" });
   }
 });
-app.get("/downloadIncomesReceiptsZip", authMiddleware, requireSubscription("MaggoPro"), async (req, res) => {
+// requireSubscription("MaggoPro"),
+app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
   try {
     console.log("enter route on downloadIncomesReceiptsZip");
     
