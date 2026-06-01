@@ -52,11 +52,8 @@ const MainApp = () => {
 
   useEffect(() => {
     const getInitialRoute = async () => {
-      const onboardingComplete = await AsyncStorage.getItem("onboardingComplete");
       const token = await AsyncStorage.getItem("token");
-      if (!onboardingComplete) {
-        setInitialRoute("Onboarding");
-      } else if (token) {
+      if (token) {
         setInitialRoute("HomeScreen");
       } else {
         setInitialRoute("LoginScreen");
@@ -89,7 +86,7 @@ const MainApp = () => {
   return (
     <NavigationContainer ref={(nav) => setNavigator(nav)}>
       <Stack.Navigator initialRouteName={initialRoute}>
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }}/>
+        {/* <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }}/> */}
         <Stack.Screen name="QuickSetup" component={QuickSetupScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="PdfPreview" component={PdfPreview} options={{ headerShown: false }}/>
         <Stack.Screen name="ProfileDetails" component={ProfileDetails} options={{ headerShown: false }}/>

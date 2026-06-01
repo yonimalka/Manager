@@ -24,6 +24,7 @@ export const useAuth = () => {
       const token = await AsyncStorage.getItem("token");
 
       if (!token) {
+        console.log("useAuth: authLoading set to false (no token)");
         setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
         navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
         return;
@@ -36,6 +37,7 @@ export const useAuth = () => {
         await AsyncStorage.removeItem("token");
         await AsyncStorage.removeItem("refreshToken");
 
+        console.log("useAuth: authLoading set to false (expired token)");
         setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
         navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
         return;
@@ -45,6 +47,7 @@ export const useAuth = () => {
       await configureRevenueCat(decoded.userId);
 
       // ✅ Set basic auth — RC is ready at this point
+      console.log("useAuth: authLoading set to false (authenticated)");
       setAuth({
         userId: decoded.userId,
         role: decoded.role || null,
@@ -63,6 +66,7 @@ export const useAuth = () => {
 
     } catch (err) {
       console.error("Auth failed:", err);
+      console.log("useAuth: authLoading set to false (catch)");
       setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
       navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
     }

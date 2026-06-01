@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
+  TextInput,
+  ScrollView,
   ActivityIndicator,
   FlatList,
   TouchableOpacity,
@@ -13,7 +15,10 @@ import {
   Animated,
   Dimensions,
   Modal,
-  Platform
+  Platform,
+  PixelRatio,
+  StatusBar,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 // import { SERVER_URL } from "@env";
@@ -25,8 +30,6 @@ import AgentScreen from "./AgentScreen";
 import Receipts from "./Receipts";
 import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 // import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
-import Incomes from "./Incomes";
-import Expenses from "./Expenses";
 import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
@@ -38,6 +41,8 @@ import { formatCurrency } from "../services/formatCurrency";
 import { refreshSubscriptionStatus, hasProAccess } from "../services/subscription";
 import { presentRevenueCatPaywallIfNeeded } from "../services/revenuecat";
 import WelcomeModal from "./WelcomeModal";
+import Svg, { Path, Rect } from "react-native-svg";
+import { Building2 } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -60,16 +65,48 @@ const HomeScreen = () => {
   const [projectDetails, setProjectDetails] = useState([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [totalIncomes, setTotalIncomes] = useState(0);
+  const [netBalance, setNetBalance] = useState(0);
   const [scrollY] = useState(new Animated.Value(0));
   const [incomeModalVisible, setIncomeModalVisible] = useState(false);
   const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [heroCardHeight, setHeroCardHeight] = useState(0);
 
   // First-run onboarding
   const [welcomeVisible, setWelcomeVisible] = useState(false);
-  const [checklistDismissed, setChecklistDismissed] = useState(true);
-  const checklistSuccessAnim = useRef(new Animated.Value(0)).current;
-  const [checklistAllDone, setChecklistAllDone] = useState(false);
 
+  // Tour overlay
+  const [tourVisible, setTourVisible] = useState(false);
+  const [tourStep, setTourStep]       = useState(1);
+
+  // One ref per tour target — measured at runtime
+  const refHeroCard   = useRef(null);
+  const refAddIncome  = useRef(null);
+  const refNewProject = useRef(null);
+  const refAddExpense = useRef(null);
+  const refCashFlow   = useRef(null);
+
+  // Biz details gate
+  const [bizVisible, setBizVisible] = useState(false);
+  const [bizId, setBizId] = useState("");
+  const [bizAddress, setBizAddress] = useState("");
+  const [bizState, setBizState] = useState("");
+  const [bizCountry, setBizCountry] = useState("US");
+  const [bizZip, setBizZip] = useState("");
+  const [bizSaving, setBizSaving] = useState(false);
+  const [bizErrors, setBizErrors] = useState({});
+  const slideAnim = useRef(new Animated.Value(300)).current;
+
+  // Tracks current scroll offset — ref to avoid re-renders
+  const scrollOffsetRef = useRef(0);
+
+  // Pre-measured tooltip card height — updated by off-screen View in render
+  const tourCardHeightRef = useRef(180);
+  const hasCheckedOnboarding = useRef(false);
+
+  // Stores measured { x, y, width, height, pageX, pageY } per target
+  const [measurements, setMeasurements] = useState({});
+
+  /* ── Data fetching ── */
   const fetchData = async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -92,6 +129,9 @@ const HomeScreen = () => {
       setProjectDetails(response.data?.projects ?? []);
       setTotalExpenses(response.data?.totalExpenses ?? 0);
       setTotalIncomes(response.data?.totalIncomes ?? 0);
+      const net = (response.data?.totalIncomes ?? 0) - (response.data?.totalExpenses ?? 0);
+      setNetBalance(net);
+      console.log("[HERO] fetchData complete — totalIncomes:", response.data?.totalIncomes, "totalExpenses:", response.data?.totalExpenses, "net:", net);
     } catch (err) {
       console.error("Error fetching user data: ", err);
       Alert.alert("Error", "Failed to load data. Please try again.");
@@ -105,6 +145,69 @@ const HomeScreen = () => {
     fetchData(true);
   }, []);
 
+  /* ── Measurement ── */
+  const measureTargets = () => {
+    const keys = ["heroCard", "newProject", "addIncome", "addExpense", "cashFlow"];
+    const refs = [refHeroCard, refNewProject, refAddIncome, refAddExpense, refCashFlow];
+    const next = {};
+    let done = 0;
+    const ratio = PixelRatio.get();
+
+    refs.forEach((ref, i) => {
+      if (ref.current) {
+        ref.current.measure((x, y, width, height, pageX, pageY) => {
+          // .measure() should return points but some Android versions return pixels.
+          // Detect: if pageX > SCREEN_W, values are in pixels — divide by ratio.
+          const { width: screenW } = Dimensions.get("window");
+          const needsRatio = pageX > screenW;
+          const px = needsRatio ? pageX / ratio : pageX;
+          const py = needsRatio ? pageY / ratio : pageY;
+          const pw = needsRatio ? width  / ratio : width;
+          const ph = needsRatio ? height / ratio : height;
+          next[keys[i]] = { pageX: px, pageY: py, width: pw, height: ph };
+          console.log(`[TOUR] ${keys[i]}: pageX=${px.toFixed(1)} pageY=${py.toFixed(1)} w=${pw.toFixed(1)} h=${ph.toFixed(1)} needsRatio=${needsRatio}`);
+          done++;
+          if (done === keys.length) setMeasurements({ ...next });
+        });
+      }
+    });
+  };
+
+  /* ── Tour handlers ── */
+  const handleTourStart = useCallback(() => {
+    setTimeout(() => {
+      measureTargets();
+    }, 200);
+    setTimeout(() => {
+      // console.log("[TOUR] 800ms setTimeout firing, calling setTourVisible");
+      // console.log("[TOUR] About to setTourVisible true");
+      setTourStep(1);
+      setTourVisible(true);
+      AsyncStorage.setItem(`maggo_tour_step_${userId}`, "1");
+    }, 800);
+  }, []);
+
+  const handleTourNext = async () => {
+    if (tourStep >= 5) {
+      setTourVisible(false);
+      setTourStep(1);
+      await AsyncStorage.setItem(`maggo_tour_step_${userId}`, "0");
+      await AsyncStorage.setItem(`maggo_checklist_dismissed_${userId}`, "true");
+    } else {
+      const next = tourStep + 1;
+      setTourStep(next);
+      await AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(next));
+    }
+  };
+
+  const handleTourSkip = async () => {
+    setTourVisible(false);
+    setTourStep(1);
+    await AsyncStorage.setItem(`maggo_tour_step_${userId}`, "0");
+    await AsyncStorage.setItem(`maggo_checklist_dismissed_${userId}`, "true");
+  };
+
+  /* ── Effects ── */
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigation.reset({
@@ -121,23 +224,38 @@ const HomeScreen = () => {
   useEffect(() => {
     if (isFocused) {
       fetchData();
+      // Small delay lets the layout settle before measuring
+      setTimeout(measureTargets, 400);
     }
   }, [isFocused]);
 
-  // First-run: check whether to show welcome modal and/or checklist
+  // First-run: show welcome modal and resume tour if in progress
   useEffect(() => {
-    const checkFirstRun = async () => {
-      const [onboardingDone, checklistDone] = await Promise.all([
-        AsyncStorage.getItem("maggo_onboarding_complete"),
-        AsyncStorage.getItem("maggo_checklist_dismissed"),
-      ]);
-      if (!onboardingDone) setWelcomeVisible(true);
-      if (!checklistDone) setChecklistDismissed(false);
-    };
-    checkFirstRun();
-  }, []);
+    if (authLoading) return;
+    if (!userId) return;
+    if (hasCheckedOnboarding.current) return;
+    hasCheckedOnboarding.current = true;
 
-  // Demo project creation triggered after welcome modal completes
+    const checkFirstRun = async () => {
+      const onboardingDone = await AsyncStorage.getItem(`maggo_onboarding_complete_${userId}`);
+      if (!onboardingDone) {
+        setWelcomeVisible(true);
+        return;
+      }
+      // Returning user — resume tour only if interrupted mid-session
+      const savedStep = await AsyncStorage.getItem(`maggo_tour_step_${userId}`);
+      const step = parseInt(savedStep, 10) || 0;
+      if (step > 0) {
+        setTourStep(step);
+        setTourVisible(true);
+        setTimeout(measureTargets, 400);
+      }
+    };
+
+    checkFirstRun();
+  }, [authLoading, userId]);
+
+  /* ── Demo project seeding ── */
   const DEMO_PROJECTS = {
     freelancer: { name: "Brand identity for Acme Co.", task: "Initial concepts" },
     agency:     { name: "Q3 campaign — Northfield",    task: "Creative brief"    },
@@ -146,7 +264,10 @@ const HomeScreen = () => {
   };
 
   const handleWelcomeComplete = async (userType) => {
+    await AsyncStorage.setItem(`maggo_onboarding_complete_${userId}`, "true");
+    await AsyncStorage.setItem(`maggo_user_type_${userId}`, userType);
     setWelcomeVisible(false);
+    // Seed demo project
     const demo = DEMO_PROJECTS[userType] || DEMO_PROJECTS.other;
     try {
       await api.post("/newProject", {
@@ -160,34 +281,61 @@ const HomeScreen = () => {
     } catch (e) {
       console.error("Demo project creation failed:", e);
     }
+    handleTourStart();
   };
 
-  // Checklist logic
-  const hasRealProject = projectDetails.some((p) => !p.isDemo);
-  const hasExpense     = (totalExpenses ?? 0) > 0;
-  const hasInvoice     = (totalIncomes  ?? 0) > 0;
-
+  /* ── Biz details gate ── */
   useEffect(() => {
-    if (!checklistDismissed && hasRealProject && hasExpense && hasInvoice) {
-      setChecklistAllDone(true);
-      Animated.timing(checklistSuccessAnim, {
-        toValue: 1,
-        duration: 350,
+    if (bizVisible) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
         useNativeDriver: true,
+        bounciness: 4,
       }).start();
-      const t = setTimeout(async () => {
-        await AsyncStorage.setItem("maggo_checklist_dismissed", "true");
-        setChecklistDismissed(true);
-      }, 2000);
-      return () => clearTimeout(t);
+    } else {
+      slideAnim.setValue(300);
     }
-  }, [checklistDismissed, hasRealProject, hasExpense, hasInvoice]);
+  }, [bizVisible]);
 
-  const handleDismissChecklist = async () => {
-    await AsyncStorage.setItem("maggo_checklist_dismissed", "true");
-    setChecklistDismissed(true);
+  const handleSaveBizDetails = async () => {
+    const errs = {};
+    if (!bizId.trim()) errs.bizId = "Business ID is required";
+    if (!bizAddress.trim()) errs.bizAddress = "Address is required";
+    if (!bizState.trim()) errs.bizState = "State is required";
+    if (!bizCountry.trim()) errs.bizCountry = "Country is required";
+    if (!bizZip.trim()) errs.bizZip = "ZIP Code is required";
+    if (Object.keys(errs).length) { setBizErrors(errs); return; }
+    setBizSaving(true);
+    try {
+      await api.post("/updateUser", {
+        businessId: bizId.trim(),
+        address: {
+          street: bizAddress.trim(),
+          state: bizState.trim().toUpperCase(),
+          country: bizCountry.trim().toUpperCase(),
+          zip: bizZip.trim(),
+        },
+      });
+      await AsyncStorage.setItem("maggo_biz_details_complete", "true");
+      setBizVisible(false);
+      setIncomeModalVisible(true);
+    } catch (e) {
+      Alert.alert("Error", "Could not save details. Please try again.");
+    } finally {
+      setBizSaving(false);
+    }
   };
 
+  const handleAddIncomePress = async () => {
+    const bizDone = await AsyncStorage.getItem("maggo_biz_details_complete");
+    if (bizDone === "true") {
+      setIncomeModalVisible(true);
+    } else {
+      setBizVisible(true);
+    }
+  };
+
+  /* ── Auth guard ── */
   if (authLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -196,15 +344,17 @@ const HomeScreen = () => {
       </View>
     );
   }
+
   const submitIncomeReceipt = async (data) => {
     try {
-      // await api.post("/incomeReceipt", data);
-      await api.get(`/getUserDetails`);
-      
+      console.log("[HERO] submitIncomeReceipt called, fetching data...");
+      await fetchData();
+      console.log("[HERO] fetchData done after income submit");
     } catch (err) {
       console.error(err);
     }
   };
+
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [0, 1],
@@ -212,20 +362,9 @@ const HomeScreen = () => {
   });
 
   const renderProjectCard = ({ item, index }) => (
-    <Animated.View
-      style={[
-        styles.projectCardWrapper,
-        // {
-        //   opacity: scrollY.interpolate({
-        //     inputRange: [-1, 0, index * 100, (index + 1) * 100],
-        //     outputRange: [1, 1, 1, 0.8],
-        //   }),
-        // },
-      ]}
-    >
+    <Animated.View style={[styles.projectCardWrapper]}>
       <TouchableOpacity
         onPress={() => navigation.navigate("AboutProject", { project: item })}
-        // style={styles.projectCard}
         activeOpacity={0.7}
       >
         <Project
@@ -234,6 +373,7 @@ const HomeScreen = () => {
           projectName={item.name}
           totalDays={item.days}
           totalAmount={item.payment}
+          isDemo={item.isDemo === true}
         />
       </TouchableOpacity>
     </Animated.View>
@@ -270,8 +410,8 @@ const HomeScreen = () => {
       <View style={styles.skeletonCard} />
     </View>
   );
+
   const handleAgentPress = async () => {
-    // navigation.navigate("AgentScreen");
     try {
       const subscription = await refreshSubscriptionStatus();
       if (hasProAccess(subscription)) {
@@ -287,9 +427,122 @@ const HomeScreen = () => {
       navigation.navigate("AgentScreen");
     }
   };
+
   return (
     <View style={styles.screen}>
       <WelcomeModal visible={welcomeVisible} onComplete={handleWelcomeComplete} />
+
+      {/* Biz details gate — shown before income modal, no Modal nesting */}
+      {bizVisible && (
+        <View style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.45)",
+          justifyContent: "flex-end",
+          zIndex: 9999,
+          elevation: 9999,
+        }}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <Animated.View style={[styles.bizSheet, { transform: [{ translateY: slideAnim }] }]}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="none"
+                showsVerticalScrollIndicator={false}
+                style={{ width: "100%" }}
+                contentContainerStyle={{ alignItems: "center" }}
+              >
+                <View style={styles.bizHandle} />
+                <View style={styles.bizIconCircle}>
+                  <Building2 size={28} color="#3B82F6" />
+                </View>
+                <Text style={styles.bizTitle}>One last thing</Text>
+                <Text style={styles.bizSubtitle}>
+                  Your business details are printed on every invoice. Fill them once and you're done.
+                </Text>
+                <View style={styles.bizField}>
+                  <Text style={styles.bizLabel}>Business ID / Tax Number</Text>
+                  <TextInput
+                    style={[styles.bizInput, bizErrors.bizId && styles.bizInputError]}
+                    value={bizId}
+                    onChangeText={(v) => { setBizId(v); setBizErrors((e) => ({ ...e, bizId: null })); }}
+                    placeholder="e.g. 12-3456789"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                  />
+                  {bizErrors.bizId ? <Text style={styles.bizErrText}>{bizErrors.bizId}</Text> : null}
+                </View>
+                <View style={styles.bizField}>
+                  <Text style={styles.bizLabel}>Business Address</Text>
+                  <TextInput
+                    style={[styles.bizInput, bizErrors.bizAddress && styles.bizInputError]}
+                    value={bizAddress}
+                    onChangeText={(v) => { setBizAddress(v); setBizErrors((e) => ({ ...e, bizAddress: null })); }}
+                    placeholder="123 Main St"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  {bizErrors.bizAddress ? <Text style={styles.bizErrText}>{bizErrors.bizAddress}</Text> : null}
+                </View>
+                <View style={styles.bizField}>
+                  <Text style={styles.bizLabel}>State</Text>
+                  <TextInput
+                    style={[styles.bizInput, bizErrors.bizState && styles.bizInputError]}
+                    value={bizState}
+                    onChangeText={(v) => { setBizState(v); setBizErrors((e) => ({ ...e, bizState: null })); }}
+                    placeholder="e.g. NY"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="characters"
+                    maxLength={2}
+                  />
+                  {bizErrors.bizState ? <Text style={styles.bizErrText}>{bizErrors.bizState}</Text> : null}
+                </View>
+                <View style={styles.bizField}>
+                  <Text style={styles.bizLabel}>Country</Text>
+                  <TextInput
+                    style={[styles.bizInput, bizErrors.bizCountry && styles.bizInputError]}
+                    value={bizCountry}
+                    onChangeText={(v) => { setBizCountry(v); setBizErrors((e) => ({ ...e, bizCountry: null })); }}
+                    placeholder="e.g. US"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="characters"
+                    maxLength={2}
+                  />
+                  {bizErrors.bizCountry ? <Text style={styles.bizErrText}>{bizErrors.bizCountry}</Text> : null}
+                </View>
+                <View style={styles.bizField}>
+                  <Text style={styles.bizLabel}>ZIP Code</Text>
+                  <TextInput
+                    style={[styles.bizInput, bizErrors.bizZip && styles.bizInputError]}
+                    value={bizZip}
+                    onChangeText={(v) => { setBizZip(v); setBizErrors((e) => ({ ...e, bizZip: null })); }}
+                    placeholder="10001"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                  />
+                  {bizErrors.bizZip ? <Text style={styles.bizErrText}>{bizErrors.bizZip}</Text> : null}
+                </View>
+                <TouchableOpacity
+                  style={styles.bizSaveBtn}
+                  onPress={handleSaveBizDetails}
+                  disabled={bizSaving}
+                  activeOpacity={0.85}
+                >
+                  {bizSaving
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={styles.bizSaveBtnText}>Save & Continue</Text>
+                  }
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.bizSkipBtn}
+                  onPress={() => { setBizVisible(false); setIncomeModalVisible(true); }}
+                >
+                  <Text style={styles.bizSkipText}>Skip for now</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </View>
+      )}
+
       {/* Animated Header Background */}
       <Animated.View style={[styles.headerBackground, { opacity: headerOpacity }]}>
         <LinearGradient
@@ -334,9 +587,13 @@ const HomeScreen = () => {
       <Animated.ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!incomeModalVisible && !receiptModalVisible}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
+          {
+            useNativeDriver: true,
+            listener: (e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }
+          }
         )}
         scrollEventThrottle={16}
         refreshControl={
@@ -349,108 +606,172 @@ const HomeScreen = () => {
         }
       >
         <ValueProvider>
-          {/* Activation Checklist */}
-          {!checklistDismissed && (
-            <View style={styles.checklistCard}>
-              {checklistAllDone ? (
-                <Animated.View style={[styles.checklistSuccess, { opacity: checklistSuccessAnim }]}>
-                  <Ionicons name="checkmark-circle" size={28} color="#10B981" />
-                  <Text style={styles.checklistSuccessText}>You're all set!</Text>
-                </Animated.View>
-              ) : (
-                <>
-                  <View style={styles.checklistHeader}>
-                    <Text style={styles.checklistTitle}>Get started</Text>
-                    <TouchableOpacity onPress={handleDismissChecklist} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons name="close" size={18} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </View>
-                  <ChecklistItem done={hasRealProject} label="Add a project" />
-                  <ChecklistItem done={hasExpense}     label="Log an expense" />
-                  <ChecklistItem done={hasInvoice}     label="Create an invoice" />
-                </>
-              )}
-            </View>
-          )}
 
           {/* Financial Overview Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Financial Overview</Text>
-              <TouchableOpacity style={styles.seeAllButton} onPress={()=> navigation.navigate("Finance")}>
+              <TouchableOpacity style={styles.seeAllButton} onPress={() => navigation.navigate("Finance")}>
                 <Text style={styles.seeAllText}>See All</Text>
                 <Ionicons name="arrow-forward" size={16} color="#3B82F6" />
               </TouchableOpacity>
             </View>
+            <View
+              ref={refHeroCard}
+              onLayout={(e) => setHeroCardHeight(e.nativeEvent.layout.height)}
+              style={{
+                borderRadius: 24,
+                padding: 24,
+                backgroundColor: "#0F172A",
+                overflow: "hidden",
+                shadowColor: "#000",
+                shadowOpacity: 0.25,
+                shadowRadius: 20,
+                shadowOffset: { width: 0, height: 8 },
+                elevation: 12,
+              }}
+            >
+              {/* Period */}
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.4)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>
+                {new Date().toLocaleString("default", { month: "long", year: "numeric" })}
+              </Text>
 
-            <View style={styles.summaryRow}>
-                  <Incomes refresh={loading} />
-                  <Expenses userId={userId} refresh={loading} />
-            </View> 
+              {/* Label */}
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "rgba(255,255,255,0.55)", marginBottom: 8 }}>
+                Net Balance
+              </Text>
+
+              {/* Hero number */}
+              <Text style={{
+                fontSize: 42,
+                fontWeight: "800",
+                color: netBalance >= 0 ? "#34d399" : "#f87171",
+                letterSpacing: -1.5,
+                lineHeight: 44,
+                marginBottom: 20,
+              }}>
+                {netBalance >= 0 ? "+" : ""}{formatCurrency(
+                                        netBalance,
+                                        userDetails?.currency || "USD",
+                                        userDetails?.locale || "en-US"
+                                      )}
+              </Text>
+
+              {/* Divider */}
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)", marginBottom: 16 }} />
+
+              {/* Income + Expense pills */}
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                {/* Income pill */}
+                <View style={{
+                  flex: 1, flexDirection: "row", alignItems: "center", gap: 10,
+                  backgroundColor: "rgba(255,255,255,0.07)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+                  borderRadius: 14, padding: 12,
+                }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#34d399" }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Income</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(
+                                            totalIncomes,
+                                            userDetails?.currency || "USD",
+                                            userDetails?.locale || "en-US"
+                                          )}</Text>
+                  </View>
+                </View>
+                {/* Expense pill */}
+                <View style={{
+                  flex: 1, flexDirection: "row", alignItems: "center", gap: 10,
+                  backgroundColor: "rgba(255,255,255,0.07)",
+                  borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+                  borderRadius: 14, padding: 12,
+                }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f87171" }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Expenses</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(
+                                            totalExpenses,
+                                            userDetails?.currency || "USD",
+                                            userDetails?.locale || "en-US"
+                                          )}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
           </View>
 
           {/* Quick Actions */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <View style={styles.quickActions}>
+
+              {/* New Project */}
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => navigation.navigate("NewProject")}
               >
-                <View style={styles.actionIcon}>
+                <View ref={refNewProject} style={[styles.actionIcon, tourVisible && tourStep === 2 && { shadowOpacity: 0, elevation: 0 }]}>
                   <Ionicons name="add-circle" size={24} color="#3B82F6" />
                 </View>
                 <Text style={styles.actionText}>New Project</Text>
               </TouchableOpacity>
 
+              {/* Add Income */}
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => setIncomeModalVisible(true)}
+                onPress={handleAddIncomePress}
               >
-                <View style={styles.actionIcon}>
+                <View ref={refAddIncome} style={[styles.actionIcon, tourVisible && tourStep === 3 && { shadowOpacity: 0, elevation: 0 }]}>
                   <Ionicons name="cash" size={24} color="#10B981" />
                 </View>
                 <Text style={styles.actionText}>Add Income</Text>
               </TouchableOpacity>
-              <Modal visible={incomeModalVisible} animationType="fade" transparent onRequestClose={() => setIncomeModalVisible(false)}>
-                      <View style={styles.backdrop}>
-                        <View style={styles.modalCard}>
-                          <IncomeReceiptGenerator
-                            onSubmit={(data) => {
-                              submitIncomeReceipt(data);
-                              setIncomeModalVisible(false);
-                            }}
-                            onClose={() => setIncomeModalVisible(false)}
-                          />
-                        </View>
-                      </View>
-                    </Modal>
+
+              {/* Add Expense */}
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => setReceiptModalVisible(true)}
               >
-                <View style={styles.actionIcon}>
+                <View ref={refAddExpense} style={[styles.actionIcon, tourVisible && tourStep === 4 && { shadowOpacity: 0, elevation: 0 }]}>
                   <Ionicons name="card" size={24} color="#EF4444" />
                 </View>
                 <Text style={styles.actionText}>Add Expense</Text>
               </TouchableOpacity>
-              <Modal visible={receiptModalVisible} transparent animationType="fade" statusBarTranslucent>
-                      <View style={styles.backdrop}>
-                        <View style={styles.modalCard}>
-                          <Receipts onClose={() => setReceiptModalVisible(false)} />
-                        </View>
-                      </View>
-                    </Modal>
+
+              {/* CashFlow */}
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => navigation.navigate("CashFlow")}
               >
-                <View style={styles.actionIcon}>
+                <View ref={refCashFlow} style={[styles.actionIcon, tourVisible && tourStep === 5 && { shadowOpacity: 0, elevation: 0 }]}>
                   <Ionicons name="stats-chart" size={24} color="#8B5CF6" />
                 </View>
                 <Text style={styles.actionText}>CashFlow</Text>
               </TouchableOpacity>
+
             </View>
+
+            {/* Modals live outside the flex row to avoid layout side-effects */}
+            <Modal visible={incomeModalVisible} animationType="fade" transparent statusBarTranslucent onRequestClose={() => setIncomeModalVisible(false)}>
+              <View style={styles.backdrop}>
+                <View style={styles.modalCard}>
+                  <IncomeReceiptGenerator
+                    onSubmit={(data) => { submitIncomeReceipt(data); setIncomeModalVisible(false); }}
+                    onClose={() => setIncomeModalVisible(false)}
+                  />
+                </View>
+              </View>
+            </Modal>
+            <Modal visible={receiptModalVisible} transparent animationType="fade" statusBarTranslucent>
+              <View style={styles.backdrop}>
+                <View style={styles.modalCard}>
+                  <Receipts
+                    onClose={() => setReceiptModalVisible(false)}
+                    onSubmit={() => { setReceiptModalVisible(false); fetchData(); }}
+                  />
+                </View>
+              </View>
+            </Modal>
           </View>
 
           {/* Projects Section */}
@@ -459,14 +780,6 @@ const HomeScreen = () => {
               <Text style={styles.sectionTitle}>
                 Active Projects | {projectDetails.length}
               </Text>
-              {/* {projectDetails.length > 0 && (
-                <TouchableOpacity
-                  style={styles.addProjectButton}
-                  onPress={() => navigation.navigate("NewProject")}
-                >
-                  <Ionicons name="add" size={20} color="#3B82F6" />
-                </TouchableOpacity>
-              )} */}
             </View>
 
             {loading && !refreshing ? (
@@ -488,15 +801,48 @@ const HomeScreen = () => {
       </Animated.ScrollView>
 
       {/* <BottomNavBar /> */}
-      
       <View style={styles.navContainer}>
-              <TouchableOpacity
-                style={styles.navButton}
-                onPress={handleAgentPress}
-                >
-                <Ionicons name="sparkles-outline" size={31} color="#10b981" />
-              </TouchableOpacity>
-            </View>
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={handleAgentPress}
+        >
+          <Ionicons name="sparkles-outline" size={31} color="#10b981" />
+        </TouchableOpacity>
+      </View>
+
+      {/* TourOverlay card pre-measure — off screen, always mounted */}
+      <View
+        style={{ position: "absolute", top: -9999, left: 0, width: 260, opacity: 0, pointerEvents: "none" }}
+        onLayout={(e) => { tourCardHeightRef.current = e.nativeEvent.layout.height; }}
+      >
+        <Text style={{ fontSize: 10, marginBottom: 7 }}>Step 1 of 5</Text>
+        <Text style={{ fontSize: 15, fontWeight: "700", marginBottom: 6, lineHeight: 21 }}>
+          Your income, live
+        </Text>
+        <Text style={{ fontSize: 12, lineHeight: 18, marginBottom: 16 }}>
+          Every payment you log shows up here instantly.
+        </Text>
+        <View style={{ height: 30 }} />
+      </View>
+
+      <SpotlightOverlay
+        visible={tourVisible}
+        measurement={measurements[TOUR_STEPS[tourStep - 1]?.key]}
+        onPress={handleTourSkip}
+        measurementKey={TOUR_STEPS[tourStep - 1]?.key}
+        cardHeights={{ heroCard: heroCardHeight }}
+        scrollOffset={scrollOffsetRef.current}
+      />
+
+      <TourOverlay
+        visible={tourVisible}
+        step={tourStep}
+        measurements={measurements}
+        onNext={handleTourNext}
+        onSkip={handleTourSkip}
+        cardHeightRef={tourCardHeightRef}
+        scrollOffset={scrollOffsetRef.current}
+      />
     </View>
   );
 };
@@ -570,16 +916,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 50,
   },
-  // avatarPlaceholder: {
-  //   width: 48,
-  //   height: 48,
-  //   borderRadius: 24,
-  //   backgroundColor: "#E0F2FE",
-  //   alignItems: "center",
-  //   justifyContent: "center",
-  //   borderWidth: 3,
-  //   borderColor: "#fff",
-  // },
 
   // Scroll Content
   scrollContent: {
@@ -591,12 +927,13 @@ const styles = StyleSheet.create({
   // Section
   section: {
     marginBottom: 32,
+    // marginTop: 40,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    // marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
@@ -625,10 +962,6 @@ const styles = StyleSheet.create({
   },
 
   // Financial Cards
-  summaryRow: {
-    flexDirection: "row",
-    gap: 16,
-  },
   financeCard: {
     flex: 1,
     borderRadius: 20,
@@ -690,11 +1023,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   modalCard: {
     width: "92%",
     height: "90%",
-    // flex: 1,
     backgroundColor: "#ffffff",
     borderRadius: 24,
     shadowColor: "#000",
@@ -702,8 +1033,9 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
     elevation: 12,
-    overflow: "hidden",
+    overflow: "visible",
   },
+
   // Projects
   projectsList: {
     gap: 12,
@@ -726,74 +1058,6 @@ const styles = StyleSheet.create({
   projectArrow: {
     marginLeft: "auto",
     paddingLeft: 12,
-  },
-
-  // Activation Checklist
-  checklistCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 28,
-    shadowColor: "#000",
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "#E0F2FE",
-  },
-  checklistHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  checklistTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  checklistItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 9,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-  },
-  checklistDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: "#D1D5DB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checklistDotDone: {
-    backgroundColor: "#10B981",
-    borderColor: "#10B981",
-  },
-  checklistItemText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  checklistItemTextDone: {
-    color: "#9CA3AF",
-    textDecorationLine: "line-through",
-  },
-  checklistSuccess: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 10,
-  },
-  checklistSuccessText: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#10B981",
   },
 
   // Empty State
@@ -848,54 +1112,390 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     opacity: 0.5,
   },
-  navContainer: {
-      position: 'absolute',
-      bottom: 25,
-      alignSelf: 'flex-end',
-      height: 70,
-      width: 70,
-      flexDirection: "row",
-      borderRadius: 50,
-      justifyContent: "space-around",
-      alignItems: "center",
-      backgroundColor: "#ffffff",
-      paddingVertical: 0,
-      // marginBottom: 25,
-      marginHorizontal: 25,
-      borderTopColor: "#e0e0e0",
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOpacity: 0.15,
-          shadowOffset: { width: 0, height: 0 },
-          shadowRadius: 5,
-        },
-        android:{
-          elevation: 5,
-          shadowColor: "#000",
-        }
-      }),
-    },
-    navButton: {
-      alignItems: "center",
-      justifyContent: "center",
 
-    },
-    navText: {
-      fontSize: 12,
-      color: "#00796b",
-      marginTop: 4,
-      fontWeight: "400",
-    },
+  navContainer: {
+    position: "absolute",
+    bottom: 25,
+    alignSelf: "flex-end",
+    height: 70,
+    width: 70,
+    flexDirection: "row",
+    borderRadius: 50,
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    paddingVertical: 0,
+    marginHorizontal: 25,
+    borderTopColor: "#e0e0e0",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 0 },
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 5,
+        shadowColor: "#000",
+      }
+    }),
+  },
+  navButton: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navText: {
+    fontSize: 12,
+    color: "#00796b",
+    marginTop: 4,
+    fontWeight: "400",
+  },
+
+  // ── Business details sheet ──
+  bizSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 28,
+    paddingBottom: 44,
+    alignItems: "center",
+  },
+  bizHandle: {
+    width: 40, height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E5E7EB",
+    marginBottom: 24,
+  },
+  bizIconCircle: {
+    width: 72, height: 72,
+    borderRadius: 36,
+    backgroundColor: "#DBEAFE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+  bizTitle: {
+    fontSize: 22, fontWeight: "800",
+    color: "#111827",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  bizSubtitle: {
+    fontSize: 14, color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  bizField: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  bizLabel: {
+    fontSize: 13, fontWeight: "700",
+    color: "#374151",
+    marginBottom: 6,
+  },
+  bizInput: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: "#111827",
+    width: "100%",
+  },
+  bizInputError: {
+    borderColor: "#EF4444",
+  },
+  bizErrText: {
+    fontSize: 12, color: "#EF4444",
+    marginTop: 4,
+  },
+  bizSaveBtn: {
+    backgroundColor: "#2563EB",
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    width: "100%",
+    marginTop: 8,
+  },
+  bizSaveBtnText: {
+    color: "#fff", fontSize: 16, fontWeight: "700",
+  },
+  bizSkipBtn: {
+    marginTop: 14, paddingVertical: 6,
+  },
+  bizSkipText: {
+    fontSize: 14, color: "#9CA3AF", fontWeight: "600",
+  },
 });
 
-const ChecklistItem = ({ done, label }) => (
-  <View style={styles.checklistItem}>
-    <View style={[styles.checklistDot, done && styles.checklistDotDone]}>
-      {done && <Ionicons name="checkmark" size={12} color="#fff" />}
+/* ─────────────────────────────────────────────
+   SPOTLIGHT OVERLAY
+───────────────────────────────────────────── */
+const SpotlightOverlay = ({ visible, measurement, onPress, measurementKey, cardHeights = {}, scrollOffset = 0 }) => {
+  if (!visible || !measurement) return null;
+
+  const { width: SW, height: SH } = Dimensions.get("window");
+  const statusBarHeight = StatusBar.currentHeight || 0;
+  const { pageX, pageY, width: mW, height: mH } = measurement;
+
+  const adjustedH = (measurementKey === "heroCard" && cardHeights.heroCard > 0)
+    ? cardHeights.heroCard
+    : mH;
+
+  const holeTop    = Math.floor(pageY - statusBarHeight - scrollOffset);
+  const holeLeft   = Math.floor(pageX);
+  const holeWidth  = Math.ceil(mW);
+  const holeHeight = Math.ceil(adjustedH - 1);
+  const radius     = measurementKey === "heroCard" ? 30 : 16;
+  const RGBA       = "rgb(15,23,42)";
+
+  // SVG even-odd path: full screen rect minus a rounded rect hole
+  const r = radius;
+  const x = holeLeft;
+  const y = holeTop;
+  const w = holeWidth;
+  const h = holeHeight;
+
+  const holePath   = `M${x + r} ${y} H${x + w - r} Q${x + w} ${y} ${x + w} ${y + r} V${y + h - r} Q${x + w} ${y + h} ${x + w - r} ${y + h} H${x + r} Q${x} ${y + h} ${x} ${y + h - r} V${y + r} Q${x} ${y} ${x + r} ${y} Z`;
+  const screenPath = `M0 0 H${SW} V${SH} H0 Z`;
+  const svgPath    = `${screenPath} ${holePath}`;
+
+  return (
+    <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}>
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={onPress}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+      >
+        <Svg width={SW} height={SH}>
+          <Path
+            d={svgPath}
+            fill={RGBA}
+            fillOpacity={0.62}
+            fillRule="evenodd"
+          />
+          {/* White border ring around hole */}
+          {/* <Rect
+            x={x - 1}
+            y={y - 1}
+            width={w + 2}
+            height={h + 2}
+            rx={r }
+            ry={r + 1}
+            fill="none"
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth={2}
+          /> */}
+        </Svg>
+      </TouchableOpacity>
     </View>
-    <Text style={[styles.checklistItemText, done && styles.checklistItemTextDone]}>{label}</Text>
-  </View>
-);
+  );
+};
+
+/* ─────────────────────────────────────────────
+   TOUR OVERLAY
+───────────────────────────────────────────── */
+const TOUR_STEPS = [
+  {
+    key: "heroCard",
+    headline: "Your business at a glance",
+    body: "Net balance updates in real time. Green means you're profitable this month — red means it's time to check your expenses.",
+  },
+  {
+    key: "newProject",
+    headline: "Start a project",
+    body: "Each project gets tasks, a timeline, and its own invoice. Your work — finally in one place.",
+  },
+  {
+    key: "addIncome",
+    headline: "Log a payment received",
+    body: "Got paid for a job? Record it here. Your net balance updates instantly.",
+  },
+  {
+    key: "addExpense",
+    headline: "Log an expense",
+    body: "Bought something for a job? Add it here. Maggo links it to the right project automatically.",
+  },
+  {
+    key: "cashFlow",
+    headline: "See your cash flow",
+    body: "The clearest view of money in vs out. Finally know if you're actually making money this month.",
+  },
+];
+
+const CARD_WIDTH  = 260;
+const CARD_PADDING = 18;
+const ARROW_SIZE  = 8;
+
+const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRef, scrollOffset = 0 }) => {
+  const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+  const statusBarHeight = StatusBar.currentHeight || 0;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(8);
+      Animated.parallel([
+        Animated.timing(fadeAnim,  { toValue: 1, duration: 280, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, step]);
+
+  const stepIndex  = step - 1;
+  const stepData   = TOUR_STEPS[stepIndex];
+  const isLastStep = step === TOUR_STEPS.length;
+  const m          = measurements[stepData?.key];
+
+  // ── Card position — computed from real measurements ──
+  let cardTop        = SCREEN_H / 2 - 80;
+  let cardLeft       = (SCREEN_W - CARD_WIDTH) / 2;
+  let arrowStyle     = {};
+  let arrowPointsUp  = true; // true = card is above target, arrow points down at bottom of card
+
+  if (m) {
+    const targetCenterX = m.pageX + m.width / 2;
+    const targetBottom  = m.pageY - statusBarHeight - scrollOffset + m.height;
+    const targetTop     = m.pageY - statusBarHeight - scrollOffset;
+    const cardHeight    = cardHeightRef.current;
+    const spaceBelow    = SCREEN_H - targetBottom;
+
+    if (spaceBelow >= cardHeight + 24) {
+      // Place below target — arrow on top of card, points up
+      cardTop       = targetBottom + 14;
+      arrowPointsUp = false;
+    } else {
+      // Place above target — arrow on bottom of card, points down
+      cardTop       = targetTop - cardHeight - 14;
+      arrowPointsUp = true;
+    }
+
+    cardLeft = Math.max(16, Math.min(SCREEN_W - CARD_WIDTH - 16, targetCenterX - CARD_WIDTH / 2));
+
+    const arrowX = Math.max(16, Math.min(CARD_WIDTH - 24, targetCenterX - cardLeft - ARROW_SIZE));
+    arrowStyle = arrowPointsUp
+      ? { bottom: -ARROW_SIZE, left: arrowX }
+      : { top:    -ARROW_SIZE, left: arrowX };
+  }
+
+  const arrowBorderStyle = arrowPointsUp
+    ? { borderTopWidth: ARROW_SIZE, borderTopColor: "#1E293B", borderBottomWidth: 0 }
+    : { borderBottomWidth: ARROW_SIZE, borderBottomColor: "#1E293B", borderTopWidth: 0 };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+      <View style={{ flex: 1 }}>
+
+        {/* Tooltip card */}
+        <Animated.View
+          style={{
+            position:        "absolute",
+            top:             cardTop,
+            left:            cardLeft,
+            width:           CARD_WIDTH,
+            backgroundColor: "#1E293B",
+            borderRadius:    18,
+            padding:         CARD_PADDING,
+            shadowColor:     "#000",
+            shadowOpacity:   0.45,
+            shadowRadius:    20,
+            shadowOffset:    { width: 0, height: 8 },
+            elevation:       24,
+            opacity:         fadeAnim,
+            transform:       [{ translateY: slideAnim }],
+          }}
+        >
+          {/* Arrow pointer */}
+          <View style={{
+            position:         "absolute",
+            width:            0,
+            height:           0,
+            borderLeftWidth:  ARROW_SIZE,
+            borderRightWidth: ARROW_SIZE,
+            borderLeftColor:  "transparent",
+            borderRightColor: "transparent",
+            ...arrowBorderStyle,
+            ...arrowStyle,
+          }} />
+
+          {/* Step counter */}
+          <Text style={{
+            fontSize:      10,
+            fontWeight:    "700",
+            color:         "#475569",
+            letterSpacing: 1,
+            marginBottom:  7,
+            textTransform: "uppercase",
+          }}>
+            Step {step} of {TOUR_STEPS.length}
+          </Text>
+
+          {/* Headline */}
+          <Text style={{
+            fontSize:     15,
+            fontWeight:   "700",
+            color:        "#F1F5F9",
+            marginBottom: 6,
+            lineHeight:   21,
+          }}>
+            {stepData?.headline}
+          </Text>
+
+          {/* Body */}
+          <Text style={{
+            fontSize:     12,
+            color:        "#94A3B8",
+            lineHeight:   18,
+            marginBottom: 16,
+          }}>
+            {stepData?.body}
+          </Text>
+
+          {/* Footer */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            {/* Dot progress */}
+            <View style={{ flexDirection: "row", gap: 5, alignItems: "center" }}>
+              {TOUR_STEPS.map((_, i) => (
+                <View key={i} style={{
+                  height:          6,
+                  width:           i === stepIndex ? 14 : 6,
+                  borderRadius:    3,
+                  backgroundColor: i === stepIndex ? "#3B82F6" : "#334155",
+                }} />
+              ))}
+            </View>
+
+            {/* Buttons */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <TouchableOpacity onPress={onSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={{ fontSize: 12, color: "#475569", paddingHorizontal: 6 }}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onNext}
+                style={{
+                  backgroundColor:  "#3B82F6",
+                  borderRadius:     8,
+                  paddingVertical:  7,
+                  paddingHorizontal: 14,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>
+                  {isLastStep ? "Done ✓" : "Next →"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+
+      </View>
+    </Modal>
+  );
+};
 
 export default HomeScreen;

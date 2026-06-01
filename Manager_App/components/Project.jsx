@@ -21,7 +21,7 @@ import { useAuth } from "./useAuth";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const Project = ({ projectName, totalAmount, id }) => {
+const Project = ({ projectName, totalAmount, id, isDemo }) => {
   const { userDetails } = useAuth();
   const [paidAmount, setPaidAmount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -69,6 +69,7 @@ const Project = ({ projectName, totalAmount, id }) => {
       setTotalTasks(list.length);
       setCompletedTasks(completed);
     } catch (error) {
+      if (error?.response?.status === 404) return; // project deleted, HomeScreen will re-render
       console.error("Error fetching project data:", error);
     }
   };
@@ -173,7 +174,14 @@ const Project = ({ projectName, totalAmount, id }) => {
 
       {/* Project Text */}
       <View style={styles.details}>
-        <Text style={styles.projectName}>{projectName}</Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.projectName} numberOfLines={1}>{projectName}</Text>
+          {isDemo && (
+            <View style={styles.demoBadge}>
+              <Text style={styles.demoBadgeText}>Demo</Text>
+            </View>
+          )}
+        </View>
 
         {paymentPercentage >= 100 ? (
           <Text style={styles.completed}>completed</Text>
@@ -307,12 +315,31 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 30,
   },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: "nowrap",
+  },
   projectName: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#222",
-    marginBottom: 4,
+    flexShrink: 1,
     textAlign: !isRTL ? "left" : "right",
+  },
+  demoBadge: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    flexShrink: 0,
+  },
+  demoBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#3B82F6",
   },
   progressLabel: {
     fontSize: 13,

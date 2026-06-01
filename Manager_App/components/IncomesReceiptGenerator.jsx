@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,8 @@ import {
   Image,
   Platform,
   ScrollView,
-  KeyboardAvoidingView,
   Alert,
-  Modal,
-  ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -67,37 +65,27 @@ const InputField = ({
   optional,
   keyboardType = "default",
   suffix,
-}) => {
-  const [focused, setFocused] = useState(false);
-  return (
-    <View style={styles.field}>
-      {label && (
-        <FieldLabel label={label} required={required} optional={optional} />
-      )}
-      <View
-        style={[
-          styles.inputWrap,
-          focused && styles.inputWrapFocused,
-          error && styles.inputWrapError,
-        ]}
-      >
-        {icon && <View style={styles.inputIcon}>{icon}</View>}
-        <TextInput
-          value={value}
-          onChangeText={onChange}
-          placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
-          style={styles.inputField}
-          keyboardType={keyboardType}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-        />
-        {suffix && <Text style={styles.inputSuffix}>{suffix}</Text>}
-      </View>
-      {error && <Text style={styles.fieldError}>{error}</Text>}
+}) => (
+  <View style={styles.field}>
+    {label && (
+      <FieldLabel label={label} required={required} optional={optional} />
+    )}
+    <View style={[styles.inputWrap, error && styles.inputWrapError]}>
+      {icon && <View style={styles.inputIcon}>{icon}</View>}
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor="#9CA3AF"
+        style={styles.inputField}
+        keyboardType={keyboardType}
+        rejectResponderTermination={false}
+      />
+      {suffix && <Text style={styles.inputSuffix}>{suffix}</Text>}
     </View>
-  );
-};
+    {error && <Text style={styles.fieldError}>{error}</Text>}
+  </View>
+);
 
 // ─── Payment methods config ───────────────────────────────────────
 const PAYMENT_METHODS = [
@@ -134,47 +122,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const [image, setImage] = useState(null);
   const [errors, setErrors] = useState({});
   const [taxRate, setTaxRate] = useState("0");
-
-  // ── Business details one-time prompt ──
-  const [bizModalVisible, setBizModalVisible] = useState(false);
-  const [bizId, setBizId] = useState("");
-  const [bizAddress, setBizAddress] = useState("");
-  const [bizZip, setBizZip] = useState("");
-  const [bizSaving, setBizSaving] = useState(false);
-  const [bizErrors, setBizErrors] = useState({});
-
-  useEffect(() => {
-    if (
-      userDetails &&
-      (!userDetails.businessId || !userDetails.address || !userDetails.zip)
-    ) {
-      setBizModalVisible(true);
-    }
-  }, [userDetails]);
-
-  const handleSaveBizDetails = async () => {
-    const errs = {};
-    if (!bizId.trim()) errs.bizId = "Business ID is required";
-    if (!bizAddress.trim()) errs.bizAddress = "Address is required";
-    if (!bizZip.trim()) errs.bizZip = "ZIP Code is required";
-    if (Object.keys(errs).length) {
-      setBizErrors(errs);
-      return;
-    }
-    setBizSaving(true);
-    try {
-      await api.post("/updateUser", {
-        businessId: bizId.trim(),
-        address: bizAddress.trim(),
-        zip: bizZip.trim(),
-      });
-      setBizModalVisible(false);
-    } catch (e) {
-      Alert.alert("Error", "Could not save details. Please try again.");
-    } finally {
-      setBizSaving(false);
-    }
-  };
+  const isSubmittingRef = useRef(false);
 
   const numericAmount = Number(amount) || 0;
 
@@ -258,11 +206,14 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
 
   // ── Submit ──
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      Alert.alert("Validation Error", "Please fill in all required fields correctly.");
-      return;
-    }
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     try {
+      if (!validateForm()) {
+        isSubmittingRef.current = false;
+        Alert.alert("Validation Error", "Please fill in all required fields correctly.");
+        return;
+      }
       const receiptData = {
         receiptNumber, subtotal, services, tax,
         taxRate: numericRate, total, amount: numericAmount,
@@ -276,114 +227,37 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       const savedReceipt = await api.post("/incomeReceipt", { ...receiptData, projectId });
       const response = await api.get("/getUserDetails");
       const userDetails = response.data;
+      console.log("[RECEIPT] calling generateIncomeReceiptPDF");
       const pdfResult = await generateIncomeReceiptPDF(receiptData, userDetails, {
         userId, projectId, allowSharing: true,
       });
-      console.log(pdfResult.downloadURL);
+      console.log("[RECEIPT] generateIncomeReceiptPDF done, downloadURL:", pdfResult?.downloadURL);
       await api.patch(`/incomeReceipt/${savedReceipt.data._id}/pdf`, {
         pdfUrl: pdfResult.downloadURL,
       });
       onSubmit(savedReceipt.data);
     } catch (err) {
-      console.error("Receipt generation error:", err.response?.data || err);
+      console.error("[RECEIPT] Error type:", err?.constructor?.name);
+      console.error("[RECEIPT] Error message:", err?.message);
+      console.error("[RECEIPT] Error stack:", err?.stack);
+      console.error("[RECEIPT] Response data:", JSON.stringify(err?.response?.data));
       Alert.alert("Error", "Failed to generate receipt");
+    } finally {
+      isSubmittingRef.current = false;
     }
   };
 
   // ─── Render ────────────────────────────────────────────────────
   return (
-    <>
-      {/* ── One-time business details prompt ── */}
-      <Modal
-        visible={bizModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {}}
-      >
-        <View style={styles.bizOverlay}>
-          <View style={styles.bizSheet}>
-            <View style={styles.bizHandle} />
-
-            <View style={styles.bizIconCircle}>
-              <Building2 size={28} color="#3B82F6" />
-            </View>
-
-            <Text style={styles.bizTitle}>One last thing</Text>
-            <Text style={styles.bizSubtitle}>
-              Your business details are printed on every invoice. Fill them once and you're done.
-            </Text>
-
-            {/* Business ID */}
-            <View style={styles.bizField}>
-              <Text style={styles.bizLabel}>Business ID / Tax Number</Text>
-              <TextInput
-                style={[styles.bizInput, bizErrors.bizId && styles.bizInputError]}
-                value={bizId}
-                onChangeText={(v) => { setBizId(v); setBizErrors((e) => ({ ...e, bizId: null })); }}
-                placeholder="e.g. 12-3456789"
-                placeholderTextColor="#9CA3AF"
-              />
-              {bizErrors.bizId ? <Text style={styles.bizErrText}>{bizErrors.bizId}</Text> : null}
-            </View>
-
-            {/* Address */}
-            <View style={styles.bizField}>
-              <Text style={styles.bizLabel}>Business Address</Text>
-              <TextInput
-                style={[styles.bizInput, bizErrors.bizAddress && styles.bizInputError]}
-                value={bizAddress}
-                onChangeText={(v) => { setBizAddress(v); setBizErrors((e) => ({ ...e, bizAddress: null })); }}
-                placeholder="123 Main St, New York, NY"
-                placeholderTextColor="#9CA3AF"
-              />
-              {bizErrors.bizAddress ? <Text style={styles.bizErrText}>{bizErrors.bizAddress}</Text> : null}
-            </View>
-
-            {/* ZIP */}
-            <View style={styles.bizField}>
-              <Text style={styles.bizLabel}>ZIP Code</Text>
-              <TextInput
-                style={[styles.bizInput, bizErrors.bizZip && styles.bizInputError]}
-                value={bizZip}
-                onChangeText={(v) => { setBizZip(v); setBizErrors((e) => ({ ...e, bizZip: null })); }}
-                placeholder="10001"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="numeric"
-              />
-              {bizErrors.bizZip ? <Text style={styles.bizErrText}>{bizErrors.bizZip}</Text> : null}
-            </View>
-
-            <TouchableOpacity
-              style={styles.bizSaveBtn}
-              onPress={handleSaveBizDetails}
-              disabled={bizSaving}
-              activeOpacity={0.85}
-            >
-              {bizSaving ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.bizSaveBtnText}>Save & Continue</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.bizSkipBtn}
-              onPress={() => setBizModalVisible(false)}
-            >
-              <Text style={styles.bizSkipText}>Skip for now</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
     <KeyboardAvoidingView
-      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
     >
       <ScrollView
-        style={styles.scrollView}
+        style={[styles.container, { borderRadius: 24, overflow: "hidden" }]}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.screen}>
@@ -516,6 +390,8 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     placeholderTextColor="#9CA3AF"
                     value={service.description}
                     onChangeText={(val) => updateService(service.id, "description", val)}
+                    rejectResponderTermination={false}
+                    disableFullscreenUI={true}
                   />
                   <TextInput
                     style={[styles.colQty, styles.serviceInput, { textAlign: "center" }]}
@@ -524,6 +400,8 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     onChangeText={(val) =>
                       updateService(service.id, "quantity", val.replace(/[^0-9]/g, ""))
                     }
+                    rejectResponderTermination={false}
+                    disableFullscreenUI={true}
                   />
                   <TextInput
                     style={[styles.colUnit, styles.serviceInput]}
@@ -534,6 +412,8 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     onChangeText={(val) =>
                       updateService(service.id, "unitPrice", val.replace(/[^0-9.]/g, ""))
                     }
+                    rejectResponderTermination={false}
+                    disableFullscreenUI={true}
                   />
                   <View style={styles.colTotal}>
                     <Text style={styles.lineTotalText}>
@@ -733,7 +613,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
           </View>
 
           {/* ── Submit ── */}
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={isSubmittingRef.current}>
             <CheckCircle2 size={20} color="#fff" />
             <Text style={styles.submitBtnText}>Generate Receipt</Text>
           </TouchableOpacity>
@@ -749,8 +629,8 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
 
         </View>
       </ScrollView>
+
     </KeyboardAvoidingView>
-    </>
   );
 }
 
@@ -859,7 +739,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    overflow: "hidden",
     marginBottom: 12,
     shadowColor: "#000",
     shadowOpacity: 0.05,
@@ -943,14 +822,6 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     borderRadius: 12,
     backgroundColor: "#fff",
-  },
-  inputWrapFocused: {
-    borderColor: "#16a34a",
-    shadowColor: "#16a34a",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 2,
   },
   inputWrapError: {
     borderColor: "#ef4444",
@@ -1299,99 +1170,4 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
-  // ── Business details modal ──
-  bizOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "flex-end",
-  },
-  bizSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 28,
-    paddingBottom: 44,
-    alignItems: "center",
-  },
-  bizHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E5E7EB",
-    marginBottom: 24,
-  },
-  bizIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "#DBEAFE",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-  },
-  bizTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  bizSubtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  bizField: {
-    width: "100%",
-    marginBottom: 16,
-  },
-  bizLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#374151",
-    marginBottom: 6,
-  },
-  bizInput: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    paddingVertical: 13,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: "#111827",
-    width: "100%",
-  },
-  bizInputError: {
-    borderColor: "#EF4444",
-  },
-  bizErrText: {
-    fontSize: 12,
-    color: "#EF4444",
-    marginTop: 4,
-  },
-  bizSaveBtn: {
-    backgroundColor: "#2563EB",
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    width: "100%",
-    marginTop: 8,
-  },
-  bizSaveBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  bizSkipBtn: {
-    marginTop: 14,
-    paddingVertical: 6,
-  },
-  bizSkipText: {
-    fontSize: 14,
-    color: "#9CA3AF",
-    fontWeight: "600",
-  },
 });

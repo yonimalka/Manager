@@ -207,13 +207,13 @@ export default function ProfileDetails() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
+            await AsyncStorage.multiRemove(["token", "refreshToken"]);
+            navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
             try {
               await api.delete(`/deleteUser/${userId}`);
             } catch (e) {
               console.error("Delete account error:", e);
             }
-            await AsyncStorage.multiRemove(["token", "refreshToken"]);
-            navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] });
           },
         },
       ]

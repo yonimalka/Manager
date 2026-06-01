@@ -426,19 +426,12 @@ const serviceRows = services.length
     // Generate PDF locally — A4 size (points: 595 × 842)
     const { uri } = await Print.printToFileAsync({ html, width: 595, height: 842 });
 
-    // Share if requested
-    if (allowSharing) {
-      await Sharing.shareAsync(uri, {
-        mimeType: "application/pdf",
-        dialogTitle: "Share Receipt",
-      });
-    }
-
-    // Upload to Firebase if requested
+    // Upload to Firebase first
     let downloadURL = null;
     if (uploadToFirebase && userId) {
       if (!auth.currentUser) {
-        await signInFirebase();
+        const { signInAnonymously } = await import("firebase/auth");
+        await signInAnonymously(auth);
       }
 
       const blob = await (await fetch(uri)).blob();
@@ -461,6 +454,14 @@ const serviceRows = services.length
             resolve(url);
           }
         );
+      });
+    }
+
+    // Share AFTER upload so sharing doesn't block Firebase
+    if (allowSharing) {
+      await Sharing.shareAsync(uri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Share Receipt",
       });
     }
 

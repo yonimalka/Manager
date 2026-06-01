@@ -56,12 +56,20 @@ export default function ReceiptDownloadByDate() {
 
   const downloadReceiptsZip = async ({ from, to } = {}) => {
     try {
+      console.log("[ZIP] start of function");
       
       const token = await AsyncStorage.getItem("token");
       const fileUri = FileSystem.documentDirectory + "Receipts.zip";
 
+      const formatDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      };
+
       const query = from instanceof Date && to instanceof Date
-        ? `?from=${from.toISOString()}&to=${to.toISOString()}`
+        ? `?from=${formatDate(from)}&to=${formatDate(to)}`
         : "";
 
       const res = await FileSystem.downloadAsync(
@@ -73,7 +81,8 @@ export default function ReceiptDownloadByDate() {
           },
         }
       );
-
+      console.log("[ZIP]", res.status);
+      
       await Sharing.shareAsync(res.uri);
     } catch (err) {
       if (err.response?.status === 402) {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,48 +6,40 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Animated,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
 
 const WORK_TYPES = [
-  {
-    key: "freelancer",
-    label: "Freelancer",
-    icon: "person-outline",
-    description: "Independent contractor or solo professional",
-  },
-  {
-    key: "agency",
-    label: "Agency / Studio",
-    icon: "business-outline",
-    description: "Team-based creative or digital agency",
-  },
-  {
-    key: "trades",
-    label: "Trades & Services",
-    icon: "construct-outline",
-    description: "Construction, renovation, or skilled trades",
-  },
-  {
-    key: "other",
-    label: "Other",
-    icon: "ellipsis-horizontal-outline",
-    description: "Something else entirely",
-  },
+  { key: "freelancer", label: "Freelancer",        emoji: "🧑‍💻" },
+  { key: "agency",     label: "Agency / Studio",   emoji: "🏢"   },
+  { key: "trades",     label: "Trades & Services", emoji: "🔧"   },
+  { key: "other",      label: "Something else",    emoji: "✦"    },
 ];
 
-const WelcomeModal = ({ visible, onComplete }) => {
+const WelcomeModal = ({ visible, onComplete, onEnter = () => {} }) => {
   const [selected, setSelected] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  const slideAnim = useRef(new Animated.Value(500)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, bounciness: 4, speed: 14, useNativeDriver: true }),
+      ]).start();
+    } else {
+      slideAnim.setValue(500);
+      fadeAnim.setValue(0);
+    }
+  }, [visible]);
 
   const handleContinue = async () => {
     if (!selected || saving) return;
     setSaving(true);
     try {
-      await AsyncStorage.setItem("maggo_user_type", selected);
-      await AsyncStorage.setItem("maggo_onboarding_complete", "true");
       await api.post("/updateUser", { userType: selected });
     } catch (e) {
       console.error("WelcomeModal save error:", e);
@@ -58,43 +50,42 @@ const WelcomeModal = ({ visible, onComplete }) => {
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent statusBarTranslucent>
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
-          {/* Header */}
-          <View style={styles.iconCircle}>
-            <Ionicons name="briefcase-outline" size={34} color="#3B82F6" />
-          </View>
-          <Text style={styles.title}>Welcome to Maggo</Text>
-          <Text style={styles.subtitle}>What kind of work do you do?</Text>
+    <Modal visible={visible} animationType="none" transparent statusBarTranslucent>
+      {/* Dim overlay — fades in */}
+      <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
 
-          {/* Options */}
-          <View style={styles.optionsList}>
+      {/* Sheet — slides up */}
+      <View style={styles.screenContainer}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+
+          {/* Handle */}
+          <View style={styles.handle} />
+
+          {/* Question */}
+          <Text style={styles.title}>What kind of work{"\n"}do you do?</Text>
+          <Text style={styles.subtitle}>We'll set Maggo up to match</Text>
+
+          {/* 2×2 tile grid */}
+          <View style={styles.grid}>
             {WORK_TYPES.map((type) => {
               const isActive = selected === type.key;
               return (
                 <TouchableOpacity
                   key={type.key}
-                  style={[styles.option, isActive && styles.optionActive]}
+                  style={[styles.tile, isActive && styles.tileActive]}
                   onPress={() => setSelected(type.key)}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
                 >
-                  <View style={[styles.optionIcon, isActive && styles.optionIconActive]}>
-                    <Ionicons
-                      name={type.icon}
-                      size={22}
-                      color={isActive ? "#fff" : "#6B7280"}
-                    />
+                  {/* Emoji + radio row */}
+                  <View style={styles.tileTop}>
+                    <Text style={styles.tileEmoji}>{type.emoji}</Text>
+                    <View style={[styles.radio, isActive && styles.radioActive]}>
+                      {isActive && <View style={styles.radioDot} />}
+                    </View>
                   </View>
-                  <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
-                      {type.label}
-                    </Text>
-                    <Text style={styles.optionDesc}>{type.description}</Text>
-                  </View>
-                  {isActive && (
-                    <Ionicons name="checkmark-circle" size={22} color="#3B82F6" />
-                  )}
+                  <Text style={[styles.tileLabel, isActive && styles.tileLabelActive]}>
+                    {type.label}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -105,15 +96,15 @@ const WelcomeModal = ({ visible, onComplete }) => {
             style={[styles.button, (!selected || saving) && styles.buttonDisabled]}
             onPress={handleContinue}
             disabled={!selected || saving}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            {saving ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.buttonText}>Let's go</Text>
-            )}
+            {saving
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.buttonText}>Let's go →</Text>
+            }
           </TouchableOpacity>
-        </View>
+
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -121,112 +112,83 @@ const WelcomeModal = ({ visible, onComplete }) => {
 
 const styles = StyleSheet.create({
   backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
   },
-  card: {
-    width: "88%",
+  screenContainer: {
+    flex: 1, justifyContent: "flex-end",
+  },
+  sheet: {
     backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 28,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 12,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingHorizontal: 22, paddingTop: 10, paddingBottom: 44,
+    shadowColor: "#000", shadowOpacity: 0.18,
+    shadowRadius: 24, shadowOffset: { width: 0, height: -6 },
+    elevation: 20,
   },
-  iconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
+  handle: {
+    width: 32, height: 4, borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    alignSelf: "center", marginBottom: 20,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 6,
-    textAlign: "center",
+    fontSize: 20, fontWeight: "800", color: "#111827",
+    letterSpacing: -0.3, marginBottom: 4, lineHeight: 26,
   },
   subtitle: {
-    fontSize: 15,
-    color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 24,
+    fontSize: 13, color: "#9CA3AF",
+    marginBottom: 18,
   },
-  optionsList: {
-    width: "100%",
-    gap: 10,
-    marginBottom: 24,
+  grid: {
+    flexDirection: "row", flexWrap: "wrap",
+    gap: 8, marginBottom: 16,
   },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#F9FAFB",
-    gap: 12,
+  tile: {
+    width: "48.5%",
+    borderWidth: 1.5, borderColor: "#F1F5F9",
+    backgroundColor: "#FAFAFA",
+    borderRadius: 14, padding: 14,
+    gap: 9,
   },
-  optionActive: {
-    borderColor: "#3B82F6",
-    backgroundColor: "#EFF6FF",
+  tileActive: {
+    borderColor: "#111827", backgroundColor: "#111827",
   },
-  optionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#E5E7EB",
-    alignItems: "center",
-    justifyContent: "center",
+  tileTop: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between",
   },
-  optionIconActive: {
-    backgroundColor: "#3B82F6",
+  tileEmoji: {
+    fontSize: 22, lineHeight: 26,
   },
-  optionText: {
-    flex: 1,
+  radio: {
+    width: 17, height: 17, borderRadius: 9,
+    borderWidth: 1.5, borderColor: "#D1D5DB",
+    alignItems: "center", justifyContent: "center",
   },
-  optionLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 2,
+  radioActive: {
+    borderColor: "#fff",
   },
-  optionLabelActive: {
-    color: "#1D4ED8",
+  radioDot: {
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: "#fff",
   },
-  optionDesc: {
-    fontSize: 12,
-    color: "#9CA3AF",
+  tileLabel: {
+    fontSize: 13, fontWeight: "700",
+    color: "#1C1917", lineHeight: 17,
+  },
+  tileLabelActive: {
+    color: "#fff",
   },
   button: {
-    width: "100%",
-    backgroundColor: "#3B82F6",
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    shadowColor: "#3B82F6",
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    width: "100%", paddingVertical: 15,
+    backgroundColor: "#111827",
+    borderRadius: 13, alignItems: "center",
   },
   buttonDisabled: {
-    backgroundColor: "#93C5FD",
-    shadowOpacity: 0,
-    elevation: 0,
+    opacity: 0.22,
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "700",
+    color: "#fff", fontSize: 15, fontWeight: "700",
   },
 });
 

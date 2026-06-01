@@ -70,7 +70,7 @@ const FieldLabel = ({ label, required, optional }) => (
 );
 
 // ─── Main Component ───────────────────────────────────────────────
-export default function Receipts({ onClose, projectId }) {
+export default function Receipts({ onClose, onSubmit, projectId }) {
   const navigation = useNavigation();
   const route = useRoute();
   const { userId, userDetails } = useAuth();
@@ -186,7 +186,7 @@ export default function Receipts({ onClose, projectId }) {
           const url = await getDownloadURL(fileRef);
           await api.patch(`/receipts/${receipt._id}/image`, { imageUrl: url });
           setLoading(false);
-          onClose();
+          onSubmit ? onSubmit() : onClose();
         }
       );
     } catch (err) {
@@ -495,12 +495,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#eff6ff",
+    borderRadius: 20,
   },
-  scrollView: { flex: 1 },
+  scrollView: {  flex: 1 },
   scrollContent: { flexGrow: 1 },
   screen: {
     padding: 16,
-    paddingTop: 32,
+    paddingTop: 38,
     paddingBottom: 48,
   },
 
