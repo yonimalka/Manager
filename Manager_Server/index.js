@@ -327,7 +327,7 @@ app.post("/AppleSignIn", async (req, res) => {
       user = new UserModel({
         appleId,
         email,
-        name: fullName?.givenName || "Apple User",
+        name: [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ") || "Apple User",
       });
 
       await user.save();
@@ -996,6 +996,48 @@ app.post("/incomeReceipt", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.post("/income", authMiddleware, async (req, res) => {
+  try {
+    const { amount, description, projectId, date, currency } = req.body;
+
+    const parsed = Number(amount);
+    if (!parsed || parsed <= 0) {
+      return res.status(400).json({ error: "Valid amount is required" });
+    }
+
+    const income = await IncomeModel.create({
+      userId: req.userId,
+      projectId: projectId || null,
+      source: projectId ? "project" : "standalone",
+      services: [{
+        description: description || "Income",
+        quantity: 1,
+        unitPrice: parsed,
+        lineTotal: parsed,
+      }],
+      subtotal: parsed,
+      taxRate: 0,
+      tax: 0,
+      total: parsed,
+      currency: currency || "USD",
+      payer: "client",
+      date: date ? new Date(date) : new Date(),
+    });
+
+    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
+      await ProjectModel.findByIdAndUpdate(projectId, {
+        $inc: { paid: parsed },
+      });
+    }
+
+    res.status(201).json(income);
+  } catch (err) {
+    console.error("Log income error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.patch("/incomeReceipt/:id/pdf", authMiddleware, async (req, res) => {
   try {
     const { pdfUrl } = req.body;
@@ -1241,7 +1283,7 @@ app.get("/downloadIncomesReceiptsZip", authMiddleware, async (req, res) => {
     // Build query
     let query = {
       userId: req.userId,
-      // pdfUrl: { $ne: null },
+      pdfUrl: { $ne: null },
       // status: "uploaded",
       // imageUrl: { $ne: null },
     };
