@@ -1021,7 +1021,7 @@ app.post("/income", authMiddleware, async (req, res) => {
       tax: 0,
       total: parsed,
       currency: currency || "USD",
-      payer: "client",
+      payer: description || "client",
       date: date ? new Date(date) : new Date(),
     });
 
