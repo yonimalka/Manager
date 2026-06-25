@@ -38,6 +38,14 @@ locale: {
 },
   employees: [EmployeeSchema],
   userType: { type: String, enum: ["freelancer", "agency", "trades", "other"], default: null },
+  pushToken: { type: String, default: null },
+  lastOpenedAt: { type: Date, default: null },
+  notificationsSent: {
+    welcome:      { type: Boolean, default: false },
+    firstProject: { type: Boolean, default: false },
+    firstIncome:  { type: Boolean, default: false },
+    reengagement: { type: Boolean, default: false },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);

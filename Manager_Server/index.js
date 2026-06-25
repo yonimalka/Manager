@@ -29,6 +29,24 @@ const MaterialPriceHistory = require("./models/MaterialPriceHistory");
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
 const { calcIncomesForPeriod, calcExpensesForPeriod } = require("./utils/financialCalculations");
 const { ACTIVE_STATUSES, requireSubscription, hasActiveEntitlement } = require('./middleware/requireSubscription');
+const { Expo } = require("expo-server-sdk");
+const cron = require("node-cron");
+const expo = new Expo();
+
+const sendPush = async (pushToken, title, body, data = {}) => {
+  if (!pushToken || !Expo.isExpoPushToken(pushToken)) return;
+  try {
+    await expo.sendPushNotificationsAsync([{
+      to: pushToken,
+      sound: "default",
+      title,
+      body,
+      data,
+    }]);
+  } catch (err) {
+    console.error("[PUSH] Error:", err.message);
+  }
+};
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -1999,6 +2017,126 @@ app.post("/webhooks/revenuecat", async (req, res) => {
   } catch (error) {
     console.error("RevenueCat webhook error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/user/push-token", authMiddleware, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "Token required" });
+    await UserModel.findByIdAndUpdate(req.userId, { pushToken: token });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/user/ping", authMiddleware, async (req, res) => {
+  try {
+    await UserModel.findByIdAndUpdate(req.userId, { lastOpenedAt: new Date() });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Activation Notification Scheduler ───────────────────────────────────────
+cron.schedule("0 * * * *", async () => {
+  console.log("[CRON] Running activation notification check...");
+  try {
+    const now = new Date();
+    const users = await UserModel.find({ pushToken: { $ne: null } }).lean();
+
+    for (const user of users) {
+      if (!user.pushToken || !user.createdAt) continue;
+
+      const hoursSinceSignup = (now - new Date(user.createdAt)) / (1000 * 60 * 60);
+      const n = user.notificationsSent || {};
+      const firstName = user.name?.split(" ")[0] || "there";
+
+      if (!n.welcome && hoursSinceSignup >= 2 && hoursSinceSignup < 48) {
+        await sendPush(
+          user.pushToken,
+          `Your workspace is ready, ${firstName} 👋`,
+          "Log your first payment and see your balance update live.",
+          { screen: "Home" }
+        );
+        await UserModel.findByIdAndUpdate(user._id, { "notificationsSent.welcome": true });
+        continue;
+      }
+
+      if (!n.firstProject && hoursSinceSignup >= 24 && hoursSinceSignup < 72) {
+        const projectCount = await ProjectModel.countDocuments({
+          userId: user._id.toString(),
+          isDemo: { $ne: true },
+        });
+        if (projectCount === 0) {
+          await sendPush(
+            user.pushToken,
+            "Jobs don't track themselves",
+            "Add your first real project and keep all your work in one place.",
+            { screen: "NewProject" }
+          );
+        }
+        await UserModel.findByIdAndUpdate(user._id, { "notificationsSent.firstProject": true });
+        continue;
+      }
+
+      if (!n.firstIncome && hoursSinceSignup >= 72 && hoursSinceSignup < 120) {
+        const incomeCount = await IncomeModel.countDocuments({ userId: user._id.toString() });
+        if (incomeCount === 0) {
+          await sendPush(
+            user.pushToken,
+            "Have you been paid recently?",
+            "Log a payment in 20 seconds. Your balance updates instantly.",
+            { screen: "Home" }
+          );
+        }
+        await UserModel.findByIdAndUpdate(user._id, { "notificationsSent.firstIncome": true });
+        continue;
+      }
+
+      if (!n.reengagement && hoursSinceSignup >= 168) {
+        const lastOpen = user.lastOpenedAt ? new Date(user.lastOpenedAt) : new Date(user.createdAt);
+        const daysSinceOpen = (now - lastOpen) / (1000 * 60 * 60 * 24);
+        if (daysSinceOpen >= 4) {
+          await sendPush(
+            user.pushToken,
+            "Your business doesn't stop.",
+            "Check in on your projects and see where your money stands.",
+            { screen: "Home" }
+          );
+        }
+        await UserModel.findByIdAndUpdate(user._id, { "notificationsSent.reengagement": true });
+        continue;
+      }
+    }
+
+    console.log(`[CRON] Notification check complete — ${users.length} users evaluated`);
+  } catch (err) {
+    console.error("[CRON] Scheduler error:", err.message);
+  }
+});
+
+// ─── Weekly Monday nudge — runs every Monday at 8am UTC ──────────────────────
+cron.schedule("0 8 * * 1", async () => {
+  console.log("[CRON] Running weekly Monday nudge...");
+  try {
+    const users = await UserModel.find({ pushToken: { $ne: null } }).lean();
+    for (const user of users) {
+      if (!user.pushToken) continue;
+      const hoursSinceSignup = (new Date() - new Date(user.createdAt)) / (1000 * 60 * 60);
+      if (hoursSinceSignup < 168) continue;
+      await sendPush(
+        user.pushToken,
+        "New week, new jobs? 📋",
+        "Log any work from last week and stay on top of your cash flow.",
+        { screen: "Home" }
+      );
+    }
+    console.log("[CRON] Weekly nudge sent");
+  } catch (err) {
+    console.error("[CRON] Weekly nudge error:", err.message);
   }
 });
 
