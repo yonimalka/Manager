@@ -380,12 +380,24 @@ app.post("/refresh", (req, res) => {
   });
 });
 app.get("/getUserDetails", authMiddleware, async (req, res) => {
-   const userId = req.userId;
-  //  console.log(userId);
-   
-   await UserModel.findById(userId)
-   .then((user)=>{
-    const userDetails = {
+  const userId = req.userId;
+  try {
+    const user = await UserModel.findById(userId).lean();
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const [projectsCount, incomesLoggedCount, invoicesGeneratedCount] = await Promise.all([
+      ProjectModel.countDocuments({ userId }),
+      IncomeModel.countDocuments({ userId }),
+      IncomeReceipt.countDocuments({ userId }),
+    ]);
+
+    const daysSinceSignup = user.createdAt
+      ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    const subscriptionStatus = user.subscriptionStatus || "free";
+
+    res.json({
       name: user.name,
       businessName: user.businessName,
       businessId: user.businessId,
@@ -393,11 +405,20 @@ app.get("/getUserDetails", authMiddleware, async (req, res) => {
       email: user.email,
       logo: user.logo,
       currency: user.currency,
-    }
-    res.json(userDetails)
-   }).catch((err) =>{
-    console.log("error occurd on getUserDetails",err);
-  } )
+      userType: user.userType,
+      createdAt: user.createdAt,
+      analytics: {
+        projectsCount,
+        incomesLoggedCount,
+        invoicesGeneratedCount,
+        daysSinceSignup,
+        subscriptionStatus,
+      },
+    });
+  } catch (err) {
+    console.error("getUserDetails error:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 app.post("/updateUser", authMiddleware, async (req, res) => {
   try {
