@@ -275,6 +275,8 @@ app.post("/GoogleSignIn", async (req, res)=>{
       $or: [{ googleId }, { email }]
     });
 
+    const isNewUser = !user;
+
     if (!user) {
 
       user = new UserModel({
@@ -286,13 +288,13 @@ app.post("/GoogleSignIn", async (req, res)=>{
 
       await user.save();
     }
-    
-    
+
+
     // Create JWT
     const token = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-    
-    res.status(200).json({ token, refreshToken });
+
+    res.status(200).json({ token, refreshToken, isNewUser });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ message: "Server error" });
@@ -340,6 +342,8 @@ app.post("/AppleSignIn", async (req, res) => {
       $or: [{ appleId }, { email }]
     });
 
+    const isNewUser = !user;
+
     if (!user) {
 
       user = new UserModel({
@@ -355,7 +359,7 @@ app.post("/AppleSignIn", async (req, res) => {
     const token = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    res.json({ token, refreshToken });
+    res.json({ token, refreshToken, isNewUser });
 
   } catch (err) {
 
