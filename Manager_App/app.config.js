@@ -1,68 +1,86 @@
-import 'dotenv/config';
+  import 'dotenv/config';
 
-const version = "1.3.2";
+  const version = "1.3.6";
 
-export default {
-  expo: {
-    name: "Maggo",
-    slug: "Manager",  
-    version: version,
-    orientation: "portrait",
-    icon: "./assets/MaggoLogo.png",
-    userInterfaceStyle: "light",
-    newArchEnabled: true,
-    splash: {
-      image: "./assets/MaggoLogo.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff"
-    },
-    ios: {
-      supportsTablet: true,
-      bundleIdentifier: "com.yonatanmalka.Manager",
-      usesAppleSignIn: true,
-      buildNumber: "10",
-      infoPlist: {
-        ITSAppUsesNonExemptEncryption: false,
-         NSCameraUsageDescription: "This app needs access to your camera to take receipts.",
-        NSPhotoLibraryUsageDescription: "This app needs access to your photo library to select receipts."
-      }
-    },
-    android: {
-      package: "com.yonatanmalka.Manager",
-      versionCode: 2,
-      permissions: ["INTERNET"],
-      usesCleartextTraffic: false,
-      adaptiveIcon: {
-        foregroundImage: "./assets/MaggoLogo.png",
+  export default {
+    expo: {
+      name: "Maggo",
+      slug: "Manager",  
+      version: version,
+      orientation: "portrait",
+      icon: "./assets/MaggoLogo.png",
+      userInterfaceStyle: "light",
+      newArchEnabled: true,
+      splash: {
+        image: "./assets/MaggoLogo.png",
+        resizeMode: "contain",
         backgroundColor: "#ffffff"
-      }
-    },
-    web: {
-      favicon: "./assets/MaggoLogo.png"
-    },
-    extra: {
-      SERVER_URL: process.env.SERVER_URL,
-      eas: {
+      },
+      ios: {
+        supportsTablet: true,
+        bundleIdentifier: "com.yonatanmalka.Manager",
+        usesAppleSignIn: true,
+        buildNumber: "14",
+        infoPlist: {
+          ITSAppUsesNonExemptEncryption: false,
+          NSCameraUsageDescription: "This app needs access to your camera to take receipts.",
+          NSPhotoLibraryUsageDescription: "This app needs access to your photo library to select receipts."
+        }
+      },
+      android: {
+        package: "com.yonatanmalka.Manager",
+        versionCode: 2,
+        permissions: ["INTERNET"],
+        usesCleartextTraffic: false,
+        adaptiveIcon: {
+          foregroundImage: "./assets/MaggoLogo.png",
+          backgroundColor: "#ffffff"
+        }
+      },
+      web: {
+        favicon: "./assets/MaggoLogo.png"
+      },
+      extra: {
+        SERVER_URL: process.env.SERVER_URL,
+        eas: {
+          projectId: "a0b72a58-39e1-4ed6-8402-837f500c13e3"
+        },
         projectId: "a0b72a58-39e1-4ed6-8402-837f500c13e3"
       },
-      projectId: "a0b72a58-39e1-4ed6-8402-837f500c13e3"
-    },
-    plugins: [
-      "expo-updates",
-      "expo-apple-authentication",
-      "expo-web-browser",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.717125560385-pg4scnvjueo0d674ha1epbal1v8f2ihv.apps.googleusercontent.com"
-        }
-      ]
-    ],
-    
-    runtimeVersion: version,
-    updates: {
-      url: "https://u.expo.dev/a0b72a58-39e1-4ed6-8402-837f500c13e3"
-    },
-    
-  }
-};
+      plugins: [
+        "expo-updates",
+        "expo-apple-authentication",
+        "expo-web-browser",
+        [
+          "@react-native-google-signin/google-signin",
+          {
+            "iosUrlScheme": "com.googleusercontent.apps.717125560385-pg4scnvjueo0d674ha1epbal1v8f2ihv.apps.googleusercontent.com"
+          }
+        ],
+        [
+          "expo-notifications",
+          {
+            "icon": "./assets/MaggoLogo.png",
+            "color": "#34d399"
+          }
+        ],
+        [
+    "expo-build-properties",
+    {
+      ios: {
+        extraPods: [
+          { name: "GoogleUtilities", modular_headers: true },
+          { name: "RecaptchaInterop", modular_headers: true }
+        ]
+      }
+    }
+  ]
+      ],
+      
+      runtimeVersion: version,
+      updates: {
+        url: "https://u.expo.dev/a0b72a58-39e1-4ed6-8402-837f500c13e3"
+      },
+      
+    }
+  };

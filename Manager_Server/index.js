@@ -545,6 +545,16 @@ app.post("/newProject", authMiddleware, async (req, res) => {
   try {
     const { name, payment, days, materialsList, toDoList, isDemo } = req.body;
 
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: "Project name is required" });
+    }
+    if (payment === undefined || payment === null || payment === "" || isNaN(Number(payment))) {
+      return res.status(400).json({ message: "Payment must be a valid number" });
+    }
+    if (days === undefined || days === null || days === "" || isNaN(Number(days)) || Number(days) <= 0) {
+      return res.status(400).json({ message: "Days must be a positive number" });
+    }
+
     const user = await UserModel.findById(req.userId).select("subscription");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -1074,6 +1084,26 @@ app.post("/income", authMiddleware, async (req, res) => {
   } catch (err) {
     console.error("Log income error:", err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch("/users/business-details", authMiddleware, async (req, res) => {
+  try {
+    const { businessId, businessAddress, businessState, businessCountry, businessZip } = req.body;
+    const update = {};
+    if (businessId !== undefined && businessId !== "") {
+      const parsed = Number(String(businessId).replace(/[\s\-]/g, ""));
+      if (!isNaN(parsed)) update.businessId = parsed;
+    }
+    if (businessAddress !== undefined) update["address.street"] = businessAddress;
+    if (businessState !== undefined) update["address.state"] = businessState.toUpperCase();
+    if (businessCountry !== undefined) update["address.country"] = businessCountry.toUpperCase();
+    if (businessZip !== undefined) update["address.zip"] = businessZip;
+    await UserModel.findByIdAndUpdate(req.userId, { $set: update });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

@@ -9,6 +9,7 @@ import {
   Animated,
 } from "react-native";
 import api from "../services/api";
+import { track } from "../utils/analytics";
 
 const WORK_TYPES = [
   { key: "freelancer", label: "Freelancer",        emoji: "🧑‍💻" },
@@ -41,6 +42,7 @@ const WelcomeModal = ({ visible, onComplete, onEnter = () => {} }) => {
     setSaving(true);
     try {
       await api.post("/updateUser", { userType: selected });
+      track("usertype_selected", { userType: selected });
     } catch (e) {
       console.error("WelcomeModal save error:", e);
     } finally {

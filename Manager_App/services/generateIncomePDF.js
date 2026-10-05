@@ -3,6 +3,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth } from "../components/firebase";
+import { track } from "../utils/analytics";
 
 export async function generateIncomeReceiptPDF(receipt, userDetails, options = {}) {
   const {
@@ -459,6 +460,7 @@ const serviceRows = services.length
 
     // Share AFTER upload so sharing doesn't block Firebase
     if (allowSharing) {
+      try { track("invoice_pdf_shared"); } catch (e) {}
       await Sharing.shareAsync(uri, {
         mimeType: "application/pdf",
         dialogTitle: "Share Receipt",

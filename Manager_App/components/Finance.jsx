@@ -30,6 +30,7 @@ import { getNextOccurrence } from "../services/getNextOccurrence";
 import { formatDate } from "../services/formatDate";
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable  } from "firebase/storage";
 import { storage } from "../components/firebase";
+import { track } from "../utils/analytics";
 
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -152,6 +153,13 @@ const openExpenseOccurrences = async (expense) => {
     };
 
     await api.post("/fixedExpense", payload);
+    try {
+      track("expense_saved", {
+        amount: Number(amount),
+        hasProject: false,
+        category: category || null,
+      });
+    } catch (e) {}
 
     setTitle("");
     setAmount("");
@@ -624,7 +632,7 @@ const viewReceipt = async (receiptId) => {
                 <BanknoteArrowUp size={20} color="#10B981" />
               </View>
               <View>
-                <Text style={styles.cardTitle}>New Income Receipt</Text>
+                <Text style={styles.cardTitle}>New Invoice</Text>
                 <Text style={styles.cardSubtitle}>Generate income documentation</Text>
               </View>
             </View>

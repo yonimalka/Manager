@@ -3,6 +3,9 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "@env";
 import { CommonActions } from "@react-navigation/native";
+import { track } from "../utils/analytics";
+
+const APP_START_TIME = Date.now();
 
 let _navigator = null;
 export const setNavigator = (ref) => { _navigator = ref; };
@@ -77,6 +80,26 @@ api.interceptors.response.use(
         await clearSessionAndRedirect();
       }
     }
+
+    try {
+      const status = error?.response?.status;
+      const shouldTrack =
+        status >= 500 ||
+        (status >= 400 && status !== 401 && status !== 404) ||
+        !error?.response;
+
+      if (shouldTrack) {
+        const token = await AsyncStorage.getItem("token").catch(() => null);
+        track("error_shown", {
+          status,
+          endpoint: error?.config?.url,
+          method: error?.config?.method,
+          message: error?.response?.data?.error || error?.message,
+          has_token: !!token,
+          ms_since_app_start: Date.now() - APP_START_TIME,
+        });
+      }
+    } catch (e) {}
 
     return Promise.reject(error);
   }

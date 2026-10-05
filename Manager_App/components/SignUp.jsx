@@ -21,6 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/Ionicons";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
+import { track } from "../utils/analytics";
 
 const Input = ({ label, error, icon, children }) => (
   <View style={styles.field}>
@@ -114,6 +115,7 @@ export default function SignUp() {
       if (response.status === 200) {
         const { token } = response.data;
         await AsyncStorage.setItem("token", token);
+        track("signup_completed");
         navigation.reset({
           index: 0,
           routes: [{ name: "HomeScreen" }],

@@ -20,7 +20,7 @@ const CURRENCIES = [
   { code: "USD", locale: "en-US", label: "🇺🇸 USD" },
   { code: "GBP", locale: "en-GB", label: "🇬🇧 GBP" },
   { code: "EUR", locale: "de-DE", label: "🇪🇺 EUR" },
-  { code: "ILS", locale: "he-IL", label: "🇮🇱 ILS" },
+  // { code: "ILS", locale: "he-IL", label: "🇮🇱 ILS" },
 ];
 
 const QuickSetupScreen = () => {

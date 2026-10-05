@@ -6,6 +6,7 @@ import api from "../services/api";
 import jwtDecode from "jwt-decode";
 import { configureRevenueCat } from "../services/revenuecat";
 import { refreshSubscriptionStatus } from "../services/subscription";
+import { identifyUser, resetAnalytics } from "../utils/analytics";
 
 export const useAuth = () => {
   const [auth, setAuth] = useState({
@@ -60,9 +61,24 @@ export const useAuth = () => {
         console.error("Initial subscription refresh failed:", error);
       });
 
-      // ✅ Fetch full user profile (INCLUDING currency)
-      const res = await api.get(`/getUserDetails`);
-      setUserDetails(res.data);
+      // ✅ Fetch full user profile (INCLUDING currency) — non-fatal if offline
+      try {
+        const res = await api.get(`/getUserDetails`);
+        setUserDetails(res.data);
+        identifyUser(decoded.userId, {
+          email: res.data.email,
+          name: res.data.name,
+          userType: res.data.userType,
+          createdAt: res.data.createdAt,
+          subscriptionStatus: res.data.analytics?.subscriptionStatus || "free",
+          projectsCount: res.data.analytics?.projectsCount || 0,
+          incomesLoggedCount: res.data.analytics?.incomesLoggedCount || 0,
+          invoicesGeneratedCount: res.data.analytics?.invoicesGeneratedCount || 0,
+          daysSinceSignup: res.data.analytics?.daysSinceSignup || 0,
+        });
+      } catch (detailsErr) {
+        console.warn("[Auth] /getUserDetails failed (offline?):", detailsErr?.message);
+      }
 
     } catch (err) {
       console.error("Auth failed:", err);
@@ -79,6 +95,7 @@ export const useAuth = () => {
   const logout = async () => {
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("refreshToken");
+    resetAnalytics();
 
     setAuth({ userId: null, role: null, isAuthenticated: false, authLoading: false });
     setUserDetails(null);

@@ -8,6 +8,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  ActivityIndicator,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Calendar, Download, ChevronDown, ChevronUp } from "lucide-react-native";
@@ -25,6 +26,7 @@ export default function ReceiptDownloadByDate() {
   const [pickerType, setPickerType] = useState(null);
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -56,6 +58,7 @@ export default function ReceiptDownloadByDate() {
 
   const downloadReceiptsZip = async ({ from, to } = {}) => {
     try {
+      setDownloading(true);
       const token = await AsyncStorage.getItem("token");
       const fileUri = FileSystem.documentDirectory + "IncomesReceipts.zip";
 
@@ -87,6 +90,8 @@ export default function ReceiptDownloadByDate() {
       } else {
         console.log("ZIP download error:", err);
       }
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -163,13 +168,19 @@ export default function ReceiptDownloadByDate() {
             )}
 
             <TouchableOpacity
-              style={[styles.primaryButton, !isValidRange && styles.primaryButtonDisabled]}
-              disabled={!isValidRange}
+              style={[styles.primaryButton, (!isValidRange || downloading) && styles.primaryButtonDisabled]}
+              disabled={!isValidRange || downloading}
               onPress={() => downloadReceiptsZip({ from: fromDate, to: toDate })}
               activeOpacity={0.8}
             >
-              <Download size={18} color="#fff" />
-              <Text style={styles.primaryButtonText}>Download ZIP</Text>
+              {downloading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Download size={18} color="#fff" />
+              )}
+              <Text style={styles.primaryButtonText}>
+                {downloading ? "Preparing…" : "Download ZIP"}
+              </Text>
             </TouchableOpacity>
           </View>
         )}

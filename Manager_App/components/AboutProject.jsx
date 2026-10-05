@@ -15,6 +15,7 @@ import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 import IncomeReceiptGenerator from "./IncomesReceiptGenerator";
 import Receipts from "./Receipts";
 import { formatCurrency } from "../services/formatCurrency";
+import { track } from "../utils/analytics";
 const { width } = Dimensions.get("window");
 
 const AboutProject = () => {
@@ -62,6 +63,18 @@ const AboutProject = () => {
     setToDoList(project?.toDoList || []);
     setMaterialsArray(project?.materials?.items || []);
   }, [project]);
+
+  useEffect(() => {
+    if (project) {
+      try {
+        track("project_viewed", {
+          projectId: project._id,
+          paid: project.paid || 0,
+          total: project.total || 0,
+        });
+      } catch (e) {}
+    }
+  }, [project?._id]);
 
   useEffect(() => {
     if (!project?.isDemo) return;
@@ -147,6 +160,7 @@ const AboutProject = () => {
   const handleProjectDelete = async () => {
     setDeleting(true);
     try {
+      try { track("project_deleted", { projectId: project._id }); } catch (e) {}
       await api.delete(`/deleteProject/${projectId}`);
       setDeleteConfirmVisible(false);
       navigation.goBack();

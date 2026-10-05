@@ -24,7 +24,7 @@
       },
       "ios": {
         "distribution": "store",
-        "image": "latest"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "channel": "production"
     }

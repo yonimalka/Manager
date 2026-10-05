@@ -25,6 +25,7 @@ import {
   refreshSubscriptionStatus,
   restoreProSubscription,
 } from "../services/subscription";
+import { track } from "../utils/analytics";
 
 
 const premiumFeatures = [
@@ -83,6 +84,7 @@ export default function SubscriptionScreen() {
 
   useEffect(() => {
     loadSubscription();
+    try { track("paywall_viewed", { source: "subscription_screen" }); } catch (e) {}
   }, [loadSubscription]);
 
   // Refresh when screen comes back into focus (e.g. after paywall closes)
@@ -118,6 +120,12 @@ export default function SubscriptionScreen() {
       }
 
       setSubscription(result.subscription);
+      try {
+        track("subscription_started", {
+          productId: pkg?.product?.identifier,
+          price: pkg?.product?.priceString,
+        });
+      } catch (e) {}
       Alert.alert(
         "Maggo Pro enabled",
         result.subscription?.status === "trialing"
@@ -208,7 +216,7 @@ export default function SubscriptionScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={() => loadSubscription(true)} />
       }
     >
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => { try { track("paywall_dismissed"); } catch (e) {} navigation.goBack(); }} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
 

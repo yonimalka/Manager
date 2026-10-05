@@ -20,6 +20,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
 import { Folder, Calendar, DollarSign, Package, CheckSquare, Plus, X, Check } from "lucide-react-native";
+import { track } from "../utils/analytics";
 
 const { width } = Dimensions.get("window");
 const isRTL = I18nManager.isRTL;
@@ -64,6 +65,7 @@ const NewProject = () => {
 
       setSubmitting(false);
       setSuccess(true);
+      track("project_created");
       setTimeout(() => navigation.goBack(), 900);
     } catch (err) {
       setSubmitting(false);
@@ -303,6 +305,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#111827",
     marginBottom: 10,
+    letterSpacing: 0.3,
   },
   iconInputWrap: {
     flexDirection: "row",
@@ -318,6 +321,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 8,
+    letterSpacing: 0.1,
   },
   gridRow: {
     flexDirection: "row",

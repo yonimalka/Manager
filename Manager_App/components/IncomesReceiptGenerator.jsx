@@ -10,6 +10,8 @@ import {
   ScrollView,
   Alert,
   KeyboardAvoidingView,
+  Animated,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -31,6 +33,7 @@ import api from "../services/api";
 import { useAuth } from "./useAuth";
 import { generateIncomeReceiptPDF } from "../services/generateIncomePDF";
 import { formatCurrency } from "../services/formatCurrency";
+import { track } from "../utils/analytics";
 
 // ─── Sub-components ──────────────────────────────────────────────
 
@@ -124,6 +127,61 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const [taxRate, setTaxRate] = useState("0");
   const isSubmittingRef = useRef(false);
 
+  // ── Biz gate ──
+  const [bizGateVisible, setBizGateVisible] = useState(false);
+  const [bizId, setBizId] = useState("");
+  const [bizAddress, setBizAddress] = useState("");
+  const [bizStateVal, setBizStateVal] = useState("");
+  const [bizCountry, setBizCountry] = useState("");
+  const [bizZip, setBizZip] = useState("");
+  const [bizErrors, setBizErrors] = useState({});
+  const [bizSaving, setBizSaving] = useState(false);
+  const bizSlideAnim = useRef(new Animated.Value(400)).current;
+
+  const openBizGate = () => {
+    setBizGateVisible(true);
+    Animated.spring(bizSlideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
+  };
+
+  const closeBizGate = () => {
+    Animated.timing(bizSlideAnim, { toValue: 400, duration: 220, useNativeDriver: true }).start(() => setBizGateVisible(false));
+  };
+
+  const validateBiz = () => {
+    const e = {};
+    if (!bizId.trim()) e.bizId = "Business ID is required";
+    if (!bizAddress.trim()) e.bizAddress = "Address is required";
+    if (!bizStateVal.trim()) e.bizStateVal = "State is required";
+    if (!bizCountry.trim()) e.bizCountry = "Country is required";
+    if (!bizZip.trim()) e.bizZip = "ZIP Code is required";
+    setBizErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSaveBizDetails = async () => {
+    if (!validateBiz()) return;
+    setBizSaving(true);
+    try {
+      await api.patch("/users/business-details", {
+        businessId: bizId.trim(),
+        businessAddress: bizAddress.trim(),
+        businessState: bizStateVal.trim(),
+        businessCountry: bizCountry.trim(),
+        businessZip: bizZip.trim(),
+      });
+      // const key = `maggo_biz_details_complete_${userId}`;
+      // const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+      // await AsyncStorage.setItem(key, "true");
+      track("biz_details_completed");
+      closeBizGate();
+      setTimeout(() => handleSubmit(true), 350);
+    } catch (err) {
+      Alert.alert("Error", "Could not save business details. Please try again.");
+    } finally {
+      setBizSaving(false);
+    }
+  };
+
   const numericAmount = Number(amount) || 0;
 
   const subtotal = services.reduce((sum, service) => {
@@ -205,15 +263,26 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
   const handlePaymentMethodSelect = (method) => setPaymentMethod(method);
 
   // ── Submit ──
-  const handleSubmit = async () => {
+  const handleSubmit = async (skipGateCheck = false) => {
+    if (!validateForm()) {
+      Alert.alert("Validation Error", "Please fill in all required fields correctly.");
+      return;
+    }
+    if (!skipGateCheck) {
+      const hasBizDetails =
+        userDetails?.businessId &&
+        userDetails?.address?.street &&
+        userDetails?.address?.state &&
+        userDetails?.address?.country &&
+        userDetails?.address?.zip;
+      if (!hasBizDetails) {
+        openBizGate();
+        return;
+      }
+    }
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     try {
-      if (!validateForm()) {
-        isSubmittingRef.current = false;
-        Alert.alert("Validation Error", "Please fill in all required fields correctly.");
-        return;
-      }
       const receiptData = {
         receiptNumber, subtotal, services, tax,
         taxRate: numericRate, total, amount: numericAmount,
@@ -226,15 +295,24 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       console.log("Incoming projectId:", projectId);
       const savedReceipt = await api.post("/incomeReceipt", { ...receiptData, projectId });
       const response = await api.get("/getUserDetails");
-      const userDetails = response.data;
+      const freshUserDetails = response.data;
       console.log("[RECEIPT] calling generateIncomeReceiptPDF");
-      const pdfResult = await generateIncomeReceiptPDF(receiptData, userDetails, {
-        userId, projectId, allowSharing: true,
-      });
+      const pdfResult = await generateIncomeReceiptPDF(
+        { ...receiptData, receiptNumber: savedReceipt.data.receiptNumber },
+        freshUserDetails,
+        { userId, projectId, allowSharing: true }
+      );
       console.log("[RECEIPT] generateIncomeReceiptPDF done, downloadURL:", pdfResult?.downloadURL);
       await api.patch(`/incomeReceipt/${savedReceipt.data._id}/pdf`, {
         pdfUrl: pdfResult.downloadURL,
       });
+      try {
+        track("invoice_pdf_generated", {
+          receiptId: savedReceipt.data._id,
+          amount: receiptData.total || receiptData.amount,
+          hasProject: !!projectId,
+        });
+      } catch (e) {}
       onSubmit(savedReceipt.data);
     } catch (err) {
       console.error("[RECEIPT] Error type:", err?.constructor?.name);
@@ -613,7 +691,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
           </View>
 
           {/* ── Submit ── */}
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={isSubmittingRef.current}>
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
             <CheckCircle2 size={20} color="#fff" />
             <Text style={styles.submitBtnText}>Generate Receipt</Text>
           </TouchableOpacity>
@@ -629,6 +707,112 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
 
         </View>
       </ScrollView>
+
+      {bizGateVisible && (
+        <View style={bizStyles.overlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <Animated.View style={[bizStyles.sheet, { transform: [{ translateY: bizSlideAnim }] }]}>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="none"
+                showsVerticalScrollIndicator={false}
+                style={{ width: "100%" }}
+                contentContainerStyle={{ alignItems: "center" }}
+              >
+                <View style={bizStyles.handle} />
+                <View style={bizStyles.iconCircle}>
+                  <Building2 size={28} color="#3B82F6" />
+                </View>
+                <Text style={bizStyles.title}>One last thing</Text>
+                <Text style={bizStyles.subtitle}>
+                  Invoices without a business ID and address aren't legally valid. Fill these in once and Maggo will stamp every future invoice automatically.
+                </Text>
+
+                <View style={bizStyles.field}>
+                  <Text style={bizStyles.label}>Business ID / Tax Number</Text>
+                  <TextInput
+                    style={[bizStyles.input, bizErrors.bizId && bizStyles.inputError]}
+                    value={bizId}
+                    onChangeText={(v) => { setBizId(v); setBizErrors((e) => ({ ...e, bizId: null })); }}
+                    placeholder="e.g. 1 2-3 4 5 6 7 8 9"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                  />
+                  {bizErrors.bizId ? <Text style={bizStyles.errText}>{bizErrors.bizId}</Text> : null}
+                </View>
+
+                <View style={bizStyles.field}>
+                  <Text style={bizStyles.label}>Business Address</Text>
+                  <TextInput
+                    style={[bizStyles.input, bizErrors.bizAddress && bizStyles.inputError]}
+                    value={bizAddress}
+                    onChangeText={(v) => { setBizAddress(v); setBizErrors((e) => ({ ...e, bizAddress: null })); }}
+                    placeholder="123 Main St"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  {bizErrors.bizAddress ? <Text style={bizStyles.errText}>{bizErrors.bizAddress}</Text> : null}
+                </View>
+
+                <View style={bizStyles.field}>
+                  <Text style={bizStyles.label}>State</Text>
+                  <TextInput
+                    style={[bizStyles.input, bizErrors.bizStateVal && bizStyles.inputError]}
+                    value={bizStateVal}
+                    onChangeText={(v) => { setBizStateVal(v); setBizErrors((e) => ({ ...e, bizStateVal: null })); }}
+                    placeholder="e.g. NY"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="characters"
+                    maxLength={2}
+                  />
+                  {bizErrors.bizStateVal ? <Text style={bizStyles.errText}>{bizErrors.bizStateVal}</Text> : null}
+                </View>
+
+                <View style={bizStyles.field}>
+                  <Text style={bizStyles.label}>Country</Text>
+                  <TextInput
+                    style={[bizStyles.input, bizErrors.bizCountry && bizStyles.inputError]}
+                    value={bizCountry}
+                    onChangeText={(v) => { setBizCountry(v); setBizErrors((e) => ({ ...e, bizCountry: null })); }}
+                    placeholder="e.g. US"
+                    placeholderTextColor="#9CA3AF"
+                    autoCapitalize="characters"
+                    maxLength={2}
+                  />
+                  {bizErrors.bizCountry ? <Text style={bizStyles.errText}>{bizErrors.bizCountry}</Text> : null}
+                </View>
+
+                <View style={bizStyles.field}>
+                  <Text style={bizStyles.label}>ZIP Code</Text>
+                  <TextInput
+                    style={[bizStyles.input, bizErrors.bizZip && bizStyles.inputError]}
+                    value={bizZip}
+                    onChangeText={(v) => { setBizZip(v); setBizErrors((e) => ({ ...e, bizZip: null })); }}
+                    placeholder="10001"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                  />
+                  {bizErrors.bizZip ? <Text style={bizStyles.errText}>{bizErrors.bizZip}</Text> : null}
+                </View>
+
+                <TouchableOpacity
+                  style={bizStyles.saveBtn}
+                  onPress={handleSaveBizDetails}
+                  disabled={bizSaving}
+                  activeOpacity={0.85}
+                >
+                  {bizSaving
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={bizStyles.saveBtnText}>Save & Continue</Text>
+                  }
+                </TouchableOpacity>
+                <TouchableOpacity style={bizStyles.skipBtn} onPress={() => { track("biz_gate_abandoned"); closeBizGate(); handleSubmit(true); }}>
+                  <Text style={bizStyles.skipText}>Skip for now</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </View>
+      )}
 
     </KeyboardAvoidingView>
   );
@@ -1170,4 +1354,91 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
+});
+
+// ─── Biz Gate Styles ─────────────────────────────────────────────
+const bizStyles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+    zIndex: 9999,
+    elevation: 9999,
+  },
+  sheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    paddingTop: 12,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 20,
+  },
+  handle: {
+    width: 40, height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E5E7EB",
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  iconCircle: {
+    width: 60, height: 60,
+    borderRadius: 30,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  field: { width: "100%", marginBottom: 14 },
+  label: { fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 6 },
+  input: {
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#111827",
+    backgroundColor: "#F9FAFB",
+  },
+  inputError: { borderColor: "#ef4444", backgroundColor: "#fef2f2" },
+  errText: { fontSize: 12, color: "#ef4444", marginTop: 4 },
+  saveBtn: {
+    width: "100%",
+    backgroundColor: "#3B82F6",
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 10,
+    shadowColor: "#3B82F6",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  saveBtnText: { fontSize: 16, fontWeight: "700", color: "#fff" },
+  skipBtn: { paddingVertical: 10, alignItems: "center" },
+  skipText: { fontSize: 14, color: "#9CA3AF", fontWeight: "500" },
 });

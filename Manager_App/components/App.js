@@ -1,52 +1,61 @@
-import { I18nManager, Platform, View, ActivityIndicator } from "react-native";
-
-if (!I18nManager.isRTL) {
-  I18nManager.allowRTL(true);
-  I18nManager.forceRTL(true);
-  Updates.reloadAsync(); // must restart immediately
-}
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
+import { I18nManager } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Updates from "expo-updates";
+import * as Notifications from "expo-notifications";
+import { PostHogProvider } from "posthog-react-native";
 import MainApp from "./MainApp";
+import { usePostHogBridge, track } from "../utils/analytics";
+
+const PostHogBridge = () => {
+  usePostHogBridge();
+  return null;
+};
 
 const App = () => {
-//   const [isReady, setIsReady] = useState(false);
+  // ONE-TIME RTL RESET — undoes prior forced RTL on existing devices
+  // Safe to remove after ~2 weeks once all users have run it once
+  useEffect(() => {
+    (async () => {
+      try {
+        if (I18nManager.isRTL) {
+          I18nManager.allowRTL(false);
+          I18nManager.forceRTL(false);
+          await AsyncStorage.removeItem("maggo_rtl_forced");
+          await Updates.reloadAsync();
+        }
+      } catch (e) {
+        console.warn("[RTL Reset] failed:", e?.message);
+      }
+    })();
+  }, []);
 
-//   useEffect(() => {
-//     async function setupRTL() {
-//       try {
-//         const rtlApplied = await AsyncStorage.getItem("rtlApplied");
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      track("notification_tapped");
+    });
+    return () => sub.remove();
+  }, []);
 
-//         if (!I18nManager.isRTL && rtlApplied !== "true") {
-//           I18nManager.allowRTL(true);
-//           I18nManager.forceRTL(true);
-//           await AsyncStorage.setItem("rtlApplied", "true");
-
-//           if (Platform.OS !== "web") {
-//             await Updates.reloadAsync(); // This restarts the app immediately
-//             return; // Don't render anything this run
-//           }
-//         }
-//       } catch (error) {
-//         console.error("RTL setup failed:", error);
-//       }
-
-//       setIsReady(true);
-//     }
-
-//     setupRTL();
-//   }, []);
-
-//   if (!isReady) {
-//     return (
-//       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-//         <ActivityIndicator size="large" />
-//       </View>
-//     );
-//   }
-
-  return <MainApp />;
+  return (
+    <PostHogProvider
+      apiKey="phc_wnUfWr7fZ5W27DR6uDQm7NV9XoQSNEDBtCdVxtnCLwye"
+      options={{
+        host: "https://us.i.posthog.com",
+        enableSessionReplay: true,
+        captureAppLifecycleEvents: true,
+        errorTracking: { autocapture: true },
+      }}
+      autocapture={{
+        captureTouches: true,
+        captureLifecycleEvents: true,
+        captureScreens: true,
+      }}
+    >
+      <PostHogBridge />
+      <MainApp />
+    </PostHogProvider>
+  );
 };
 
 export default App;
