@@ -7,6 +7,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import axios from "axios";
 import {SERVER_URL} from "@env";
 import api from "../services/api";
+import { track } from "../utils/analytics";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -24,23 +25,16 @@ export default function GoogleSignInButton() {
   // Handle the sign-in result
   useEffect(() => {
   const getUserInfo = async () => {
-    if (response?.type === "success") {
+    if (!response) return;
+    if (response.type === "success") {
       const accessToken = response.authentication.accessToken;
-
-    //   const userInfoResponse = await fetch(
-    //     "https://www.googleapis.com/userinfo/v2/me",
-    //     { headers: { Authorization: `Bearer ${accessToken}` } }
-    //   );
-
-    //   const user = await userInfoResponse.json();
-    //   Alert.alert('Logged in!', JSON.stringify(user, null, 2));
-      // Now send this to your server
       await handleGoogleLogin(accessToken);
+    } else {
+      track("signup_failed", { method: "google", step: "provider", reason: response.type });
     }
   };
 
   getUserInfo();
-      // You can now use authentication.accessToken to fetch user info
   }, [response]);
 
    const handleGoogleLogin = async (accessToken) => {
@@ -67,20 +61,23 @@ export default function GoogleSignInButton() {
     { headers: { "Content-Type": "application/json" } });
 
       const { token } = response.data;
-      
+
       // Save login token locally
       await AsyncStorage.setItem("token", token);
       const res = await api.get("/getUserDetails");
-      // New user: no business name or currency set yet → quick setup
-      if (!res.data.businessName || !res.data.currency) {
+      const isNewUser = !res.data.businessName || !res.data.currency;
+      if (isNewUser) {
+        track("signup_completed", { method: "google" });
         navigation.reset({ index: 0, routes: [{ name: "QuickSetup" }] });
       } else {
+        track("login_completed", { method: "google" });
         navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
       }
-      
 
     } catch (error) {
       console.log("Google login error:", error);
+      const reason = error?.response?.status ? String(error.response.status) : "network";
+      track("signup_failed", { method: "google", step: "server", reason });
     }
   };
 
@@ -88,7 +85,10 @@ export default function GoogleSignInButton() {
     <Pressable
       style={[styles.button, !request && { opacity: 0.5 }]}
       disabled={!request}
-      onPress={() => promptAsync()}
+      onPress={() => {
+        track("signup_method_selected", { method: "google" });
+        promptAsync();
+      }}
     >
       <Image
         source={require("../assets/google.png")}

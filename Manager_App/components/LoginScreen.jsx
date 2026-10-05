@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import GoogleSignInButton from "./GoogleSignInButton";
 import AppleSignInButton from "./AppleSignInButton";
 import Svg, { Path } from "react-native-svg";
+import { track } from "../utils/analytics";
 
 const isRTL = I18nManager.isRTL;
 
@@ -53,6 +54,10 @@ const LoginScreen = () => {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const animMaxHeight = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    track("auth_screen_viewed", { screen: "login" });
+  }, []);
 
   const toggleEmailForm = () => {
     if (!showEmailForm) {
@@ -108,7 +113,10 @@ const LoginScreen = () => {
       hasError = true;
     }
 
-    if (hasError) return;
+    if (hasError) {
+      track("login_failed", { method: "email", reason: "validation" });
+      return;
+    }
 
     setIsLoading(true);
 
@@ -122,6 +130,7 @@ const LoginScreen = () => {
       if (response.status === 200) {
         const { token } = response.data;
         await AsyncStorage.setItem("token", token);
+        track("login_completed", { method: "email" });
         navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
       } else {
         setValidation(response.data?.message || "Login failed");
@@ -129,10 +138,13 @@ const LoginScreen = () => {
     } catch (error) {
       if (error.response?.status === 401) {
         setValidation("Invalid email or password");
+        track("login_failed", { method: "email", reason: "401" });
       } else if (error.response?.status === 404) {
         setValidation("Account not found");
+        track("login_failed", { method: "email", reason: "404" });
       } else {
         setValidation("Connection error. Please try again.");
+        track("login_failed", { method: "email", reason: "network" });
       }
     } finally {
       setIsLoading(false);
@@ -169,7 +181,11 @@ const LoginScreen = () => {
           {/* Sign Up */}
           <TouchableOpacity
             style={styles.signUpRow}
-            onPress={() => navigation.navigate("SignUp")}
+            onPress={() => {
+              track("signup_method_selected", { method: "email" });
+              track("auth_switch", { from: "login", to: "signup" });
+              navigation.navigate("SignUp");
+            }}
             disabled={isLoading}
             activeOpacity={0.7}
           >

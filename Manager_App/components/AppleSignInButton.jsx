@@ -12,6 +12,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import api from "../services/api";
+import { track } from "../utils/analytics";
 
 const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
@@ -54,26 +55,28 @@ const signInWithApple = async () => {
     await AsyncStorage.setItem("token", token);
     await AsyncStorage.setItem("refreshToken", refreshToken);
 
-    const res =  await api.get(`/getUserDetails`);
-   
-    
-    // New user: no business name or currency set yet → quick setup
-    if (!res.data.businessName || !res.data.currency) {
+    const res = await api.get(`/getUserDetails`);
+
+    const isNewUser = !res.data.businessName || !res.data.currency;
+    if (isNewUser) {
+      track("signup_completed", { method: "apple" });
       navigation.reset({ index: 0, routes: [{ name: "QuickSetup" }] });
     } else {
+      track("login_completed", { method: "apple" });
       navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
     }
     return { success: true, token, refreshToken };
   } catch (error) {
 
     if (error.code === "ERR_CANCELED") {
-
+      track("signup_failed", { method: "apple", step: "provider", reason: "cancelled" });
       return { success: false, cancelled: true };
-
     }
 
     console.error("Apple Sign-In Error:", error);
-
+    const reason = error?.response?.status ? String(error.response.status) : "provider_error";
+    const step = error?.response ? "server" : "provider";
+    track("signup_failed", { method: "apple", step, reason });
     return {
       success: false,
       error: error.message,
@@ -81,7 +84,7 @@ const signInWithApple = async () => {
   }
 };
 const handleLogin = async () => {
-
+    track("signup_method_selected", { method: "apple" });
     const result = await signInWithApple();
 
     if (result.success) {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -43,6 +43,10 @@ export default function SignUp() {
   const navigation = useNavigation();
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    track("auth_screen_viewed", { screen: "signup" });
+  }, []);
   const [image, setImage] = useState();
   const [formData, setFormData] = useState({
     firstName: "",
@@ -115,7 +119,7 @@ export default function SignUp() {
       if (response.status === 200) {
         const { token } = response.data;
         await AsyncStorage.setItem("token", token);
-        track("signup_completed");
+        track("signup_completed", { method: "email" });
         navigation.reset({
           index: 0,
           routes: [{ name: "HomeScreen" }],
@@ -125,6 +129,9 @@ export default function SignUp() {
       Alert.alert("Success", "Account created successfully");
     } catch (err) {
       console.log(err);
+      const step = err?.response ? "server" : "provider";
+      const reason = err?.response?.status ? String(err.response.status) : "server_error";
+      track("signup_failed", { method: "email", step, reason });
       Alert.alert("Error", "Registration failed. Please try again.");
     }
   };
@@ -162,7 +169,10 @@ export default function SignUp() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => {
+            track("auth_switch", { from: "signup", to: "login" });
+            navigation.goBack();
+          }} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
             {/* Header */}
@@ -286,7 +296,13 @@ export default function SignUp() {
                   </Input>
 
                   <TouchableOpacity
-                    onPress={() => validateStep1() && setStep(2)}
+                    onPress={() => {
+                      if (!validateStep1()) {
+                        track("signup_failed", { method: "email", step: "validation", reason: "step1_validation" });
+                        return;
+                      }
+                      setStep(2);
+                    }}
                     activeOpacity={0.8}
                   >
                     <LinearGradient
