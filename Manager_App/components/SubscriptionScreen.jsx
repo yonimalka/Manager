@@ -32,7 +32,7 @@ const premiumFeatures = [
   "Unlimited projects",
   "Employee management",
   "AI-powered Private Assistant",
-  "Receipt & income exports",
+  "Payment receipt & income exports",
   "Price quote generation",
   "Advanced finance insights",
 ];

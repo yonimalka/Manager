@@ -105,7 +105,7 @@ export default function Receipts({ onClose, onSubmit, projectId }) {
   // ── Validation ──
   const validateForm = () => {
     const newErrors = {};
-    if (!image)              newErrors.image    = "Receipt image is required";
+    if (!image)              newErrors.image    = "Expense receipt image is required";
     if (!category.trim())    newErrors.category = "Category is required";
     if (!sum || isNaN(sum) || Number(sum) <= 0)
                              newErrors.sum      = "Please enter a valid amount";
@@ -222,7 +222,7 @@ export default function Receipts({ onClose, onSubmit, projectId }) {
                 <Upload size={22} color="#fff" />
               </View>
               <View>
-                <Text style={styles.title}>Upload Receipt</Text>
+                <Text style={styles.title}>Add Expense</Text>
                 <Text style={styles.subtitle}>Track your project expenses</Text>
               </View>
             </View>
@@ -365,7 +365,7 @@ export default function Receipts({ onClose, onSubmit, projectId }) {
           <SectionCard
             iconBg="#fff1f2"
             icon={<Camera size={16} color="#e11d48" />}
-            title="Receipt Image"
+            title="Expense Receipt Image"
           >
             <FieldLabel label="Attach photo" required />
 
@@ -442,7 +442,7 @@ export default function Receipts({ onClose, onSubmit, projectId }) {
             ) : (
               <>
                 <Upload size={20} color="#fff" />
-                <Text style={styles.uploadBtnText}>Upload Receipt</Text>
+                <Text style={styles.uploadBtnText}>Add Expense</Text>
               </>
             )}
           </TouchableOpacity>
@@ -451,7 +451,7 @@ export default function Receipts({ onClose, onSubmit, projectId }) {
           {loading && (
             <View style={styles.progressCard}>
               <View style={styles.progressHeader}>
-                <Text style={styles.progressLabel}>Uploading receipt…</Text>
+                <Text style={styles.progressLabel}>Uploading expense…</Text>
                 <Text style={styles.progressPct}>{progress}%</Text>
               </View>
               <View style={styles.progressTrack}>
@@ -476,7 +476,7 @@ export default function Receipts({ onClose, onSubmit, projectId }) {
               <View style={styles.successIconWrap}>
                 <CheckCircle2 size={30} color="#fff" />
               </View>
-              <Text style={styles.successTitle}>Receipt Uploaded!</Text>
+              <Text style={styles.successTitle}>Expense Added!</Text>
               <Text style={styles.successSub}>
                 Your expense has been added to the project
               </Text>

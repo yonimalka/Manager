@@ -1056,7 +1056,7 @@ const HomeScreen = () => {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Log income</Text>
-                      <Text style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>Quick — no invoice</Text>
+                      <Text style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>Quick — no receipt</Text>
                     </View>
                   </TouchableOpacity>
 
@@ -1076,7 +1076,7 @@ const HomeScreen = () => {
                       <Ionicons name="document-text-outline" size={16} color="#F59E0B" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Generate invoice</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Create Payment Receipt</Text>
                       <Text style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>PDF with biz details</Text>
                     </View>
                   </TouchableOpacity>

@@ -103,7 +103,7 @@ const serviceRows = services.length
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Income Receipt</title>
+<title>Payment Receipt</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   @page { size: A4; margin: 0; }
@@ -278,7 +278,7 @@ const serviceRows = services.length
         </div>
       </div>
       <div class="header-right">
-        <div class="receipt-title">Income Receipt</div>
+        <div class="receipt-title">PAYMENT RECEIPT</div>
         <div class="receipt-subtitle">Official payment documentation</div>
         <div class="paid-stamp">PAID</div>
       </div>
@@ -388,7 +388,7 @@ const serviceRows = services.length
     <!-- NOTICE -->
     <div class="notice">
       <div class="notice-title">📋 Tax Documentation Notice</div>
-      This receipt serves as official documentation of income received. Please retain this document for your
+      This payment receipt serves as official documentation of payment received. Please retain this document for your
       tax records and accounting purposes. Consult with a tax professional regarding reporting requirements.
     </div>
 
@@ -402,7 +402,7 @@ const serviceRows = services.length
 <div class="footer">
   <div>
     Thank you for your payment &bull;
-    This is an official receipt generated on ${new Date().toLocaleDateString(userLocale, {
+    This is an official payment receipt generated on ${new Date().toLocaleDateString(userLocale, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -463,7 +463,7 @@ const serviceRows = services.length
       try { track("invoice_pdf_shared"); } catch (e) {}
       await Sharing.shareAsync(uri, {
         mimeType: "application/pdf",
-        dialogTitle: "Share Receipt",
+        dialogTitle: "Share Payment Receipt",
       });
     }
 

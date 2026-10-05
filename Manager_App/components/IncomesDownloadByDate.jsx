@@ -104,8 +104,8 @@ export default function ReceiptDownloadByDate() {
               <Calendar size={20} color="#F97316" />
             </View>
             <View>
-              <Text style={styles.cardTitle}>Download Incomes Receipts</Text>
-              <Text style={styles.cardSubtitle}>Get receipts for a date range</Text>
+              <Text style={styles.cardTitle}>Download Payment Receipts</Text>
+              <Text style={styles.cardSubtitle}>Get payment receipts for a date range</Text>
             </View>
           </View>
           <View style={styles.chevronContainer}>

@@ -299,7 +299,7 @@ const uploadReceipt = async (
         setUploadProgress(0);
         setUploadingFor(null);
 
-        Alert.alert("Success", "Receipt uploaded successfully");
+        Alert.alert("Success", "Expense added successfully");
       }
     );
   } catch (err) {
@@ -329,7 +329,7 @@ const viewReceipt = async (receiptId) => {
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
         <Text style={styles.headerTitle}>Finance</Text>
-        <Text style={styles.headerSubtitle}>Manage your recurring expenses and income receipts</Text>
+        <Text style={styles.headerSubtitle}>Manage your recurring expenses and payment receipts</Text>
       </View>
 
       {/* Expenses Section */}
@@ -600,8 +600,8 @@ const viewReceipt = async (receiptId) => {
                 <CloudUpload size={20} color="#8B5CF6" />
               </View>
               <View>
-                <Text style={styles.cardTitle}>Upload Receipt</Text>
-                <Text style={styles.cardSubtitle}>Add an expense receipt</Text>
+                <Text style={styles.cardTitle}>Add Expense</Text>
+                <Text style={styles.cardSubtitle}>Attach a receipt photo</Text>
               </View>
             </View>
             <ChevronDown size={20} color="#6B7280" style={{ transform: [{ rotate: '-90deg' }] }} />
@@ -632,7 +632,7 @@ const viewReceipt = async (receiptId) => {
                 <BanknoteArrowUp size={20} color="#10B981" />
               </View>
               <View>
-                <Text style={styles.cardTitle}>New Invoice</Text>
+                <Text style={styles.cardTitle}>New Payment Receipt</Text>
                 <Text style={styles.cardSubtitle}>Generate income documentation</Text>
               </View>
             </View>
@@ -726,7 +726,7 @@ const viewReceipt = async (receiptId) => {
                     >
                       <CloudUpload size={16} color="#fff" />
                       <Text style={styles.timelineUploadText}>
-                        Upload Receipt
+                        Add Expense
                       </Text>
                     </TouchableOpacity>
                   )}

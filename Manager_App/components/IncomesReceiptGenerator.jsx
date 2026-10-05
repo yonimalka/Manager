@@ -319,7 +319,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
       console.error("[RECEIPT] Error message:", err?.message);
       console.error("[RECEIPT] Error stack:", err?.stack);
       console.error("[RECEIPT] Response data:", JSON.stringify(err?.response?.data));
-      Alert.alert("Error", "Failed to generate receipt");
+      Alert.alert("Error", "Failed to create payment receipt");
     } finally {
       isSubmittingRef.current = false;
     }
@@ -347,8 +347,8 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                 <FileText size={22} color="#fff" />
               </View>
               <View>
-                <Text style={styles.title}>Income Receipt</Text>
-                <Text style={styles.subtitle}>Tax-Compliant Documentation</Text>
+                <Text style={styles.title}>Payment Receipt</Text>
+                <Text style={styles.subtitle}>Proof of payment for your client</Text>
               </View>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -669,7 +669,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                 <>
                   <Text style={styles.attachLabel}>Attach Document</Text>
                   <Text style={styles.attachHint}>
-                    Invoice, contract, or photo — optional
+                    Receipt, contract, or photo — optional
                   </Text>
                 </>
               )}
@@ -693,14 +693,14 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
           {/* ── Submit ── */}
           <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
             <CheckCircle2 size={20} color="#fff" />
-            <Text style={styles.submitBtnText}>Generate Receipt</Text>
+            <Text style={styles.submitBtnText}>Create Payment Receipt</Text>
           </TouchableOpacity>
 
           {/* ── Disclaimer ── */}
           <View style={styles.disclaimer}>
             <Hash size={16} color="#3b82f6" style={{ flexShrink: 0, marginTop: 1 }} />
             <Text style={styles.disclaimerText}>
-              This receipt will be stored for tax reporting purposes. Ensure all
+              This payment receipt will be stored for tax reporting purposes. Ensure all
               information is accurate and complete before generating.
             </Text>
           </View>
@@ -725,7 +725,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                 </View>
                 <Text style={bizStyles.title}>One last thing</Text>
                 <Text style={bizStyles.subtitle}>
-                  Invoices without a business ID and address aren't legally valid. Fill these in once and Maggo will stamp every future invoice automatically.
+                  Payment receipts without a business ID and address aren't legally valid. Fill these in once and Maggo will stamp every future payment receipt automatically.
                 </Text>
 
                 <View style={bizStyles.field}>

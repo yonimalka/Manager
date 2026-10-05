@@ -408,11 +408,11 @@ const removeMaterial = async (materialId) => {
 
         {activeTab === "receipts" && (
           <View style={s.section}>
-            <Text style={s.sectionTitle}>Receipts Gallery</Text>
+            <Text style={s.sectionTitle}>Expense Receipts</Text>
             {receipts.length === 0 ? (
               <View style={s.emptyState}>
                 <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
-                <Text style={s.emptyText}>No receipts uploaded</Text>
+                <Text style={s.emptyText}>No expense receipts uploaded</Text>
                 <Text style={s.emptySubtext}>Upload receipt images to track expenses</Text>
               </View>
             ) : (
@@ -455,7 +455,7 @@ const removeMaterial = async (materialId) => {
         <Ionicons name="add-circle-outline" size={26} color="#fff" />
       </View>
       <View style={s.actionTextBlock}>
-        <Text style={s.actionButtonLabel}>Income Receipt</Text>
+        <Text style={s.actionButtonLabel}>Payment Receipt</Text>
         <Text style={s.actionButtonSub}>Log a payment</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
@@ -477,7 +477,7 @@ const removeMaterial = async (materialId) => {
         <Ionicons name="cloud-upload-outline" size={26} color="#fff" />
       </View>
       <View style={s.actionTextBlock}>
-        <Text style={s.actionButtonLabel}>Upload Receipt</Text>
+        <Text style={s.actionButtonLabel}>Add Expense</Text>
         <Text style={s.actionButtonSub}>Attach an image</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
