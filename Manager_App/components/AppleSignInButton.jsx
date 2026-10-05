@@ -49,7 +49,7 @@ const signInWithApple = async () => {
       }
     );
 
-    const { token, refreshToken } = response.data;
+    const { token, refreshToken, isNewUser: serverIsNewUser } = response.data;
 
     // Save tokens locally
     await AsyncStorage.setItem("token", token);
@@ -57,12 +57,17 @@ const signInWithApple = async () => {
 
     const res = await api.get(`/getUserDetails`);
 
-    const isNewUser = !res.data.businessName || !res.data.currency;
-    if (isNewUser) {
+    if (serverIsNewUser === true) {
       track("signup_completed", { method: "apple" });
+    } else if (serverIsNewUser === false) {
+      track("login_completed", { method: "apple" });
+    } else {
+      track("login_completed", { method: "apple", unknown_new: true });
+    }
+
+    if (!res.data.businessName || !res.data.currency) {
       navigation.reset({ index: 0, routes: [{ name: "QuickSetup" }] });
     } else {
-      track("login_completed", { method: "apple" });
       navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
     }
     return { success: true, token, refreshToken };

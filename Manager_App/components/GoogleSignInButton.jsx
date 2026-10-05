@@ -60,17 +60,23 @@ export default function GoogleSignInButton() {
       },
     { headers: { "Content-Type": "application/json" } });
 
-      const { token } = response.data;
+      const { token, isNewUser: serverIsNewUser } = response.data;
 
       // Save login token locally
       await AsyncStorage.setItem("token", token);
       const res = await api.get("/getUserDetails");
-      const isNewUser = !res.data.businessName || !res.data.currency;
-      if (isNewUser) {
+
+      if (serverIsNewUser === true) {
         track("signup_completed", { method: "google" });
+      } else if (serverIsNewUser === false) {
+        track("login_completed", { method: "google" });
+      } else {
+        track("login_completed", { method: "google", unknown_new: true });
+      }
+
+      if (!res.data.businessName || !res.data.currency) {
         navigation.reset({ index: 0, routes: [{ name: "QuickSetup" }] });
       } else {
-        track("login_completed", { method: "google" });
         navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
       }
 
