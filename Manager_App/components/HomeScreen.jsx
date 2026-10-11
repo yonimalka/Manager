@@ -16,6 +16,7 @@ import {
   Image,
   Animated,
   Dimensions,
+  useWindowDimensions,
   Modal,
   Platform,
   PixelRatio,
@@ -50,6 +51,7 @@ import Svg, { Path, Rect } from "react-native-svg";
 import { Building2 } from "lucide-react-native";
 import { registerPushToken } from "../utils/registerPushToken";
 import { track } from "../utils/analytics";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 
 const { width } = Dimensions.get("window");
@@ -65,6 +67,8 @@ const HomeScreen = () => {
   const navigation = useNavigation();
   const { userId, authLoading, isAuthenticated, userDetails } = useAuth();
   const isFocused = useIsFocused();
+  const { height: windowHeight } = useWindowDimensions();
+  const { top: topInset } = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,15 +92,8 @@ const HomeScreen = () => {
   const logIncomeSheetY = useRef(new Animated.Value(600)).current;
   useEffect(() => {
     if (logIncomeVisible) {
-      logIncomeSheetY.setValue(600);
-      Animated.spring(logIncomeSheetY, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 22,
-        stiffness: 220,
-        mass: 0.9,
-      }).start();
-      setTimeout(() => logIncomeAmountRef.current?.focus(), 250);
+      logIncomeSheetY.setValue(0);
+      requestAnimationFrame(() => logIncomeAmountRef.current?.focus());
     }
   }, [logIncomeVisible]);
   const [logIncomeAmount, setLogIncomeAmount] = useState("");
@@ -119,10 +116,20 @@ const HomeScreen = () => {
   const [remindSheetVisible, setRemindSheetVisible] = useState(false);
   const [remindInvoice, setRemindInvoice] = useState(null);
 
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const s = Keyboard.addListener(showEvt, (e) => setKbHeight(e.endCoordinates.height));
+    const h = Keyboard.addListener(hideEvt, () => setKbHeight(0));
+    return () => { s.remove(); h.remove(); };
+  }, []);
+
   const logIncomeAmountRef = useRef(null);
   const logIncomeClientRef = useRef(null);
   const logIncomePhoneRef = useRef(null);
   const logIncomeDescRef = useRef(null);
+  const logIncomeScrollRef = useRef(null);
   const LOG_INCOME_ACCESSORY_ID = "logIncomeAccessory";
 
   // First-run onboarding
@@ -987,9 +994,17 @@ const HomeScreen = () => {
                 >
                   <Animated.View style={{ transform: [{ translateY: logIncomeSheetY }] }}>
                   <ScrollView
+                    ref={logIncomeScrollRef}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
-                    style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderTopLeftRadius: 28,
+                      borderTopRightRadius: 28,
+                      maxHeight: kbHeight > 0
+                        ? windowHeight - kbHeight - topInset - 24
+                        : windowHeight * 0.88,
+                    }}
                     contentContainerStyle={{ paddingBottom: Platform.OS === "ios" ? 40 : 28 }}
                     bounces={false}
                   >
@@ -1046,9 +1061,9 @@ const HomeScreen = () => {
                     </View>
 
                     {/* Amount hero */}
-                    <View style={{ paddingVertical: 20, paddingHorizontal: 22, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                    <View style={{ paddingVertical: kbHeight > 0 ? 10 : 20, paddingHorizontal: 22, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
                       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                        <Text style={{ fontSize: 26, fontWeight: "600", color: logIncomeAmount ? "#94A3B8" : "#CBD5E1", marginTop: 8, marginRight: 2 }}>$</Text>
+                        <Text style={{ fontSize: kbHeight > 0 ? 22 : 26, fontWeight: "600", color: logIncomeAmount ? "#94A3B8" : "#CBD5E1", marginTop: kbHeight > 0 ? 6 : 8, marginRight: 2 }}>$</Text>
                         <TextInput
                           ref={logIncomeAmountRef}
                           value={logIncomeAmount}
@@ -1057,7 +1072,7 @@ const HomeScreen = () => {
                           inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
                           placeholder="0"
                           placeholderTextColor="#CBD5E1"
-                          style={{ fontSize: 56, fontWeight: "700", color: "#0F172A", letterSpacing: -2, minWidth: 60, maxWidth: 220, textAlign: "center", padding: 0 }}
+                          style={{ fontSize: kbHeight > 0 ? 44 : 56, fontWeight: "700", color: "#0F172A", letterSpacing: -2, minWidth: 60, maxWidth: 220, textAlign: "center", padding: 0 }}
                         />
                       </View>
                       <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
@@ -1104,6 +1119,7 @@ const HomeScreen = () => {
                             autoCorrect={false}
                             spellCheck={false}
                             autoComplete="off"
+                            onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
                           />
                         </View>
                         <TouchableOpacity onPress={() => setShowDatePicker(!showDatePicker)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 }} activeOpacity={0.7}>
@@ -1158,6 +1174,7 @@ const HomeScreen = () => {
                             autoCorrect={false}
                             spellCheck={false}
                             autoComplete="off"
+                            onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
                           />
                         </View>
                         {/* Phone */}
@@ -1175,6 +1192,7 @@ const HomeScreen = () => {
                             inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
                             style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
                             returnKeyType="done"
+                            onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
                           />
                         </View>
                         {/* Due date chips */}
