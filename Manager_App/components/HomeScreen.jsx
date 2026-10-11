@@ -84,6 +84,19 @@ const HomeScreen = () => {
 
   // Lightweight log income modal
   const [logIncomeVisible, setLogIncomeVisible] = useState(false);
+  const logIncomeSheetY = useRef(new Animated.Value(600)).current;
+  useEffect(() => {
+    if (logIncomeVisible) {
+      logIncomeSheetY.setValue(600);
+      Animated.spring(logIncomeSheetY, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 22,
+        stiffness: 220,
+        mass: 0.9,
+      }).start();
+    }
+  }, [logIncomeVisible]);
   const [logIncomeAmount, setLogIncomeAmount] = useState("");
   const [logIncomeDescription, setLogIncomeDescription] = useState("");
   const [logIncomeProject, setLogIncomeProject] = useState(null);
@@ -942,7 +955,7 @@ const HomeScreen = () => {
             {/* Log Income / Log Owed Modal */}
             <Modal
               visible={logIncomeVisible}
-              animationType="slide"
+              animationType="fade"
               transparent
               statusBarTranslucent
               onRequestClose={() => {
@@ -966,6 +979,7 @@ const HomeScreen = () => {
                   behavior={Platform.OS === "ios" ? "padding" : "height"}
                   style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}
                 >
+                  <Animated.View style={{ transform: [{ translateY: logIncomeSheetY }] }}>
                   <ScrollView
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -1198,6 +1212,7 @@ const HomeScreen = () => {
                       </TouchableOpacity>
                     </View>
                   </ScrollView>
+                  </Animated.View>
                 </KeyboardAvoidingView>
               </View>
             </Modal>
