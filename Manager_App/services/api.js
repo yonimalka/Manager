@@ -7,6 +7,8 @@ import { track } from "../utils/analytics";
 
 const APP_START_TIME = Date.now();
 
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || SERVER_URL;
+
 let _navigator = null;
 export const setNavigator = (ref) => { _navigator = ref; };
 
@@ -22,7 +24,7 @@ console.log("");
 
 // Create Axios instance
 const api = axios.create({
-  baseURL: SERVER_URL,
+  baseURL: BASE_URL,
   headers: {
     Accept: "application/json",
   },
@@ -62,7 +64,7 @@ api.interceptors.response.use(
         if (!refreshToken) throw new Error("No refresh token available");
 
         // Call backend refresh endpoint
-        const res = await axios.post(`${SERVER_URL}/refresh`, {
+        const res = await axios.post(`${BASE_URL}/refresh`, {
           token: refreshToken,
         });
 
