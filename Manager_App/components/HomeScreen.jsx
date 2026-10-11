@@ -116,10 +116,12 @@ const HomeScreen = () => {
   // One ref per tour target — measured at runtime
   const refHeroCard   = useRef(null);
   const refAddIncome  = useRef(null);
-  const refOwed = useRef(null);
+  const refOwed       = useRef(null);
   const refAddExpense = useRef(null);
   const refCashFlow   = useRef(null);
 
+  // Scroll view ref for programmatic scrolling during tour
+  const scrollViewRef = useRef(null);
 
   // Tracks current scroll offset — ref to avoid re-renders
   const scrollOffsetRef = useRef(0);
@@ -178,14 +180,15 @@ const HomeScreen = () => {
     const keys = ["heroCard", "addIncome", "owed", "addExpense", "cashFlow"];
     const refs = [refHeroCard, refAddIncome, refOwed, refAddExpense, refCashFlow];
     const next = {};
+    // Only count refs that are currently mounted so the done-check can fire
+    const mountedCount = refs.filter(r => r.current).length;
+    if (mountedCount === 0) return;
     let done = 0;
     const ratio = PixelRatio.get();
 
     refs.forEach((ref, i) => {
       if (ref.current) {
         ref.current.measure((x, y, width, height, pageX, pageY) => {
-          // .measure() should return points but some Android versions return pixels.
-          // Detect: if pageX > SCREEN_W, values are in pixels — divide by ratio.
           const { width: screenW } = Dimensions.get("window");
           const needsRatio = pageX > screenW;
           const px = needsRatio ? pageX / ratio : pageX;
@@ -194,7 +197,7 @@ const HomeScreen = () => {
           const ph = needsRatio ? height / ratio : height;
           next[keys[i]] = { pageX: px, pageY: py, width: pw, height: ph };
           done++;
-          if (done === keys.length) setMeasurements({ ...next });
+          if (done === mountedCount) setMeasurements({ ...next });
         });
       }
     });
@@ -216,7 +219,7 @@ const HomeScreen = () => {
   }, []);
 
   const handleTourNext = async () => {
-    if (tourStep >= 5) {
+    if (tourStep >= TOUR_STEPS.length) {
       setTourVisible(false);
       setTourStep(1);
       setShowNudge(true);
@@ -226,6 +229,13 @@ const HomeScreen = () => {
       await AsyncStorage.setItem(`maggo_checklist_dismissed_${userId}`, "true");
     } else {
       const next = tourStep + 1;
+      // Step 3 is the Owed section — scroll it into view before the tooltip renders
+      if (next === 3 && measurements.owed) {
+        const docY = measurements.owed.pageY + scrollOffsetRef.current;
+        try {
+          scrollViewRef.current?.getScrollResponder()?.scrollTo({ y: Math.max(0, docY - 120), animated: true });
+        } catch (_) {}
+      }
       setTourStep(next);
       await AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(next));
     }
@@ -409,14 +419,30 @@ const HomeScreen = () => {
     }
   };
 
-  const handleMarkPaid = async (invoice) => {
-    try {
-      await api.patch(`/invoices/${invoice._id}/pay`);
-      track("owed_marked_paid", { amount: invoice.amount });
-      await fetchData();
-    } catch (e) {
-      Alert.alert("Error", "Could not mark as paid. Please try again.");
-    }
+  const handleMarkPaid = (invoice) => {
+    Alert.alert(
+      "Mark as paid?",
+      `${formatCurrency(invoice.amount, userDetails?.currency || "USD", userDetails?.locale || "en-US")} from ${invoice.client}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Mark Paid",
+          onPress: async () => {
+            try {
+              await api.patch(`/invoices/${invoice._id}/pay`);
+              track("owed_marked_paid", { amount: invoice.amount });
+              await fetchData();
+            } catch (e) {
+              if (e.response?.status === 409) {
+                await fetchData(); // already paid — just refresh silently
+              } else {
+                Alert.alert("Error", "Could not mark as paid. Please try again.");
+              }
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleOpenRemind = async (invoice) => {
@@ -579,6 +605,7 @@ const HomeScreen = () => {
       </View>
 
       <Animated.ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!receiptModalVisible}
@@ -665,12 +692,8 @@ const HomeScreen = () => {
                 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#34d399" }} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Income</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(
-                                            totalIncomes,
-                                            userDetails?.currency || "USD",
-                                            userDetails?.locale || "en-US"
-                                          )}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Earned</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(totalIncomes, userDetails?.currency || "USD", userDetails?.locale || "en-US")}</Text>
                   </View>
                 </View>
                 {/* Expense pill */}
@@ -683,66 +706,29 @@ const HomeScreen = () => {
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f87171" }} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Expenses</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(
-                                            totalExpenses,
-                                            userDetails?.currency || "USD",
-                                            userDetails?.locale || "en-US"
-                                          )}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(totalExpenses, userDetails?.currency || "USD", userDetails?.locale || "en-US")}</Text>
                   </View>
                 </View>
               </View>
+
+              {/* In/out bar */}
+              {(totalIncomes + totalExpenses) > 0 && (
+                <View style={{ marginTop: 14, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                  <View style={{
+                    height: 4, borderRadius: 2, backgroundColor: "#34d399",
+                    width: `${Math.round(totalIncomes / (totalIncomes + totalExpenses) * 100)}%`,
+                  }} />
+                </View>
+              )}
+
+              {/* Tax estimate */}
+              {netBalance > 0 && (
+                <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 10, fontWeight: "500" }}>
+                  {`Keep about ${formatCurrency(netBalance * 0.25, userDetails?.currency || "USD", userDetails?.locale || "en-US")} aside for tax.`}
+                </Text>
+              )}
             </View>
           </View>
-
-          {/* Post-tour nudge card */}
-          {showNudge && (
-            <View style={{
-              backgroundColor: "#111827",
-              borderRadius: 14,
-              borderWidth: 0.5,
-              borderColor: "rgba(255,255,255,0.08)",
-              overflow: "hidden",
-              marginBottom: 12,
-            }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 0 }}>
-                <Text style={{ fontSize: 11, color: "#34d399", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "500" }}>
-                  Get started
-                </Text>
-                <TouchableOpacity onPress={() => setShowNudge(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Dismiss</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14 }}>
-                <Text style={{ fontSize: 17, fontWeight: "600", color: "#F8FAFC", letterSpacing: -0.3, marginBottom: 4, lineHeight: 22 }}>
-                  Ready, {userName?.split(" ")[0]}.
-                </Text>
-                <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", lineHeight: 19, marginBottom: 14 }}>
-                  Log your first payment and watch your balance update live.
-                </Text>
-              </View>
-              <View style={{ height: 0.5, backgroundColor: "rgba(255,255,255,0.07)", marginHorizontal: 16, marginBottom: 14 }} />
-              <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingBottom: 14 }}>
-                <TouchableOpacity
-                  style={{ flex: 1, paddingVertical: 9, borderRadius: 8, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}
-                  onPress={() => setShowNudge(false)}
-                >
-                  <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>Later</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{ flex: 2, paddingVertical: 9, borderRadius: 8, backgroundColor: "#34d399", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}
-                  onPress={() => {
-                    track("nudge_log_payment_tapped");
-                    setShowNudge(false);
-                    track("income_modal_opened", { source: "nudge" });
-                    setLogIncomeVisible(true);
-                  }}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#052e16" }}>Log payment</Text>
-                  <Ionicons name="arrow-forward" size={13} color="#052e16" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
 
           {/* Primary Actions */}
           <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
@@ -814,9 +800,42 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </View>
 
+          {/* Post-tour nudge card */}
+          {showNudge && (
+            <View style={{ backgroundColor: "#111827", borderRadius: 14, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: 20 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 0 }}>
+                <Text style={{ fontSize: 11, color: "#34d399", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "500" }}>Get started</Text>
+                <TouchableOpacity onPress={() => setShowNudge(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Dismiss</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14 }}>
+                <Text style={{ fontSize: 17, fontWeight: "600", color: "#F8FAFC", letterSpacing: -0.3, marginBottom: 4, lineHeight: 22 }}>
+                  Ready, {userName?.split(" ")[0]}.
+                </Text>
+                <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", lineHeight: 19, marginBottom: 14 }}>
+                  Log your first payment and watch your balance update live.
+                </Text>
+              </View>
+              <View style={{ height: 0.5, backgroundColor: "rgba(255,255,255,0.07)", marginHorizontal: 16, marginBottom: 14 }} />
+              <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingBottom: 14 }}>
+                <TouchableOpacity style={{ flex: 1, paddingVertical: 9, borderRadius: 8, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }} onPress={() => setShowNudge(false)}>
+                  <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>Later</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 2, paddingVertical: 9, borderRadius: 8, backgroundColor: "#34d399", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}
+                  onPress={() => { track("nudge_log_payment_tapped"); setShowNudge(false); track("income_modal_opened", { source: "nudge" }); setLogIncomeVisible(true); }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#052e16" }}>Log payment</Text>
+                  <Ionicons name="arrow-forward" size={13} color="#052e16" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Owed to You */}
-          <View style={{ marginBottom: 28 }}>
-            <View ref={refOwed} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <View ref={refOwed} style={{ marginBottom: 28 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <View>
                 <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 }}>
                   Owed to You
@@ -844,92 +863,65 @@ const HomeScreen = () => {
             </View>
 
             {owedSummary.items.length === 0 ? (
-              <View style={{
-                backgroundColor: "#fff",
-                borderRadius: 16,
-                padding: 20,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: "#F1F5F9",
-              }}>
+              <View style={{ backgroundColor: "#fff", borderRadius: 16, padding: 20, alignItems: "center", borderWidth: 1, borderColor: "#F1F5F9" }}>
                 <Text style={{ fontSize: 14, color: "#94A3B8", fontWeight: "500" }}>No outstanding payments</Text>
               </View>
             ) : (
               <>
                 {owedSummary.totalOwed > 0 && (
-                  <View style={{
-                    backgroundColor: "#0F172A",
-                    borderRadius: 14,
-                    paddingVertical: 12,
-                    paddingHorizontal: 16,
-                    marginBottom: 10,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}>
+                  <View style={{ backgroundColor: "#0F172A", borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>Total owed</Text>
                     <Text style={{ fontSize: 18, fontWeight: "800", color: "#34d399" }}>
                       {formatCurrency(owedSummary.totalOwed, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
                     </Text>
                   </View>
                 )}
-                {owedSummary.items.map((inv) => {
-                  const isOverdue = new Date(inv.dueDate) < new Date();
-                  return (
-                    <View
-                      key={inv._id}
-                      style={{
-                        backgroundColor: "#fff",
-                        borderRadius: 14,
-                        padding: 14,
-                        marginBottom: 8,
-                        borderWidth: 1,
-                        borderColor: isOverdue ? "#FEE2E2" : "#F1F5F9",
-                        shadowColor: "#000",
-                        shadowOpacity: 0.04,
-                        shadowRadius: 6,
-                        shadowOffset: { width: 0, height: 2 },
-                        elevation: 2,
-                      }}
-                    >
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A", flex: 1, marginRight: 8 }} numberOfLines={1}>{inv.client}</Text>
-                        <Text style={{ fontSize: 15, fontWeight: "700", color: isOverdue ? "#EF4444" : "#10B981" }}>
-                          {formatCurrency(inv.amount, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+                {/* Single white card with rows */}
+                <View style={{ backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: "#F1F5F9", overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
+                  {owedSummary.items.map((inv, index) => {
+                    const isOverdue = new Date(inv.dueDate) < new Date();
+                    return (
+                      <View
+                        key={inv._id}
+                        style={{
+                          padding: 14,
+                          borderTopWidth: index === 0 ? 0 : 1,
+                          borderTopColor: "#F1F5F9",
+                          backgroundColor: isOverdue ? "#FFFAF9" : "#fff",
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                          <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A", flex: 1, marginRight: 8 }} numberOfLines={1}>{inv.client}</Text>
+                          <Text style={{ fontSize: 15, fontWeight: "700", color: isOverdue ? "#EF4444" : "#10B981" }}>
+                            {formatCurrency(inv.amount, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11, color: isOverdue ? "#EF4444" : "#94A3B8", marginBottom: 10, fontWeight: isOverdue ? "600" : "400" }}>
+                          {isOverdue ? "Overdue · " : "Due · "}
+                          {new Date(inv.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </Text>
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          {isOverdue && (
+                            <TouchableOpacity
+                              onPress={() => handleOpenRemind(inv)}
+                              style={{ flex: 1, paddingVertical: 7, borderRadius: 8, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}
+                            >
+                              <Ionicons name="send-outline" size={13} color="#64748B" />
+                              <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151" }}>Remind</Text>
+                            </TouchableOpacity>
+                          )}
+                          <TouchableOpacity
+                            onPress={() => handleMarkPaid(inv)}
+                            style={{ flex: 1, paddingVertical: 7, borderRadius: 8, backgroundColor: "#ECFDF5", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}
+                          >
+                            <Ionicons name="checkmark-circle-outline" size={13} color="#059669" />
+                            <Text style={{ fontSize: 12, fontWeight: "600", color: "#059669" }}>Mark Paid</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <Text style={{ fontSize: 11, color: isOverdue ? "#EF4444" : "#94A3B8", marginBottom: 10, fontWeight: isOverdue ? "600" : "400" }}>
-                        {isOverdue ? "Overdue · " : "Due · "}
-                        {new Date(inv.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </Text>
-                      <View style={{ flexDirection: "row", gap: 8 }}>
-                        <TouchableOpacity
-                          onPress={() => handleOpenRemind(inv)}
-                          style={{
-                            flex: 1, paddingVertical: 7, borderRadius: 8,
-                            backgroundColor: "#F8FAFC",
-                            borderWidth: 1, borderColor: "#E2E8F0",
-                            flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
-                          }}
-                        >
-                          <Ionicons name="send-outline" size={13} color="#64748B" />
-                          <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151" }}>Remind</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => handleMarkPaid(inv)}
-                          style={{
-                            flex: 1, paddingVertical: 7, borderRadius: 8,
-                            backgroundColor: "#ECFDF5",
-                            flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
-                          }}
-                        >
-                          <Ionicons name="checkmark-circle-outline" size={13} color="#059669" />
-                          <Text style={{ fontSize: 12, fontWeight: "600", color: "#059669" }}>Mark Paid</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
+                    );
+                  })}
+                </View>
               </>
             )}
           </View>
@@ -1214,10 +1206,19 @@ const HomeScreen = () => {
 
           {/* Projects Section */}
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                Active Projects | {projectDetails.length}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 }}>
+                {`Projects · ${projectDetails.length} active`}
               </Text>
+              <TouchableOpacity
+                style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: "#EFF6FF" }}
+                onPress={() => {
+                  track("project_create_started", { source: "home_projects_row" });
+                  navigation.navigate("NewProject");
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#2563EB" }}>+ Add</Text>
+              </TouchableOpacity>
             </View>
 
             {loading && !refreshing ? (
