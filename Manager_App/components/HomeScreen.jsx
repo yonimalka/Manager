@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TextInput,
+  InputAccessoryView,
   ScrollView,
   ActivityIndicator,
   FlatList,
@@ -95,6 +96,7 @@ const HomeScreen = () => {
         stiffness: 220,
         mass: 0.9,
       }).start();
+      setTimeout(() => logIncomeAmountRef.current?.focus(), 250);
     }
   }, [logIncomeVisible]);
   const [logIncomeAmount, setLogIncomeAmount] = useState("");
@@ -118,6 +120,10 @@ const HomeScreen = () => {
   const [remindInvoice, setRemindInvoice] = useState(null);
 
   const logIncomeAmountRef = useRef(null);
+  const logIncomeClientRef = useRef(null);
+  const logIncomePhoneRef = useRef(null);
+  const logIncomeDescRef = useRef(null);
+  const LOG_INCOME_ACCESSORY_ID = "logIncomeAccessory";
 
   // First-run onboarding
   const [welcomeVisible, setWelcomeVisible] = useState(false);
@@ -1048,6 +1054,7 @@ const HomeScreen = () => {
                           value={logIncomeAmount}
                           onChangeText={setLogIncomeAmount}
                           keyboardType="decimal-pad"
+                          inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
                           placeholder="0"
                           placeholderTextColor="#CBD5E1"
                           style={{ fontSize: 56, fontWeight: "700", color: "#0F172A", letterSpacing: -2, minWidth: 60, maxWidth: 220, textAlign: "center", padding: 0 }}
@@ -1089,10 +1096,14 @@ const HomeScreen = () => {
                           <TextInput
                             value={logIncomeDescription}
                             onChangeText={setLogIncomeDescription}
+                            ref={logIncomeDescRef}
                             placeholder="Description (optional)"
                             placeholderTextColor="#CBD5E1"
                             style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
                             returnKeyType="done"
+                            autoCorrect={false}
+                            spellCheck={false}
+                            autoComplete="off"
                           />
                         </View>
                         <TouchableOpacity onPress={() => setShowDatePicker(!showDatePicker)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 }} activeOpacity={0.7}>
@@ -1136,10 +1147,17 @@ const HomeScreen = () => {
                           <TextInput
                             value={logIncomeClient}
                             onChangeText={setLogIncomeClient}
+                            ref={logIncomeClientRef}
                             placeholder="Client name (required)"
                             placeholderTextColor="#CBD5E1"
                             style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
                             returnKeyType="next"
+                            submitBehavior="submit"
+                            onSubmitEditing={() => logIncomePhoneRef.current?.focus()}
+                            autoCapitalize="words"
+                            autoCorrect={false}
+                            spellCheck={false}
+                            autoComplete="off"
                           />
                         </View>
                         {/* Phone */}
@@ -1150,9 +1168,11 @@ const HomeScreen = () => {
                           <TextInput
                             value={logIncomeClientPhone}
                             onChangeText={setLogIncomeClientPhone}
+                            ref={logIncomePhoneRef}
                             placeholder="Phone (optional)"
                             placeholderTextColor="#CBD5E1"
                             keyboardType="phone-pad"
+                            inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
                             style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
                             returnKeyType="done"
                           />
@@ -1214,6 +1234,25 @@ const HomeScreen = () => {
                   </ScrollView>
                   </Animated.View>
                 </KeyboardAvoidingView>
+                {Platform.OS === "ios" && (
+                  <InputAccessoryView nativeID={LOG_INCOME_ACCESSORY_ID}>
+                    <View style={{ flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 20, paddingHorizontal: 18, height: 44, backgroundColor: "#F8FAFC", borderTopWidth: 1, borderTopColor: "#E2E8F0" }}>
+                      <Pressable
+                        hitSlop={8}
+                        onPress={() => {
+                          if (logIncomePhoneRef.current?.isFocused()) { Keyboard.dismiss(); return; }
+                          if (logIncomePaidStatus === "owed") logIncomeClientRef.current?.focus();
+                          else logIncomeDescRef.current?.focus();
+                        }}
+                      >
+                        <Text style={{ fontSize: 16, fontWeight: "600", color: "#3B82F6" }}>Next</Text>
+                      </Pressable>
+                      <Pressable hitSlop={8} onPress={() => Keyboard.dismiss()}>
+                        <Text style={{ fontSize: 16, fontWeight: "700", color: "#0F172A" }}>Done</Text>
+                      </Pressable>
+                    </View>
+                  </InputAccessoryView>
+                )}
               </View>
             </Modal>
 
