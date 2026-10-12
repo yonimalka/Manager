@@ -2,7 +2,6 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { Animated, AppState, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const BOTTOM_NAV_HEIGHT = 95; // BottomNavBar height:70 + bottom:25
 
 const UndoContext = createContext(null);
 export const useUndoToast = () => useContext(UndoContext);
@@ -104,7 +103,7 @@ export function UndoToastProvider({ children }) {
     };
   }, []);
 
-  const bottom = insets.bottom + BOTTOM_NAV_HEIGHT + 12;
+  const bottom = insets.bottom + 8;
 
   const animStyle = {
     opacity: anim,
@@ -124,25 +123,26 @@ export function UndoToastProvider({ children }) {
               {
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: "#0F172A",
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: "#E2E8F0",
                 borderRadius: 14,
                 paddingVertical: 14,
-                paddingLeft: 16,
-                paddingRight: 8,
-                shadowColor: "#000",
-                shadowOpacity: 0.25,
-                shadowRadius: 20,
-                shadowOffset: { width: 0, height: 8 },
-                elevation: 8,
+                paddingHorizontal: 16,
+                shadowColor: "#0F172A",
+                shadowOpacity: 0.12,
+                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 6,
               },
               animStyle,
             ]}
           >
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "600", color: "#fff" }} numberOfLines={1}>
+            <Text style={{ flex: 1, fontSize: 14, fontWeight: "600", color: "#0F172A" }} numberOfLines={1}>
               {displayed.message}
             </Text>
             <TouchableOpacity onPress={handleUndo} hitSlop={10} style={{ paddingHorizontal: 14, paddingVertical: 7 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#34d399" }}>Undo</Text>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#2563EB" }}>Undo</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
