@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Updates from "expo-updates";
 import * as Notifications from "expo-notifications";
 import { PostHogProvider } from "posthog-react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MainApp from "./MainApp";
 import { usePostHogBridge, track } from "../utils/analytics";
 
@@ -38,23 +39,25 @@ const App = () => {
   }, []);
 
   return (
-    <PostHogProvider
-      apiKey="phc_wnUfWr7fZ5W27DR6uDQm7NV9XoQSNEDBtCdVxtnCLwye"
-      options={{
-        host: "https://us.i.posthog.com",
-        enableSessionReplay: true,
-        captureAppLifecycleEvents: true,
-        errorTracking: { autocapture: true },
-      }}
-      autocapture={{
-        captureTouches: true,
-        captureLifecycleEvents: true,
-        captureScreens: true,
-      }}
-    >
-      <PostHogBridge />
-      <MainApp />
-    </PostHogProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PostHogProvider
+        apiKey="phc_wnUfWr7fZ5W27DR6uDQm7NV9XoQSNEDBtCdVxtnCLwye"
+        options={{
+          host: "https://us.i.posthog.com",
+          enableSessionReplay: true,
+          captureAppLifecycleEvents: true,
+          errorTracking: { autocapture: true },
+        }}
+        autocapture={{
+          captureTouches: true,
+          captureLifecycleEvents: true,
+          captureScreens: true,
+        }}
+      >
+        <PostHogBridge />
+        <MainApp />
+      </PostHogProvider>
+    </GestureHandlerRootView>
   );
 };
 
