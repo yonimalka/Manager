@@ -25,6 +25,7 @@ const ReceiptModel = require ("./models/Receipt");
 const ProjectModel = require("./models/Project");
 const IncomeReceipt = require('./models/IncomeReceipt');
 const IncomeModel = require("./models/Incomes");
+const InvoiceModel = require("./models/Invoice");
 const MaterialPriceHistory = require("./models/MaterialPriceHistory");
 const generateReceiptNumber = require('./utils/generateReceiptNumber');
 const { calcIncomesForPeriod, calcExpensesForPeriod } = require("./utils/financialCalculations");
@@ -1050,43 +1051,161 @@ app.post("/incomeReceipt", authMiddleware, async (req, res) => {
   }
 });
 
+// Shared helper — creates an Income record and optionally increments Project.paid
+const createIncomeRecord = async ({ userId, amount, description, projectId, date, currency, referenceId }) => {
+  const parsed = Number(amount);
+  const income = await IncomeModel.create({
+    userId,
+    projectId: projectId || null,
+    source: projectId ? "project" : "standalone",
+    services: [{ description: description || "Income", quantity: 1, unitPrice: parsed, lineTotal: parsed }],
+    subtotal: parsed,
+    taxRate: 0,
+    tax: 0,
+    total: parsed,
+    currency: currency || "USD",
+    payer: description || "client",
+    date: date ? new Date(date) : new Date(),
+    ...(referenceId ? { referenceId } : {}),
+  });
+  if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
+    await ProjectModel.findByIdAndUpdate(projectId, { $inc: { paid: parsed } });
+  }
+  return income;
+};
+
 app.post("/income", authMiddleware, async (req, res) => {
   try {
     const { amount, description, projectId, date, currency } = req.body;
-
     const parsed = Number(amount);
     if (!parsed || parsed <= 0) {
       return res.status(400).json({ error: "Valid amount is required" });
     }
-
-    const income = await IncomeModel.create({
-      userId: req.userId,
-      projectId: projectId || null,
-      source: projectId ? "project" : "standalone",
-      services: [{
-        description: description || "Income",
-        quantity: 1,
-        unitPrice: parsed,
-        lineTotal: parsed,
-      }],
-      subtotal: parsed,
-      taxRate: 0,
-      tax: 0,
-      total: parsed,
-      currency: currency || "USD",
-      payer: description || "client",
-      date: date ? new Date(date) : new Date(),
-    });
-
-    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-      await ProjectModel.findByIdAndUpdate(projectId, {
-        $inc: { paid: parsed },
-      });
-    }
-
+    const income = await createIncomeRecord({ userId: req.userId, amount: parsed, description, projectId, date, currency });
     res.status(201).json(income);
   } catch (err) {
     console.error("Log income error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Invoice routes ──────────────────────────────────────────────────────────
+
+app.post("/invoices", authMiddleware, async (req, res) => {
+  try {
+    const { client, clientPhone, amount, currency, projectId, dueDays, dueDate } = req.body;
+    if (!client || !client.trim()) return res.status(400).json({ error: "Client name is required" });
+    const parsed = Number(amount);
+    if (!parsed || parsed <= 0) return res.status(400).json({ error: "Valid amount is required" });
+
+    let due;
+    if (dueDate) {
+      due = new Date(dueDate);
+    } else {
+      const days = Number(dueDays) || 14;
+      due = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    }
+    if (isNaN(due.getTime())) return res.status(400).json({ error: "Invalid due date" });
+
+    const user = await UserModel.findById(req.userId).select("currency");
+    const invoice = await InvoiceModel.create({
+      userId: req.userId,
+      projectId: projectId || null,
+      client: client.trim(),
+      clientPhone: clientPhone || null,
+      amount: parsed,
+      currency: currency || user?.currency || "USD",
+      dueDate: due,
+    });
+    res.status(201).json(invoice);
+  } catch (err) {
+    console.error("Create invoice error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/invoices/summary", authMiddleware, async (req, res) => {
+  try {
+    const now = new Date();
+    const unpaid = await InvoiceModel.find({ userId: req.userId, status: "unpaid" })
+      .sort({ dueDate: 1 })
+      .lean();
+
+    const totalOwed = unpaid.reduce((sum, inv) => sum + inv.amount, 0);
+    const overdueCount = unpaid.filter((inv) => inv.dueDate < now).length;
+
+    // Overdue first, then by dueDate ascending; cap at 5
+    const overdue = unpaid.filter((inv) => inv.dueDate < now).sort((a, b) => a.dueDate - b.dueDate);
+    const upcoming = unpaid.filter((inv) => inv.dueDate >= now).sort((a, b) => a.dueDate - b.dueDate);
+    const items = [...overdue, ...upcoming].slice(0, 5);
+
+    res.json({ totalOwed, overdueCount, items });
+  } catch (err) {
+    console.error("Invoice summary error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch("/invoices/:id/pay", authMiddleware, async (req, res) => {
+  try {
+    const invoice = await InvoiceModel.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId, status: "unpaid" },
+      { status: "paid", paidAt: new Date() },
+      { new: true }
+    );
+    if (!invoice) return res.status(409).json({ error: "Invoice not found or already paid" });
+
+    let income;
+    try {
+      income = await createIncomeRecord({
+        userId: req.userId,
+        amount: invoice.amount,
+        description: invoice.client,
+        projectId: invoice.projectId,
+        currency: invoice.currency,
+        referenceId: invoice._id,
+      });
+      await InvoiceModel.findByIdAndUpdate(invoice._id, { incomeId: income._id });
+    } catch (incomeErr) {
+      // Revert the status change if income creation fails
+      await InvoiceModel.findByIdAndUpdate(invoice._id, { status: "unpaid", paidAt: null });
+      console.error("Income creation failed, reverted invoice:", incomeErr);
+      return res.status(500).json({ error: "Failed to record income" });
+    }
+
+    res.json({ invoice, income });
+  } catch (err) {
+    console.error("Mark paid error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch("/invoices/:id/remind", authMiddleware, async (req, res) => {
+  try {
+    const invoice = await InvoiceModel.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
+      { lastRemindedAt: new Date() },
+      { new: true }
+    );
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    res.json(invoice);
+  } catch (err) {
+    console.error("Remind error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/invoices/:id", authMiddleware, async (req, res) => {
+  try {
+    const invoice = await InvoiceModel.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.userId,
+      status: "unpaid",
+    });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found or already paid" });
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error("Delete invoice error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1943,6 +2062,7 @@ app.delete("/deleteUser/:userId", async (req, res) => {
     ReceiptModel.deleteMany({ userId }),
     IncomeReceipt.deleteMany({ userId }),
     IncomeModel.deleteMany({ userId }),
+    InvoiceModel.deleteMany({ userId }),
     FixedExpenseModel.deleteMany({ userId }),
     MaterialPriceHistory.deleteMany({ userId }),
     mongoose.connection.collection("agents").deleteMany({ userId: new mongoose.Types.ObjectId(userId) }),
