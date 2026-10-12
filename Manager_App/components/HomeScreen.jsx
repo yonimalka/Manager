@@ -900,14 +900,14 @@ const HomeScreen = () => {
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 }}>Owed to You</Text>
               <TouchableOpacity
-                style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: "#ECFDF5" }}
+                style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: "#EFF6FF" }}
                 onPress={() => {
                   track("income_modal_opened", { source: "owed_add" });
                   setLogIncomePaidStatus("owed");
                   setLogIncomeVisible(true);
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#059669" }}>+ Add</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#2563EB" }}>+ Add</Text>
               </TouchableOpacity>
             </View>
 
