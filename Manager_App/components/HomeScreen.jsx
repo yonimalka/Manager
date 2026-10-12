@@ -825,6 +825,7 @@ const HomeScreen = () => {
               summary={owedSummary}
               currency={userDetails?.currency || "USD"}
               locale={userDetails?.locale || "en-US"}
+              region={userDetails?.address?.country}
               userName={userName}
               onAdd={() => { track("income_modal_opened", { source: "owed_add" }); setLogIncomePaidStatus("owed"); setLogIncomeVisible(true); }}
               onChanged={fetchData}

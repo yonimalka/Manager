@@ -1,18 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   Alert,
-  Modal,
-  Pressable,
-  Platform,
+  TextInput,
   Linking,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import api from "../services/api";
 import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
+import BottomSheet from "./BottomSheet";
+
+const COUNTRY_CODES = { US: "1", CA: "1", GB: "44", IL: "972", AU: "61", IE: "353" };
+
+const toIntl = (raw, region) => {
+  if (!raw) return "";
+  let s = String(raw).trim();
+  if (s.startsWith("+")) return s.replace(/\D/g, "");
+  let d = s.replace(/\D/g, "");
+  if (d.startsWith("00")) return d.slice(2);
+  const cc = COUNTRY_CODES[region];
+  if (!cc) return d;
+  if ((region === "US" || region === "CA") && d.length === 10) return "1" + d;
+  if (d.startsWith("0")) return cc + d.slice(1);
+  return d;
+};
 
 const calcDayDiff = (dueDate) => {
   const now = new Date();
@@ -33,10 +48,22 @@ const isRemindedToday = (inv) => {
   );
 };
 
-export default function OwedSection({ summary, currency, locale, userName, onAdd, onChanged }) {
+const calcRemDaysAgo = (lastRemindedAt) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(lastRemindedAt);
+  d.setHours(0, 0, 0, 0);
+  return Math.round((today - d) / 86400000);
+};
+
+export default function OwedSection({ summary, currency, locale, userName, region: regionProp, onAdd, onChanged }) {
+  const region = regionProp || locale.split("-")[1] || "US";
+
   const [remindSheetVisible, setRemindSheetVisible] = useState(false);
   const [remindInvoice, setRemindInvoice] = useState(null);
   const [remindedIds, setRemindedIds] = useState({});
+  const [remindPhone, setRemindPhone] = useState("");
+  const remindPhoneRef = useRef(null);
 
   const handleMarkPaid = (invoice) => {
     Alert.alert(
@@ -64,13 +91,24 @@ export default function OwedSection({ summary, currency, locale, userName, onAdd
     );
   };
 
-  const handleOpenRemind = async (invoice) => {
+  const handleOpenRemind = (invoice) => {
     setRemindInvoice(invoice);
+    setRemindPhone(invoice.clientPhone || "");
     setRemindSheetVisible(true);
+  };
+
+  const markReminded = async (invoice, channel) => {
     setRemindedIds((prev) => ({ ...prev, [invoice._id]: true }));
     try {
       await api.patch(`/invoices/${invoice._id}/remind`);
-      track("owed_reminder_sent", { amount: invoice.amount });
+      track("owed_reminder_sent", { amount: invoice.amount, channel });
+    } catch (e) {}
+  };
+
+  const savePhone = async (invoiceId, phone) => {
+    try {
+      await api.patch(`/invoices/${invoiceId}`, { clientPhone: phone });
+      onChanged();
     } catch (e) {}
   };
 
@@ -174,6 +212,9 @@ export default function OwedSection({ summary, currency, locale, userName, onAdd
               statusWeight = "400";
             }
 
+            const showRemindedAgo = inv.lastRemindedAt && !isRemindedToday(inv);
+            const remDaysAgo = showRemindedAgo ? calcRemDaysAgo(inv.lastRemindedAt) : 0;
+
             let barPct;
             if (days <= 0) {
               barPct = 1;
@@ -213,14 +254,19 @@ export default function OwedSection({ summary, currency, locale, userName, onAdd
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "flex-end", marginLeft: 48, gap: 10 }}>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontWeight: statusWeight, color: statusColor, marginBottom: 5 }}>{statusLabel}</Text>
+                        <Text style={{ fontSize: 13, fontWeight: statusWeight, color: statusColor, marginBottom: 5 }}>
+                          {statusLabel}
+                          {showRemindedAgo && (
+                            <Text style={{ fontWeight: "400" }}>{` · reminded ${remDaysAgo}d ago`}</Text>
+                          )}
+                        </Text>
                         <View style={{ width: 96, height: 4, backgroundColor: "#F1F5F9", borderRadius: 2, overflow: "hidden" }}>
                           <View style={{ width: Math.round(barPct * 96), height: 4, backgroundColor: barColor, borderRadius: 2 }} />
                         </View>
                       </View>
                       <View style={{ flexDirection: "row", gap: 6 }}>
                         <TouchableOpacity
-                          onPress={() => { if (!reminded) handleOpenRemind(inv); }}
+                          onPress={() => handleOpenRemind(inv)}
                           style={{ minHeight: 34, paddingHorizontal: 10, borderRadius: 10, backgroundColor: remBg, borderWidth: remBorderW, borderColor: remBorderC, flexDirection: "row", alignItems: "center", gap: 5 }}
                         >
                           <Ionicons name="chatbubble-outline" size={13} color={remTxt} />
@@ -244,59 +290,87 @@ export default function OwedSection({ summary, currency, locale, userName, onAdd
       )}
 
       {/* Remind sheet */}
-      <Modal
-        visible={remindSheetVisible}
-        animationType="slide"
-        transparent
-        statusBarTranslucent
-        onRequestClose={() => setRemindSheetVisible(false)}
-      >
-        <View style={{ flex: 1 }}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }} onPress={() => setRemindSheetVisible(false)} />
-          <View style={{ backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: Platform.OS === "ios" ? 44 : 28, paddingHorizontal: 22 }}>
-            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12, marginBottom: 20 }} />
-            <Text style={{ fontSize: 17, fontWeight: "700", color: "#0F172A", marginBottom: 4 }}>Send Reminder</Text>
-            {remindInvoice && (
-              <Text style={{ fontSize: 13, color: "#64748B", marginBottom: 22 }}>
-                To {remindInvoice.client} · {formatCurrency(remindInvoice.amount, currency, locale)}
-              </Text>
-            )}
-            <View style={{ backgroundColor: "#F8FAFC", borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: "#E2E8F0" }}>
-              <Text style={{ fontSize: 13, color: "#0F172A", lineHeight: 20 }}>
-                {getRemindMessage(remindInvoice)}
-              </Text>
-            </View>
-            {/* WhatsApp */}
-            <TouchableOpacity
-              style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#ECFDF5", borderRadius: 14, padding: 16, marginBottom: 10 }}
-              onPress={async () => {
-                const phone = remindInvoice?.clientPhone?.replace(/\D/g, "") || "";
-                const msg = encodeURIComponent(getRemindMessage(remindInvoice));
-                const url = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
-                try { await Linking.openURL(url); } catch (e) {}
-                setRemindSheetVisible(false);
-              }}
-            >
-              <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A" }}>Send via WhatsApp</Text>
-            </TouchableOpacity>
-            {/* SMS */}
-            <TouchableOpacity
-              style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#EFF6FF", borderRadius: 14, padding: 16, marginBottom: 16 }}
-              onPress={async () => {
-                const phone = remindInvoice?.clientPhone || "";
-                const msg = encodeURIComponent(getRemindMessage(remindInvoice));
-                const url = Platform.OS === "ios" ? `sms:${phone}&body=${msg}` : `sms:${phone}?body=${msg}`;
-                try { await Linking.openURL(url); } catch (e) {}
-                setRemindSheetVisible(false);
-              }}
-            >
-              <Ionicons name="chatbubble-outline" size={22} color="#3B82F6" />
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A" }}>Send via SMS</Text>
-            </TouchableOpacity>
+      <BottomSheet visible={remindSheetVisible} onClose={() => setRemindSheetVisible(false)}>
+        <Text style={{ fontSize: 17, fontWeight: "700", color: "#0F172A", marginBottom: 4 }}>Send Reminder</Text>
+
+        {/* Contact line: static when phone known, input when missing */}
+        {remindInvoice?.clientPhone ? (
+          <Text style={{ fontSize: 13, color: "#64748B", marginBottom: 22 }}>
+            To {remindInvoice.client} · {remindInvoice.clientPhone}
+          </Text>
+        ) : (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#64748B", marginBottom: 6 }}>
+              Add {remindInvoice ? remindInvoice.client.trim().split(/\s+/)[0] : ""}'s number (optional)
+            </Text>
+            <TextInput
+              ref={remindPhoneRef}
+              value={remindPhone}
+              onChangeText={setRemindPhone}
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              placeholder="+1 555 000 0000"
+              placeholderTextColor="#CBD5E1"
+              style={{ fontSize: 14, color: "#0F172A", backgroundColor: "#F8FAFC", borderRadius: 10, borderWidth: 1, borderColor: "#E2E8F0", paddingHorizontal: 12, paddingVertical: 10 }}
+            />
           </View>
+        )}
+
+        {/* Prefilled message */}
+        <View style={{ backgroundColor: "#F8FAFC", borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: "#E2E8F0" }}>
+          <Text style={{ fontSize: 13, color: "#0F172A", lineHeight: 20 }}>
+            {getRemindMessage(remindInvoice)}
+          </Text>
         </View>
-      </Modal>
+
+        {/* WhatsApp */}
+        <TouchableOpacity
+          style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#ECFDF5", borderRadius: 14, padding: 16, marginBottom: 10 }}
+          onPress={async () => {
+            const rawPhone = remindInvoice?.clientPhone || remindPhone.trim();
+            const intlPhone = toIntl(rawPhone, region);
+            const msg = encodeURIComponent(getRemindMessage(remindInvoice));
+            const url = intlPhone ? `https://wa.me/${intlPhone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+            try {
+              await Linking.openURL(url);
+              if (!remindInvoice?.clientPhone && remindPhone.trim()) {
+                savePhone(remindInvoice._id, remindPhone.trim());
+              }
+              await markReminded(remindInvoice, "whatsapp");
+              setRemindSheetVisible(false);
+            } catch (e) {
+              Alert.alert("Couldn't open WhatsApp", "Make sure it's installed, or try the other option.");
+            }
+          }}
+        >
+          <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A" }}>Send via WhatsApp</Text>
+        </TouchableOpacity>
+
+        {/* SMS */}
+        <TouchableOpacity
+          style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#EFF6FF", borderRadius: 14, padding: 16, marginBottom: 4 }}
+          onPress={async () => {
+            const rawPhone = remindInvoice?.clientPhone || remindPhone.trim();
+            const intlPhone = rawPhone ? "+" + toIntl(rawPhone, region) : "";
+            const msg = encodeURIComponent(getRemindMessage(remindInvoice));
+            const url = Platform.OS === "ios" ? `sms:${intlPhone}&body=${msg}` : `sms:${intlPhone}?body=${msg}`;
+            try {
+              await Linking.openURL(url);
+              if (!remindInvoice?.clientPhone && remindPhone.trim()) {
+                savePhone(remindInvoice._id, remindPhone.trim());
+              }
+              await markReminded(remindInvoice, "sms");
+              setRemindSheetVisible(false);
+            } catch (e) {
+              Alert.alert("Couldn't open Messages", "Make sure it's installed, or try the other option.");
+            }
+          }}
+        >
+          <Ionicons name="chatbubble-outline" size={22} color="#3B82F6" />
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A" }}>Send via SMS</Text>
+        </TouchableOpacity>
+      </BottomSheet>
     </>
   );
 }
