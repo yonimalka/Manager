@@ -36,3 +36,6 @@ yarn-error.*
 
 # Ignore everything inside config folder
 config/
+
+# Handoff folder (local only, never committed)
+handoff/
