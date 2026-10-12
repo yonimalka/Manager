@@ -5,7 +5,9 @@ import * as Updates from "expo-updates";
 import * as Notifications from "expo-notifications";
 import { PostHogProvider } from "posthog-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import MainApp from "./MainApp";
+import { UndoToastProvider } from "./UndoToast";
 import { usePostHogBridge, track } from "../utils/analytics";
 
 const PostHogBridge = () => {
@@ -40,23 +42,27 @@ const App = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PostHogProvider
-        apiKey="phc_wnUfWr7fZ5W27DR6uDQm7NV9XoQSNEDBtCdVxtnCLwye"
-        options={{
-          host: "https://us.i.posthog.com",
-          enableSessionReplay: true,
-          captureAppLifecycleEvents: true,
-          errorTracking: { autocapture: true },
-        }}
-        autocapture={{
-          captureTouches: true,
-          captureLifecycleEvents: true,
-          captureScreens: true,
-        }}
-      >
-        <PostHogBridge />
-        <MainApp />
-      </PostHogProvider>
+      <SafeAreaProvider>
+        <UndoToastProvider>
+          <PostHogProvider
+            apiKey="phc_wnUfWr7fZ5W27DR6uDQm7NV9XoQSNEDBtCdVxtnCLwye"
+            options={{
+              host: "https://us.i.posthog.com",
+              enableSessionReplay: true,
+              captureAppLifecycleEvents: true,
+              errorTracking: { autocapture: true },
+            }}
+            autocapture={{
+              captureTouches: true,
+              captureLifecycleEvents: true,
+              captureScreens: true,
+            }}
+          >
+            <PostHogBridge />
+            <MainApp />
+          </PostHogProvider>
+        </UndoToastProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 };

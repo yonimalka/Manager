@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import api from "../services/api";
 import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
 import BottomSheet from "./BottomSheet";
+import { useUndoToast } from "./UndoToast";
 
 // ─── Phone helpers ──────────────────────────────────────────────────────────
 
@@ -75,8 +76,6 @@ const calcRemDaysAgo = (lastRemindedAt) => {
 function RightAction({ prog, onDelete, onFullSwipe, screenWidth }) {
   const fired = useSharedValue(false);
 
-  // full swipe = dragged past 70% of screen width
-  // prog is (drag_distance / action_width=88), so threshold = screenWidth*0.7/88
   useAnimatedReaction(
     () => prog.value,
     (val) => {
@@ -122,6 +121,7 @@ export default function OwedSection({
 }) {
   const region = regionProp || locale.split("-")[1] || "US";
   const { width: screenWidth } = useWindowDimensions();
+  const { showUndo } = useUndoToast();
 
   // Remind sheet
   const [remindSheetVisible, setRemindSheetVisible] = useState(false);
@@ -132,74 +132,41 @@ export default function OwedSection({
 
   // Swipe-to-delete
   const [pendingDeleteIds, setPendingDeleteIds] = useState({});
-  const [toastInvoice, setToastInvoice] = useState(null);
-  const pendingRef = useRef({}); // { [id]: { invoice, method, timer } }
-  const openSwipeableRef = useRef(null); // tracks the currently open swipeable
+  const openSwipeableRef = useRef(null);
 
-  useEffect(() => {
-    return () => {
-      // On unmount: clear all pending timers (do NOT commit — safe failure)
-      Object.values(pendingRef.current).forEach(({ timer }) => clearTimeout(timer));
-    };
-  }, []);
-
-  const commitDelete = useCallback(
-    async (inv, method) => {
-      try {
-        await api.delete(`/invoices/${inv._id}`);
-        track("owed_deleted", { method, undone: false });
-        onChanged();
-      } catch (e) {
-        if (e.response?.status === 404) {
-          onChanged();
-        } else {
-          // Restore the row
+  const startDelete = useCallback(
+    (inv, method) => {
+      if (openSwipeableRef.current) {
+        openSwipeableRef.current.close();
+        openSwipeableRef.current = null;
+      }
+      setPendingDeleteIds((prev) => ({ ...prev, [inv._id]: true }));
+      showUndo({
+        message: `${inv.client} deleted`,
+        commit: async () => {
+          try {
+            await api.delete(`/invoices/${inv._id}`);
+            track("owed_deleted", { method, undone: false });
+          } catch (e) {
+            if (e?.response?.status !== 404) {
+              Alert.alert("Couldn't delete", "Please try again.");
+            }
+          } finally {
+            onChanged?.();
+          }
+        },
+        onUndo: () => {
           setPendingDeleteIds((prev) => {
             const next = { ...prev };
             delete next[inv._id];
             return next;
           });
-          Alert.alert("Couldn't delete", "Please try again.");
-        }
-      } finally {
-        delete pendingRef.current[inv._id];
-        setToastInvoice((cur) => (cur?._id === inv._id ? null : cur));
-      }
+          track("owed_delete_undone");
+        },
+      });
     },
-    [onChanged]
+    [showUndo, onChanged]
   );
-
-  const startDelete = useCallback(
-    (inv, method) => {
-      // Close any open swipeable row
-      if (openSwipeableRef.current) {
-        openSwipeableRef.current.close();
-        openSwipeableRef.current = null;
-      }
-      // Optimistically hide the row
-      setPendingDeleteIds((prev) => ({ ...prev, [inv._id]: true }));
-      setToastInvoice(inv);
-      // Schedule server delete after 5 s
-      const timer = setTimeout(() => commitDelete(inv, method), 5000);
-      pendingRef.current[inv._id] = { invoice: inv, method, timer };
-    },
-    [commitDelete]
-  );
-
-  const handleUndo = useCallback(() => {
-    if (!toastInvoice) return;
-    const entry = pendingRef.current[toastInvoice._id];
-    if (!entry) return;
-    clearTimeout(entry.timer);
-    delete pendingRef.current[toastInvoice._id];
-    setPendingDeleteIds((prev) => {
-      const next = { ...prev };
-      delete next[toastInvoice._id];
-      return next;
-    });
-    setToastInvoice(null);
-    track("owed_delete_undone");
-  }, [toastInvoice]);
 
   const handleMarkPaid = useCallback(
     (invoice) => {
@@ -302,7 +269,7 @@ export default function OwedSection({
     [handleOpenRemind, handleMarkPaid, startDelete]
   );
 
-  // Derived display values — exclude pending-deleted rows from totals
+  // Derived display values — exclude pending-deleted rows
   const visibleItems = summary.items.filter((inv) => !pendingDeleteIds[inv._id]);
   const pendingAmount = summary.items
     .filter((inv) => pendingDeleteIds[inv._id])
@@ -312,6 +279,23 @@ export default function OwedSection({
   ).length;
   const displayTotal = summary.totalOwed - pendingAmount;
   const displayOverdue = summary.overdueCount - pendingLate;
+
+  // Composition bar segments (excludes pending-deleted rows)
+  const lateAmt = visibleItems
+    .filter((inv) => calcDayDiff(inv.dueDate) < 0)
+    .reduce((s, inv) => s + inv.amount, 0);
+  const soonAmt = visibleItems
+    .filter((inv) => { const d = calcDayDiff(inv.dueDate); return d >= 0 && d <= 3; })
+    .reduce((s, inv) => s + inv.amount, 0);
+  const onTrackAmt = visibleItems
+    .filter((inv) => calcDayDiff(inv.dueDate) > 3)
+    .reduce((s, inv) => s + inv.amount, 0);
+  const barSegments = [
+    { key: "late", amount: lateAmt, color: "#EF4444", label: "late" },
+    { key: "soon", amount: soonAmt, color: "#F59E0B", label: "due soon" },
+    { key: "ontrack", amount: onTrackAmt, color: "#3B82F6", label: "on track" },
+  ].filter((seg) => seg.amount > 0);
+  const showCompositionBar = barSegments.length > 1;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -343,7 +327,7 @@ export default function OwedSection({
         /* Card */
         <View style={{ backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
           {/* Summary row */}
-          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View>
               <Text style={{ fontSize: 26, fontWeight: "800", color: "#0F172A", letterSpacing: -0.8 }}>
                 {formatCurrency(displayTotal, currency, locale)}
@@ -359,6 +343,31 @@ export default function OwedSection({
             )}
           </View>
 
+          {/* Composition bar */}
+          {showCompositionBar && (
+            <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+              <View style={{ flexDirection: "row", gap: 2, height: 6, borderRadius: 3, backgroundColor: "#F1F5F9", overflow: "hidden" }}>
+                {barSegments.map((seg) => (
+                  <View key={seg.key} style={{ flex: seg.amount, height: 6, backgroundColor: seg.color }} />
+                ))}
+              </View>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 8 }}>
+                {barSegments.map((seg) => (
+                  <View key={seg.key} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: seg.color }} />
+                    <Text style={{ fontSize: 12, color: "#475569" }}>
+                      <Text style={{ fontWeight: "700", color: "#0F172A" }}>{formatCurrency(seg.amount, currency, locale)}</Text>
+                      {" " + seg.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Divider */}
+          <View style={{ height: 1, backgroundColor: "#F1F5F9" }} />
+
           {/* Invoice rows */}
           {visibleItems.map((inv, rowIndex) => {
             const days = calcDayDiff(inv.dueDate);
@@ -372,8 +381,8 @@ export default function OwedSection({
               words.length >= 2
                 ? (words[0][0] + words[words.length - 1][0]).toUpperCase()
                 : words[0][0].toUpperCase();
-            const circleBg = isLate ? "#FEF2F2" : isToday || isSoon ? "#FFFBEB" : "#F1F5F9";
-            const circleText = isLate ? "#DC2626" : isToday || isSoon ? "#B45309" : "#475569";
+            const circleBg = isLate ? "#FEF2F2" : isToday || isSoon ? "#FFFBEB" : "#EFF6FF";
+            const circleText = isLate ? "#DC2626" : isToday || isSoon ? "#B45309" : "#2563EB";
 
             let statusLabel, statusColor, statusWeight;
             if (isLate) {
@@ -387,7 +396,7 @@ export default function OwedSection({
             } else if (isSoon) {
               statusLabel = `Due in ${days} days`; statusColor = "#B45309"; statusWeight = "600";
             } else {
-              statusLabel = `Due in ${days} days`; statusColor = "#64748B"; statusWeight = "400";
+              statusLabel = `Due in ${days} days`; statusColor = "#2563EB"; statusWeight = "500";
             }
 
             const showRemindedAgo = inv.lastRemindedAt && !isRemindedToday(inv);
@@ -403,7 +412,7 @@ export default function OwedSection({
               const total = dueMs - createdMs;
               barPct = total > 0 ? Math.max(0.06, Math.min(0.99, (nowMs - createdMs) / total)) : 0.06;
             }
-            const barColor = isLate ? "#EF4444" : isToday || isSoon ? "#F59E0B" : "#94A3B8";
+            const barColor = isLate ? "#EF4444" : isToday || isSoon ? "#F59E0B" : "#3B82F6";
 
             let remBg, remBorderW, remBorderC, remTxt, remLabel;
             if (reminded) {
@@ -429,7 +438,6 @@ export default function OwedSection({
                   />
                 )}
                 onSwipeableWillOpen={() => {
-                  // Close any other open row before this one opens
                   if (openSwipeableRef.current) {
                     openSwipeableRef.current.close();
                     openSwipeableRef.current = null;
@@ -504,20 +512,6 @@ export default function OwedSection({
           })}
         </View>
       ) : null}
-
-      {/* Undo toast */}
-      {toastInvoice && (
-        <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#0F172A", borderRadius: 28, paddingVertical: 12, paddingLeft: 18, paddingRight: 8, gap: 12, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 }}>
-            <Text style={{ fontSize: 14, color: "#fff", fontWeight: "500" }} numberOfLines={1}>
-              {toastInvoice.client} deleted
-            </Text>
-            <TouchableOpacity onPress={handleUndo} style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#34d399" }}>Undo</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
       {/* Remind sheet */}
       <BottomSheet visible={remindSheetVisible} onClose={() => setRemindSheetVisible(false)}>
