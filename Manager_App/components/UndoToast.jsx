@@ -115,7 +115,7 @@ export function UndoToastProvider({ children }) {
       {children}
       <View
         pointerEvents="box-none"
-        style={{ position: "absolute", left: 16, right: 16, bottom, zIndex: 1000 }}
+        style={{ position: "absolute", left: 0, right: 0, bottom, alignItems: "center", zIndex: 1000 }}
       >
         {displayed && (
           <Animated.View
@@ -123,26 +123,29 @@ export function UndoToastProvider({ children }) {
               {
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: "#FFFFFF",
+                gap: 14,
+                maxWidth: 320,
+                backgroundColor: "#F1F5F9",
                 borderWidth: 1,
                 borderColor: "#E2E8F0",
-                borderRadius: 14,
-                paddingVertical: 14,
-                paddingHorizontal: 16,
+                borderRadius: 12,
+                paddingVertical: 9,
+                paddingLeft: 14,
+                paddingRight: 10,
                 shadowColor: "#0F172A",
-                shadowOpacity: 0.12,
-                shadowRadius: 16,
-                shadowOffset: { width: 0, height: 6 },
-                elevation: 6,
+                shadowOpacity: 0.08,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 3,
               },
               animStyle,
             ]}
           >
-            <Text style={{ flex: 1, fontSize: 14, fontWeight: "600", color: "#0F172A" }} numberOfLines={1}>
+            <Text style={{ flexShrink: 1, fontSize: 13, fontWeight: "500", color: "#334155" }} numberOfLines={1}>
               {displayed.message}
             </Text>
-            <TouchableOpacity onPress={handleUndo} hitSlop={10} style={{ paddingHorizontal: 14, paddingVertical: 7 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#2563EB" }}>Undo</Text>
+            <TouchableOpacity onPress={handleUndo} hitSlop={10} style={{ paddingHorizontal: 4, minHeight: 28, justifyContent: "center" }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#2563EB" }}>Undo</Text>
             </TouchableOpacity>
           </Animated.View>
         )}

@@ -463,46 +463,44 @@ export default function OwedSection({
                 >
                   {isLate && <View style={{ width: 3, backgroundColor: "#EF4444" }} />}
                   <View style={{ flex: 1, paddingTop: 14, paddingBottom: 14, paddingLeft: isLate ? 13 : 16, paddingRight: 16 }}>
-                    {/* Row 1: initials + name + amount */}
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
                       <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: circleBg, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <Text style={{ fontSize: 13, fontWeight: "700", color: circleText }}>{initials}</Text>
                       </View>
-                      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                        <Text style={{ fontSize: 16, fontWeight: "600", color: "#0F172A", flex: 1, marginRight: 8 }} numberOfLines={1}>{inv.client}</Text>
-                        <Text style={{ fontSize: 16, fontWeight: "700", color: "#0F172A" }}>
-                          {formatCurrency(inv.amount, currency, locale)}
-                        </Text>
-                      </View>
-                    </View>
-                    {/* Row 2: status + bar + buttons */}
-                    <View style={{ flexDirection: "row", alignItems: "flex-end", marginLeft: 48, gap: 10 }}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontWeight: statusWeight, color: statusColor, marginBottom: 5 }}>
-                          {statusLabel}
-                          {showRemindedAgo && (
-                            <Text style={{ fontWeight: "400" }}>{` · reminded ${remDaysAgo}d ago`}</Text>
-                          )}
-                        </Text>
-                        <View style={{ width: 96, height: 4, backgroundColor: "#F1F5F9", borderRadius: 2, overflow: "hidden" }}>
-                          <View style={{ width: Math.round(barPct * 96), height: 4, backgroundColor: barColor, borderRadius: 2 }} />
+                      <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+                        <View style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
+                          <Text numberOfLines={1} style={{ fontSize: 16, lineHeight: 20, fontWeight: "600", color: "#0F172A" }}>{inv.client}</Text>
+                          <Text style={{ fontSize: 13, lineHeight: 17, marginTop: 2, fontWeight: statusWeight, color: statusColor }}>
+                            {statusLabel}
+                            {showRemindedAgo && (
+                              <Text style={{ fontWeight: "400" }}>{` · reminded ${remDaysAgo}d ago`}</Text>
+                            )}
+                          </Text>
+                          <View style={{ width: 88, height: 4, marginTop: 7, borderRadius: 2, backgroundColor: "#F1F5F9", overflow: "hidden" }}>
+                            <View style={{ width: Math.round(barPct * 88), height: 4, borderRadius: 2, backgroundColor: barColor }} />
+                          </View>
                         </View>
-                      </View>
-                      <View style={{ flexDirection: "row", gap: 6 }}>
-                        <TouchableOpacity
-                          onPress={() => handleOpenRemind(inv)}
-                          style={{ minHeight: 34, paddingHorizontal: 10, borderRadius: 10, backgroundColor: remBg, borderWidth: remBorderW, borderColor: remBorderC, flexDirection: "row", alignItems: "center", gap: 5 }}
-                        >
-                          <Ionicons name="chatbubble-outline" size={13} color={remTxt} />
-                          <Text style={{ fontSize: 13, fontWeight: "600", color: remTxt }}>{remLabel}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => handleMarkPaid(inv)}
-                          style={{ minHeight: 34, paddingHorizontal: 10, borderRadius: 10, backgroundColor: "#ECFDF5", flexDirection: "row", alignItems: "center", gap: 5 }}
-                        >
-                          <Ionicons name="checkmark" size={13} color="#059669" />
-                          <Text style={{ fontSize: 13, fontWeight: "700", color: "#059669" }}>Paid</Text>
-                        </TouchableOpacity>
+                        <View style={{ alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+                          <Text style={{ fontSize: 16, lineHeight: 20, fontWeight: "700", color: "#0F172A" }}>
+                            {formatCurrency(inv.amount, currency, locale)}
+                          </Text>
+                          <View style={{ flexDirection: "row", gap: 6 }}>
+                            <TouchableOpacity
+                              onPress={() => handleOpenRemind(inv)}
+                              style={{ minHeight: 32, paddingHorizontal: 11, borderRadius: 10, backgroundColor: remBg, borderWidth: remBorderW, borderColor: remBorderC, flexDirection: "row", alignItems: "center", gap: 5 }}
+                            >
+                              <Ionicons name="chatbubble-outline" size={13} color={remTxt} />
+                              <Text style={{ fontSize: 13, fontWeight: "600", color: remTxt }}>{remLabel}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => handleMarkPaid(inv)}
+                              style={{ minHeight: 32, paddingHorizontal: 11, borderRadius: 10, backgroundColor: "#ECFDF5", flexDirection: "row", alignItems: "center", gap: 5 }}
+                            >
+                              <Ionicons name="checkmark" size={13} color="#059669" />
+                              <Text style={{ fontSize: 13, fontWeight: "700", color: "#059669" }}>Paid</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
                       </View>
                     </View>
                   </View>
