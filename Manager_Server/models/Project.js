@@ -15,6 +15,10 @@ const ProjectSchema = new mongoose.Schema({
       materials: MaterialsSchema,
       toDoList: [toDoListSchema],
       isDemo: { type: Boolean, default: false },
+      client: { type: String, trim: true, default: "" },
+      clientPhone: { type: String, trim: true, default: "" },
+      status: { type: String, enum: ["active", "complete"], default: "active" },
+      completedAt: { type: Date, default: null },
       estimatedCost: Number,
       actualCost: Number,
        createdAt: {

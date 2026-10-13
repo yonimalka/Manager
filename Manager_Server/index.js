@@ -650,9 +650,23 @@ app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
 
     const expenses = receipts[0]?.totalExpenses || 0;
 
+    const [incomeDocs, receiptDocs, openInvoices] = await Promise.all([
+      IncomeModel.find({ userId: req.userId, projectId }).sort({ date: -1 }).limit(50).lean(),
+      ReceiptModel.find({ userId: req.userId, projectId }).sort({ createdAt: -1 }).limit(50).lean(),
+      InvoiceModel.find({ userId: req.userId, projectId, status: "unpaid" }).sort({ dueDate: 1 }).lean(),
+    ]);
+
+    const money = [
+      ...incomeDocs.map((i) => ({ type: "payment", id: i._id, title: i.services?.[0]?.description || i.payer || "Payment", amount: i.total, date: i.date })),
+      ...receiptDocs.map((r) => ({ type: "expense", id: r._id, title: r.category || "Expense", amount: r.sumOfReceipt || 0, date: r.createdAt, imageUrl: r.imageUrl || null })),
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
     res.json({
       ...project.toObject(),
-      expenses
+      expenses,
+      money,
+      billed: openInvoices.reduce((sum, inv) => sum + inv.amount, 0),
+      nextDue: openInvoices[0]?.dueDate || null,
     });
 
   } catch (err) {
@@ -660,7 +674,41 @@ app.get("/getProject/:projectId", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-   
+
+app.patch("/projects/:projectId", authMiddleware, async (req, res) => {
+  try {
+    const update = {};
+    if (typeof req.body.name === "string" && req.body.name.trim()) update.name = req.body.name.trim();
+    if (typeof req.body.client === "string") update.client = req.body.client.trim();
+    if (typeof req.body.clientPhone === "string") update.clientPhone = req.body.clientPhone.trim();
+    if (req.body.payment !== undefined) {
+      const p = Number(req.body.payment);
+      if (isNaN(p) || p < 0) return res.status(400).json({ message: "Job value must be a number" });
+      update.payment = p;
+    }
+    if (req.body.days !== undefined) {
+      const d = Number(req.body.days);
+      if (isNaN(d) || d <= 0) return res.status(400).json({ message: "Days must be a positive number" });
+      update.days = d;
+    }
+    if (req.body.status === "active" || req.body.status === "complete") {
+      update.status = req.body.status;
+      update.completedAt = req.body.status === "complete" ? new Date() : null;
+    }
+    if (!Object.keys(update).length) return res.status(400).json({ message: "Nothing to update" });
+    const project = await ProjectModel.findOneAndUpdate(
+      { _id: req.params.projectId, userId: req.userId },
+      { $set: update },
+      { new: true }
+    );
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    res.json(project);
+  } catch (err) {
+    console.error("Update project error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 app.post("/fixedExpense", authMiddleware, async (req, res) => {
   try {
     const {
@@ -1448,6 +1496,9 @@ app.get("/downloadReceiptsZip", authMiddleware, async (req, res) => {
     };
     if (fromDate && toDate) {
       query.createdAt = { $gte: fromDate, $lte: toDate };
+    }
+    if (req.query.projectId && mongoose.Types.ObjectId.isValid(req.query.projectId)) {
+      query.projectId = new mongoose.Types.ObjectId(req.query.projectId);
     }
 
     const receipts = await ReceiptModel.find(query);
