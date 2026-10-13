@@ -98,6 +98,9 @@ export default function AboutProject() {
   const [qtyValue,         setQtyValue]         = useState("");
   const taskInputRef     = useRef(null);
   const matNameRef       = useRef(null);
+  const qtyRef    = useRef(null);
+  const scrollRef = useRef(null);
+  const scrollToInput = () => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
 
   // ── Edit sheet ───────────────────────────────────────────────────────
   const [editName,        setEditName]        = useState("");
@@ -221,7 +224,7 @@ export default function AboutProject() {
       setMaterialsArray(res.data.materials);
       setItemValue("");
       setQtyValue("");
-      setIsAddingMaterial(false);
+      setTimeout(() => matNameRef.current?.focus(), 50);
     } catch (err) { console.error(err); }
   };
 
@@ -391,7 +394,14 @@ export default function AboutProject() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={s.scroll}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
 
         {/* Title + meta */}
         <View style={s.titleBlock}>
@@ -596,10 +606,11 @@ export default function AboutProject() {
                     value={taskValue}
                     onChangeText={setTaskValue}
                     returnKeyType="done"
-                    onSubmitEditing={() => {
-                      handleAddTask();
-                      setTimeout(() => taskInputRef.current?.focus(), 50);
-                    }}
+                    blurOnSubmit={false}
+                    inputAccessoryViewID="acc-task"
+                    onSubmitEditing={() => { handleAddTask(); scrollToInput(); }}
+                    onFocus={scrollToInput}
+                    onBlur={() => { if (!taskValue.trim()) setIsAddingTask(false); }}
                     autoFocus
                   />
                 </View>
@@ -647,9 +658,16 @@ export default function AboutProject() {
                     value={itemValue}
                     onChangeText={setItemValue}
                     returnKeyType="next"
+                    blurOnSubmit={false}
+                    inputAccessoryViewID="acc-material"
+                    onSubmitEditing={() => qtyRef.current?.focus()}
+                    onFocus={scrollToInput}
                     autoFocus
                   />
                   <TextInput
+                    ref={qtyRef}
+                    inputAccessoryViewID="acc-material"
+                    onFocus={scrollToInput}
                     style={[s.inlineInput, { width: 72 }]}
                     placeholder="Qty"
                     placeholderTextColor={C.muted}
@@ -725,6 +743,23 @@ export default function AboutProject() {
 
         </View>
       </ScrollView>
+
+      {Platform.OS === "ios" && (
+        <>
+          <InputAccessoryView nativeID="acc-task">
+            <View style={s.accBar}>
+              <TouchableOpacity onPress={() => { Keyboard.dismiss(); if (!taskValue.trim()) setIsAddingTask(false); }} style={s.accBtn}><Text style={s.accMuted}>Close</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => { handleAddTask(); scrollToInput(); }} style={s.accBtn}><Text style={s.accPrimary}>Add</Text></TouchableOpacity>
+            </View>
+          </InputAccessoryView>
+          <InputAccessoryView nativeID="acc-material">
+            <View style={s.accBar}>
+              <TouchableOpacity onPress={() => { Keyboard.dismiss(); if (!itemValue.trim()) setIsAddingMaterial(false); }} style={s.accBtn}><Text style={s.accMuted}>Close</Text></TouchableOpacity>
+              <TouchableOpacity onPress={handleAddMaterial} style={s.accBtn}><Text style={s.accPrimary}>Add</Text></TouchableOpacity>
+            </View>
+          </InputAccessoryView>
+        </>
+      )}
 
       {/* ── Income modal ─────────────────────────────────────────────────── */}
       <Modal visible={incomeModalVisible} animationType="fade" transparent onRequestClose={() => setIncomeModalVisible(false)}>
@@ -1072,6 +1107,12 @@ const s = StyleSheet.create({
   inlineAddRow:   { flexDirection: "row", gap: 8, paddingVertical: 8 },
   inlineInput:    { height: 44, backgroundColor: C.bg, borderRadius: 10, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12, fontSize: 16, color: C.ink },
   emptyTabText:   { fontSize: 14, color: C.muted, paddingVertical: 20, textAlign: "center" },
+
+  // Keyboard bar
+  accBar:     { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#F1F1EE", borderTopWidth: 1, borderTopColor: "#E6E6E1", paddingHorizontal: 12 },
+  accBtn:     { paddingVertical: 10, paddingHorizontal: 8 },
+  accMuted:   { fontSize: 16, color: "#5E616A" },
+  accPrimary: { fontSize: 16, fontWeight: "600", color: "#2457D6" },
 
   // Modals
   modalBackdrop:          { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
