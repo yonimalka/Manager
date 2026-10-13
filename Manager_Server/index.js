@@ -1195,6 +1195,24 @@ app.patch("/invoices/:id/remind", authMiddleware, async (req, res) => {
   }
 });
 
+app.patch("/invoices/:id", authMiddleware, async (req, res) => {
+  try {
+    const update = {};
+    if (typeof req.body.clientPhone === "string") update.clientPhone = req.body.clientPhone.trim() || null;
+    if (!Object.keys(update).length) return res.status(400).json({ error: "Nothing to update" });
+    const invoice = await InvoiceModel.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
+      { $set: update },
+      { new: true }
+    );
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    res.json(invoice);
+  } catch (err) {
+    console.error("Update invoice error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete("/invoices/:id", authMiddleware, async (req, res) => {
   try {
     const invoice = await InvoiceModel.findOneAndDelete({
