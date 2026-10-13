@@ -44,7 +44,7 @@ const C = {
 const KeyboardDone = ({ id }) =>
   Platform.OS === "ios" ? (
     <InputAccessoryView nativeID={id}>
-      <View style={{ flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#F1F1EE", borderTopWidth: 1, borderTopColor: "#E6E6E1", paddingHorizontal: 12 }}>
+      <View style={{ height: 44, alignItems: "center", flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#F1F1EE", borderTopWidth: 1, borderTopColor: "#E6E6E1", paddingHorizontal: 12 }}>
         <TouchableOpacity onPress={Keyboard.dismiss} style={{ paddingVertical: 10, paddingHorizontal: 8 }}>
           <Text style={{ fontSize: 16, fontWeight: "600", color: "#2457D6" }}>Done</Text>
         </TouchableOpacity>
@@ -600,19 +600,26 @@ export default function AboutProject() {
                 <View style={s.inlineAddRow}>
                   <TextInput
                     ref={taskInputRef}
-                    style={s.inlineInput}
+                    style={[s.inlineInput, { flex: 1 }]}
                     placeholder="Task name"
                     placeholderTextColor={C.muted}
                     value={taskValue}
                     onChangeText={setTaskValue}
                     returnKeyType="done"
                     blurOnSubmit={false}
-                    inputAccessoryViewID="acc-task"
                     onSubmitEditing={() => { handleAddTask(); scrollToInput(); }}
                     onFocus={scrollToInput}
                     onBlur={() => { if (!taskValue.trim()) setIsAddingTask(false); }}
                     autoFocus
                   />
+                  <TouchableOpacity
+                    onPress={() => { handleAddTask(); scrollToInput(); }}
+                    disabled={!taskValue.trim()}
+                    accessibilityLabel="Add task"
+                    style={[s.inlineAddBtn, !taskValue.trim() && { opacity: 0.35 }]}
+                  >
+                    <Ionicons name="checkmark" size={22} color="#fff" />
+                  </TouchableOpacity>
                 </View>
               )}
               <TouchableOpacity
@@ -659,14 +666,12 @@ export default function AboutProject() {
                     onChangeText={setItemValue}
                     returnKeyType="next"
                     blurOnSubmit={false}
-                    inputAccessoryViewID="acc-material"
                     onSubmitEditing={() => qtyRef.current?.focus()}
                     onFocus={scrollToInput}
                     autoFocus
                   />
                   <TextInput
                     ref={qtyRef}
-                    inputAccessoryViewID="acc-material"
                     onFocus={scrollToInput}
                     style={[s.inlineInput, { width: 72 }]}
                     placeholder="Qty"
@@ -677,6 +682,14 @@ export default function AboutProject() {
                     returnKeyType="done"
                     onSubmitEditing={handleAddMaterial}
                   />
+                  <TouchableOpacity
+                    onPress={handleAddMaterial}
+                    disabled={!itemValue.trim() || !qtyValue}
+                    accessibilityLabel="Add material"
+                    style={[s.inlineAddBtn, (!itemValue.trim() || !qtyValue) && { opacity: 0.35 }]}
+                  >
+                    <Ionicons name="checkmark" size={22} color="#fff" />
+                  </TouchableOpacity>
                 </View>
               )}
               <TouchableOpacity
@@ -743,23 +756,6 @@ export default function AboutProject() {
 
         </View>
       </ScrollView>
-
-      {Platform.OS === "ios" && (
-        <>
-          <InputAccessoryView nativeID="acc-task">
-            <View style={s.accBar}>
-              <TouchableOpacity onPress={() => { Keyboard.dismiss(); if (!taskValue.trim()) setIsAddingTask(false); }} style={s.accBtn}><Text style={s.accMuted}>Close</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => { handleAddTask(); scrollToInput(); }} style={s.accBtn}><Text style={s.accPrimary}>Add</Text></TouchableOpacity>
-            </View>
-          </InputAccessoryView>
-          <InputAccessoryView nativeID="acc-material">
-            <View style={s.accBar}>
-              <TouchableOpacity onPress={() => { Keyboard.dismiss(); if (!itemValue.trim()) setIsAddingMaterial(false); }} style={s.accBtn}><Text style={s.accMuted}>Close</Text></TouchableOpacity>
-              <TouchableOpacity onPress={handleAddMaterial} style={s.accBtn}><Text style={s.accPrimary}>Add</Text></TouchableOpacity>
-            </View>
-          </InputAccessoryView>
-        </>
-      )}
 
       {/* ── Income modal ─────────────────────────────────────────────────── */}
       <Modal visible={incomeModalVisible} animationType="fade" transparent onRequestClose={() => setIncomeModalVisible(false)}>
@@ -1106,13 +1102,8 @@ const s = StyleSheet.create({
   addRowBtnText:  { fontSize: 15, fontWeight: "600", color: C.link },
   inlineAddRow:   { flexDirection: "row", gap: 8, paddingVertical: 8 },
   inlineInput:    { height: 44, backgroundColor: C.bg, borderRadius: 10, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12, fontSize: 16, color: C.ink },
+  inlineAddBtn:   { width: 44, height: 44, borderRadius: 12, backgroundColor: C.ink, alignItems: "center", justifyContent: "center" },
   emptyTabText:   { fontSize: 14, color: C.muted, paddingVertical: 20, textAlign: "center" },
-
-  // Keyboard bar
-  accBar:     { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#F1F1EE", borderTopWidth: 1, borderTopColor: "#E6E6E1", paddingHorizontal: 12 },
-  accBtn:     { paddingVertical: 10, paddingHorizontal: 8 },
-  accMuted:   { fontSize: 16, color: "#5E616A" },
-  accPrimary: { fontSize: 16, fontWeight: "600", color: "#2457D6" },
 
   // Modals
   modalBackdrop:          { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
