@@ -55,6 +55,8 @@ import OwedSection from "./OwedSection";
 
 const { width } = Dimensions.get("window");
 
+const SHOW_TAX_ESTIMATE = false;
+
 export const firebaseLogin = async () => {
   if (!auth.currentUser) {
     await signInAnonymously(auth);
@@ -196,48 +198,42 @@ const HomeScreen = () => {
     fetchData(true);
   }, []);
 
-  /* ── Measurement ── */
-  const measureTargets = () => {
-    const keys = ["heroCard", "addIncome", "owed", "addExpense", "cashFlow"];
-    const refs = [refHeroCard, refAddIncome, refOwed, refAddExpense, refCashFlow];
-    const next = {};
-    // Only count refs that are currently mounted so the done-check can fire
-    const mountedCount = refs.filter(r => r.current).length;
-    if (mountedCount === 0) return;
-    let done = 0;
-    const ratio = PixelRatio.get();
+  /* ── Tour: bring target into view, measure it, then show the step ── */
+  const TOUR_REFS = { heroCard: refHeroCard, addIncome: refAddIncome, addExpense: refAddExpense, cashFlow: refCashFlow, owed: refOwed };
 
-    refs.forEach((ref, i) => {
-      if (ref.current) {
-        ref.current.measure((x, y, width, height, pageX, pageY) => {
-          const { width: screenW } = Dimensions.get("window");
-          const needsRatio = pageX > screenW;
-          const px = needsRatio ? pageX / ratio : pageX;
-          const py = needsRatio ? pageY / ratio : pageY;
-          const pw = needsRatio ? width  / ratio : width;
-          const ph = needsRatio ? height / ratio : height;
-          next[keys[i]] = { pageX: px, pageY: py, width: pw, height: ph };
-          done++;
-          if (done === mountedCount) setMeasurements({ ...next });
-        });
-      }
+  const showTourStep = (n) => {
+    const key = TOUR_STEPS[n - 1]?.key;
+    const ref = TOUR_REFS[key];
+    if (!ref?.current) return;
+    const { height: SH } = Dimensions.get("window");
+    const TOP_ROOM = 140;
+    const BOTTOM_ROOM = 240;
+
+    const measureAndShow = () => {
+      ref.current?.measureInWindow((x, y, width, height) => {
+        setMeasurements((prev) => ({ ...prev, [key]: { pageX: x, pageY: y, width, height } }));
+        setTourStep(n);
+        setTourVisible(true);
+        AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(n));
+      });
+    };
+
+    ref.current.measureInWindow((x, y, width, height) => {
+      if (y >= TOP_ROOM && y + height <= SH - BOTTOM_ROOM) { measureAndShow(); return; }
+      const sv = scrollViewRef.current;
+      const scroller = sv?.scrollTo ? sv : sv?.getScrollResponder?.();
+      scroller?.scrollTo({ y: Math.max(0, scrollOffsetRef.current + y - TOP_ROOM), animated: false });
+      setTimeout(measureAndShow, 80);
     });
   };
 
   /* ── Tour handlers ── */
-  const handleTourStart = useCallback(() => {
+  const handleTourStart = () => {
     setTimeout(() => {
-      measureTargets();
-    }, 200);
-    setTimeout(() => {
-      // console.log("[TOUR] 800ms setTimeout firing, calling setTourVisible");
-      // console.log("[TOUR] About to setTourVisible true");
-      setTourStep(1);
-      setTourVisible(true);
+      showTourStep(1);
       track("tour_started");
-      AsyncStorage.setItem(`maggo_tour_step_${userId}`, "1");
     }, 800);
-  }, []);
+  };
 
   const handleTourNext = async () => {
     if (tourStep >= TOUR_STEPS.length) {
@@ -249,24 +245,7 @@ const HomeScreen = () => {
       await AsyncStorage.setItem(`maggo_tour_step_${userId}`, "0");
       await AsyncStorage.setItem(`maggo_checklist_dismissed_${userId}`, "true");
     } else {
-      const next = tourStep + 1;
-      // Step 3 is the Owed section — scroll it into view before the tooltip renders
-      if (next === 3 && measurements.owed) {
-        const docY = measurements.owed.pageY + scrollOffsetRef.current;
-        try {
-          scrollViewRef.current?.getScrollResponder()?.scrollTo({ y: Math.max(0, docY - 120), animated: true });
-        } catch (_) {}
-        setTimeout(() => {
-          measureTargets();
-          setTimeout(() => {
-            setTourStep(next);
-            AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(next));
-          }, 80);
-        }, 350);
-        return;
-      }
-      setTourStep(next);
-      await AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(next));
+      showTourStep(tourStep + 1);
     }
   };
 
@@ -298,8 +277,6 @@ const HomeScreen = () => {
     if (isFocused && !authLoading && isAuthenticated) {
       fetchData();
       api.post("/user/ping").catch(() => {});
-      // Small delay lets the layout settle before measuring
-      setTimeout(measureTargets, 400);
     }
   }, [isFocused, authLoading, isAuthenticated]);
 
@@ -321,9 +298,7 @@ const HomeScreen = () => {
       const rawStep = parseInt(savedStep, 10) || 0;
       const step = Math.min(rawStep, TOUR_STEPS.length);
       if (step > 0) {
-        setTourStep(step);
-        setTourVisible(true);
-        setTimeout(measureTargets, 400);
+        setTimeout(() => showTourStep(step), 400);
       }
     };
 
@@ -716,7 +691,7 @@ const HomeScreen = () => {
               )}
 
               {/* Tax estimate */}
-              {netBalance > 0 && (
+              {SHOW_TAX_ESTIMATE && netBalance > 0 && (
                 <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 10, fontWeight: "500" }}>
                   {`Keep about ${formatCurrency(netBalance * 0.25, userDetails?.currency || "USD", userDetails?.locale || "en-US")} aside for tax.`}
                 </Text>
@@ -1220,15 +1195,6 @@ const HomeScreen = () => {
         <View style={{ height: 30 }} />
       </View>
 
-      <SpotlightOverlay
-        visible={tourVisible}
-        measurement={measurements[TOUR_STEPS[tourStep - 1]?.key]}
-        onPress={handleTourSkip}
-        measurementKey={TOUR_STEPS[tourStep - 1]?.key}
-        cardHeights={{ heroCard: heroCardHeight }}
-        scrollOffset={scrollOffsetRef.current}
-      />
-
       <TourOverlay
         visible={tourVisible}
         step={tourStep}
@@ -1236,7 +1202,6 @@ const HomeScreen = () => {
         onNext={handleTourNext}
         onSkip={handleTourSkip}
         cardHeightRef={tourCardHeightRef}
-        scrollOffset={scrollOffsetRef.current}
       />
 
       {/* Post-income success modal */}
@@ -1707,27 +1672,20 @@ const styles = StyleSheet.create({
 /* ─────────────────────────────────────────────
    SPOTLIGHT OVERLAY
 ───────────────────────────────────────────── */
-const SpotlightOverlay = ({ visible, measurement, onPress, measurementKey, cardHeights = {}, scrollOffset = 0 }) => {
+const SpotlightOverlay = ({ visible, measurement, measurementKey }) => {
   if (!visible || !measurement) return null;
 
   const { width: SW, height: SH } = Dimensions.get("window");
-  const statusBarHeight = StatusBar.currentHeight || 0;
   const { pageX, pageY, width: mW, height: mH } = measurement;
-
-  const adjustedH = (measurementKey === "heroCard" && cardHeights.heroCard > 0)
-    ? cardHeights.heroCard
-    : mH;
-
   const PAD = 8;
-  const holeTop    = Math.floor(pageY - statusBarHeight - scrollOffset) - PAD;
+  const holeTop    = Math.floor(pageY) - PAD;
   const holeLeft   = Math.floor(pageX) - PAD;
   const holeWidth  = Math.ceil(mW) + PAD * 2;
-  const holeHeight = Math.ceil(adjustedH) + PAD * 2;
+  const holeHeight = Math.ceil(mH) + PAD * 2;
   const radii = { heroCard: 32, addIncome: 24, addExpense: 24, owed: 24, cashFlow: 20 };
   const radius = radii[measurementKey] ?? 24;
-  const RGBA       = "rgb(15,23,42)";
+  const RGBA = "rgb(15,23,42)";
 
-  // SVG even-odd path: full screen rect minus a rounded rect hole
   const r = radius;
   const x = holeLeft;
   const y = holeTop;
@@ -1739,33 +1697,10 @@ const SpotlightOverlay = ({ visible, measurement, onPress, measurementKey, cardH
   const svgPath    = `${screenPath} ${holePath}`;
 
   return (
-    <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}>
-      <TouchableOpacity
-        activeOpacity={1}
-        onPress={onPress}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-      >
-        <Svg width={SW} height={SH}>
-          <Path
-            d={svgPath}
-            fill={RGBA}
-            fillOpacity={0.62}
-            fillRule="evenodd"
-          />
-          {/* White border ring around hole */}
-          {/* <Rect
-            x={x - 1}
-            y={y - 1}
-            width={w + 2}
-            height={h + 2}
-            rx={r }
-            ry={r + 1}
-            fill="none"
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth={2}
-          /> */}
-        </Svg>
-      </TouchableOpacity>
+    <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+      <Svg width={SW} height={SH}>
+        <Path d={svgPath} fill={RGBA} fillOpacity={0.62} fillRule="evenodd" />
+      </Svg>
     </View>
   );
 };
@@ -1785,11 +1720,6 @@ const TOUR_STEPS = [
     body: "Got paid for a job? Record it here. Your net balance updates instantly.",
   },
   {
-    key: "owed",
-    headline: "Track what you're owed",
-    body: "Add unpaid invoices here. When the client pays, tap Mark Paid and the income records automatically.",
-  },
-  {
     key: "addExpense",
     headline: "Log an expense",
     body: "Bought something for a job? Add it here. Maggo links it to the right project automatically.",
@@ -1799,15 +1729,19 @@ const TOUR_STEPS = [
     headline: "See your cash flow",
     body: "The clearest view of money in vs out. Finally know if you're actually making money this month.",
   },
+  {
+    key: "owed",
+    headline: "Track what you're owed",
+    body: "Add unpaid invoices here. When the client pays, tap Paid and it's logged as income.",
+  },
 ];
 
 const CARD_WIDTH  = 260;
 const CARD_PADDING = 18;
 const ARROW_SIZE  = 8;
 
-const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRef, scrollOffset = 0 }) => {
+const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRef }) => {
   const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-  const statusBarHeight = StatusBar.currentHeight || 0;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(8)).current;
 
@@ -1835,8 +1769,8 @@ const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRe
 
   if (m) {
     const targetCenterX = m.pageX + m.width / 2;
-    const targetBottom  = m.pageY - statusBarHeight - scrollOffset + m.height;
-    const targetTop     = m.pageY - statusBarHeight - scrollOffset;
+    const targetBottom  = m.pageY + m.height + 8;
+    const targetTop     = m.pageY - 8;
     const cardHeight    = cardHeightRef.current;
     const spaceBelow    = SCREEN_H - targetBottom;
 
@@ -1850,6 +1784,7 @@ const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRe
       arrowPointsUp = true;
     }
 
+    cardTop  = Math.max(54, Math.min(SCREEN_H - cardHeight - 24, cardTop));
     cardLeft = Math.max(16, Math.min(SCREEN_W - CARD_WIDTH - 16, targetCenterX - CARD_WIDTH / 2));
 
     const arrowX = Math.max(16, Math.min(CARD_WIDTH - 24, targetCenterX - cardLeft - ARROW_SIZE));
@@ -1865,6 +1800,7 @@ const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRe
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
       <View style={{ flex: 1 }}>
+        <SpotlightOverlay visible={visible} measurement={m} measurementKey={stepData?.key} />
 
         {/* Tooltip card */}
         <Animated.View
