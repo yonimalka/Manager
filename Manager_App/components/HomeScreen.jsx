@@ -256,6 +256,14 @@ const HomeScreen = () => {
         try {
           scrollViewRef.current?.getScrollResponder()?.scrollTo({ y: Math.max(0, docY - 120), animated: true });
         } catch (_) {}
+        setTimeout(() => {
+          measureTargets();
+          setTimeout(() => {
+            setTourStep(next);
+            AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(next));
+          }, 80);
+        }, 350);
+        return;
       }
       setTourStep(next);
       await AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(next));
@@ -721,10 +729,7 @@ const HomeScreen = () => {
             {/* Log Payment */}
             <TouchableOpacity
               ref={refAddIncome}
-              style={[
-                styles.primaryActionBtn,
-                { backgroundColor: tourVisible && tourStep === 2 ? "transparent" : "#10B981" },
-              ]}
+              style={[styles.primaryActionBtn, { backgroundColor: "#10B981" }]}
               onPress={() => {
                 track("income_modal_opened", { source: "primary_btn" });
                 setLogIncomeVisible(true);
@@ -744,8 +749,8 @@ const HomeScreen = () => {
                   backgroundColor: "#fff",
                   borderWidth: 1.5,
                   borderColor: "#E2E8F0",
-                  shadowOpacity: tourVisible && tourStep === 4 ? 0 : 0.06,
-                  elevation: tourVisible && tourStep === 4 ? 0 : 3,
+                  shadowOpacity: 0.06,
+                  elevation: 3,
                 },
               ]}
               onPress={() => setReceiptModalVisible(true)}
@@ -773,7 +778,6 @@ const HomeScreen = () => {
               ref={refCashFlow}
               style={[
                 styles.secondaryActionBtn,
-                tourVisible && tourStep === 5 && { shadowOpacity: 0, elevation: 0 },
               ]}
               onPress={() => {
                 track("cashflow_opened");
@@ -950,9 +954,9 @@ const HomeScreen = () => {
                           onChangeText={setLogIncomeAmount}
                           keyboardType="decimal-pad"
                           inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
-                          placeholder="0"
-                          placeholderTextColor="#CBD5E1"
-                          style={{ fontSize: kbHeight > 0 ? 44 : 56, fontWeight: "700", color: "#0F172A", letterSpacing: -2, minWidth: 60, maxWidth: 220, textAlign: "center", padding: 0 }}
+                          placeholder="0.00"
+                          placeholderTextColor="#94A3B8"
+                          style={{ fontSize: kbHeight > 0 ? 44 : 56, fontWeight: "700", color: "#0F172A", letterSpacing: -2, minWidth: 80, maxWidth: 280, textAlign: "center", padding: 0 }}
                         />
                       </View>
                       <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
@@ -992,8 +996,8 @@ const HomeScreen = () => {
                             value={logIncomeDescription}
                             onChangeText={setLogIncomeDescription}
                             ref={logIncomeDescRef}
-                            placeholder="Description (optional)"
-                            placeholderTextColor="#CBD5E1"
+                            placeholder="What was it for?"
+                            placeholderTextColor="#94A3B8"
                             style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
                             returnKeyType="done"
                             autoCorrect={false}
@@ -1044,8 +1048,8 @@ const HomeScreen = () => {
                             value={logIncomeClient}
                             onChangeText={setLogIncomeClient}
                             ref={logIncomeClientRef}
-                            placeholder="Client name (required)"
-                            placeholderTextColor="#CBD5E1"
+                            placeholder="Client name"
+                            placeholderTextColor="#94A3B8"
                             style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
                             returnKeyType="next"
                             submitBehavior="submit"
@@ -1067,7 +1071,7 @@ const HomeScreen = () => {
                             onChangeText={setLogIncomeClientPhone}
                             ref={logIncomePhoneRef}
                             placeholder="Phone (optional)"
-                            placeholderTextColor="#CBD5E1"
+                            placeholderTextColor="#94A3B8"
                             keyboardType="phone-pad"
                             inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
                             style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
@@ -1714,11 +1718,13 @@ const SpotlightOverlay = ({ visible, measurement, onPress, measurementKey, cardH
     ? cardHeights.heroCard
     : mH;
 
-  const holeTop    = Math.floor(pageY - statusBarHeight - scrollOffset);
-  const holeLeft   = Math.floor(pageX);
-  const holeWidth  = Math.ceil(mW);
-  const holeHeight = Math.ceil(adjustedH - 1);
-  const radius     = measurementKey === "heroCard" ? 30 : 16;
+  const PAD = 8;
+  const holeTop    = Math.floor(pageY - statusBarHeight - scrollOffset) - PAD;
+  const holeLeft   = Math.floor(pageX) - PAD;
+  const holeWidth  = Math.ceil(mW) + PAD * 2;
+  const holeHeight = Math.ceil(adjustedH) + PAD * 2;
+  const radii = { heroCard: 32, addIncome: 24, addExpense: 24, owed: 24, cashFlow: 20 };
+  const radius = radii[measurementKey] ?? 24;
   const RGBA       = "rgb(15,23,42)";
 
   // SVG even-odd path: full screen rect minus a rounded rect hole
