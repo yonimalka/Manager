@@ -1,435 +1,117 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  I18nManager,
-  TouchableOpacity,
-  Platform,
-  Modal,
-  TextInput,
-  Alert,
-  Animated,
-} from "react-native";
-import Svg, { Circle } from "react-native-svg";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import api from "../services/api";
 import { formatCurrency } from "../services/formatCurrency";
 import { useAuth } from "./useAuth";
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const DAY = 86400000;
 
-const Project = ({ projectName, totalAmount, id, isDemo }) => {
+const Project = ({ id, projectName, totalAmount, totalDays, isDemo, initial }) => {
   const { userDetails } = useAuth();
-  const [paidAmount, setPaidAmount] = useState(0);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [paymentInput, setPaymentInput] = useState("");
-  const [todos, setTodos] = useState([]);
-  const [totalTasks, setTotalTasks] = useState(0);
-  const [completedTasks, setCompletedTasks] = useState(0);
-  const [progress, setProgress] = useState(0);
-
   const isFocused = useIsFocused();
-
-  /** -----------------------------
-   *  Smooth Animated Progress Circle
-   * ----------------------------- */
-  const animatedProgress = useRef(new Animated.Value(0)).current;
-  const strokeRadius = 35;
-  const strokeDasharray = 2 * Math.PI * strokeRadius;
-
-  const animatedStrokeOffset = animatedProgress.interpolate({
-    inputRange: [0, 100],
-    outputRange: [strokeDasharray, 0],
-  });
+  const [data, setData] = useState(initial || null);
 
   useEffect(() => {
-    Animated.timing(animatedProgress, {
-      toValue: progress,
-      duration: 600,
-      useNativeDriver: false,
-    }).start();
-  }, [progress]);
+    if (!isFocused || !id) return;
+    api.get(`/getProject/${id}`)
+      .then((res) => setData(res.data))
+      .catch((err) => { if (err?.response?.status !== 404) console.error("Project card fetch error:", err); });
+  }, [isFocused, id]);
 
-  /** -----------------------------
-   *  Fetch project data
-   * ----------------------------- */
-  const fetchProjectData = async () => {
-    try {
-      const response = await api.get(`/getProject/${id}`);
+  const fmt = (n) => formatCurrency(n || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US");
 
-      const list = response.data.toDoList;
-      const completed = list.filter((t) => t.checked).length;
+  const jobValue   = data?.payment ?? totalAmount ?? 0;
+  const paid       = data?.paid || 0;
+  const owed       = Math.max(jobValue - paid, 0);
+  const collected  = jobValue > 0 ? Math.min(100, Math.round((paid / jobValue) * 100)) : 0;
+  const days       = data?.days ?? totalDays ?? 0;
+  const dayNum     = data?.createdAt ? Math.floor((Date.now() - new Date(data.createdAt)) / DAY) + 1 : 1;
+  const tasks      = data?.toDoList || [];
+  const doneCount  = tasks.filter((t) => t.checked).length;
+  const nextTask   = tasks.find((t) => !t.checked);
+  const isComplete = data?.status === "complete";
 
-      setPaidAmount(response.data.paid);
-      setTodos(list);
-      setTotalTasks(list.length);
-      setCompletedTasks(completed);
-    } catch (error) {
-      if (error?.response?.status === 404) return; // project deleted, HomeScreen will re-render
-      console.error("Error fetching project data:", error);
-    }
-  };
+  const timing = isComplete
+    ? "Complete"
+    : days ? (dayNum > days ? `${dayNum - days} days over` : `Day ${dayNum} of ${days}`) : null;
+  const meta = [data?.client, timing].filter(Boolean).join(" · ");
 
-  /** Re-fetch AFTER returning from task screen */
-  useEffect(() => {
-    if (isFocused) fetchProjectData();
-  }, [isFocused]);
-
-  /** Calculate progress after tasks update */
-  useEffect(() => {
-    if (totalTasks === 0) {
-      setProgress(0);
-      return;
-    }
-    setProgress(((completedTasks / totalTasks) * 100).toFixed(0));
-  }, [completedTasks, totalTasks]);
-
-  /** -----------------------------
-   *  Confirm payment update
-   * ----------------------------- */
-  const handleConfirmPayment = async () => {
-    const amount = Number(paymentInput);
-    if (isNaN(amount) || amount <= 0) {
-      Alert.alert("Amount invalid");
-      return;
-    }
-
-    const newPaidAmount = paidAmount + amount;
-    setPaidAmount(newPaidAmount);
-    setModalVisible(false);
-    setMenuVisible(false);
-
-    try {
-      await api.post(`/updatePayment/${id}`, { paidAmount: amount });
-      fetchProjectData();
-      setPaymentInput("");
-    } catch (error) {
-      console.error("Error updating payment:", error);
-    }
-  };
-
-  const paymentPercentage = (paidAmount / totalAmount) * 100;
+  const footer = jobValue === 0
+    ? "Set job value to track what's owed"
+    : nextTask ? `Next: ${nextTask.task}` : tasks.length ? "All tasks done" : "No tasks yet";
 
   return (
-    <View style={styles.card}>
-      {/* Menu Button */}
-      {/* <TouchableOpacity
-        style={styles.menuButton}
-        onPress={() => setMenuVisible(!menuVisible)}
-      >
-        <MaterialCommunityIcons name="dots-vertical" size={22} color="#555" />
-      </TouchableOpacity>
-
-      {menuVisible && (
-        <View style={styles.menuContainer}>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => {
-              setMenuVisible(false);
-              setModalVisible(true);
-            }}
-          >
-            <Text style={styles.menuText}>update payment</Text>
-          </TouchableOpacity>
-        </View>
-      )} */}
-
-      {/* Smooth Animated Progress Circle */}
-      <View style={styles.circleWrapper}>
-        <Svg height="80" width="80">
-          <Circle
-            cx="40"
-            cy="40"
-            r={strokeRadius}
-            stroke="#e0e0e0"
-            strokeWidth="8"
-            fill="none"
-          />
-
-          <AnimatedCircle
-            cx="40"
-            cy="40"
-            r={strokeRadius}
-            stroke={progress >= 100 ? "#3b82f6" : "#4caf50"}
-            strokeWidth="8"
-            fill="none"
-            strokeDasharray={strokeDasharray}
-            strokeDashoffset={animatedStrokeOffset}
-            strokeLinecap="round"
-          />
-        </Svg>
-
-        <View style={styles.circleOverlay}>
-          {progress >= 100 ? (
-            <Text style={styles.check}>✔</Text>
-          ) : (
-            <Text style={styles.percent}>{progress}%</Text>
-          )}
-        </View>
-      </View>
-
-      {/* Project Text */}
-      <View style={styles.details}>
-        <View style={styles.nameRow}>
-          <Text style={styles.projectName} numberOfLines={1}>{projectName}</Text>
-          {isDemo && (
-            <View style={styles.demoBadge}>
-              <Text style={styles.demoBadgeText}>Demo</Text>
-            </View>
-          )}
-        </View>
-
-        {paymentPercentage >= 100 ? (
-          <Text style={styles.completed}>completed</Text>
-        ) : (
-          <Text style={styles.progressLabel}>progress</Text>
-        )}
-
-        <View style={styles.amountRow}>
-          <Text style={styles.paid}>{formatCurrency(
-                            paidAmount || 0,
-                            userDetails?.currency || "USD",
-                            userDetails?.locale || "en-US"
-                          )}</Text>
-          <Text style={styles.total}>/ {formatCurrency(
-                            totalAmount || 0,
-                            userDetails?.currency || "USD",
-                            userDetails?.locale || "en-US"
-                          )}</Text>
-        </View>
-      </View>
-      <View style={styles.projectArrow}>
-                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-              </View>
-      {/* Payment Modal */}
-      {/* <Modal visible={modalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>How much?</Text>
-            <TextInput
-              style={styles.modalInput}
-              keyboardType="numeric"
-              value={paymentInput}
-              onChangeText={setPaymentInput}
-              placeholder="Amount"
-            />
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                style={styles.cancelButton}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleConfirmPayment}
-                style={styles.confirmButton}
-              >
-                <Text style={styles.confirmText}>Ok</Text>
-              </TouchableOpacity>
-            </View>
+    <View style={[s.card, isComplete && s.cardComplete]}>
+      <View style={s.top}>
+        <View style={s.left}>
+          <View style={s.nameRow}>
+            <Text style={[s.name, isComplete && s.nameComplete]} numberOfLines={1}>{data?.name || projectName}</Text>
+            {isDemo && <View style={s.demo}><Text style={s.demoText}>Demo</Text></View>}
           </View>
+          {!!meta && <Text style={s.meta} numberOfLines={1}>{meta}</Text>}
         </View>
-      </Modal> */}
+
+        <View style={s.right}>
+          {isComplete ? (
+            <View style={s.donePill}>
+              <Ionicons name="checkmark" size={13} color="#047857" />
+              <Text style={s.doneText}>Done</Text>
+            </View>
+          ) : jobValue === 0 ? (
+            <Text style={s.noValue}>No value yet</Text>
+          ) : owed === 0 ? (
+            <>
+              <Text style={s.amount}>{fmt(jobValue)}</Text>
+              <Text style={[s.amountLabel, { color: "#047857" }]}>fully paid</Text>
+            </>
+          ) : (
+            <>
+              <Text style={s.amount}>{fmt(owed)}</Text>
+              <Text style={[s.amountLabel, { color: "#B45309" }]}>still owed</Text>
+            </>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#CBD5E1" style={{ marginLeft: 6 }} />
+      </View>
+
+      {!isComplete && jobValue > 0 && (
+        <View style={s.track}><View style={[s.fill, { width: `${collected}%` }]} /></View>
+      )}
+
+      {!isComplete && (
+        <View style={s.footer}>
+          <Text style={s.footerText} numberOfLines={1}>{footer}</Text>
+          {tasks.length > 0 && <Text style={s.footerCount}>{doneCount} of {tasks.length} tasks</Text>}
+        </View>
+      )}
     </View>
   );
 };
 
-const isRTL = I18nManager.isRTL;
-
-const styles = StyleSheet.create({
-  card: {
-      backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-
-  menuButton: {
-    position: "absolute",
-    top: 10,
-    left: !isRTL ? 6 : undefined,
-    padding: 6,
-    zIndex: 2,
-  },
-
-  menuContainer: {
-    position: "absolute",
-    top: 40,
-    left: !isRTL ? 10 : undefined,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    zIndex: 3,
-  },
-
-  menuItem: {
-    paddingVertical: 6,
-  },
-  menuText: {
-    fontSize: 14,
-    color: "#333",
-  },
-
-  circleWrapper: {
-    width: 80,
-    height: 80,
-    marginHorizontal: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  circleOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  percent: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  check: {
-    fontSize: 28,
-    color: "#4caf50",
-    fontWeight: "bold",
-  },
-
-  details: {
-    flex: 1,
-    marginLeft: 30,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-    flexWrap: "nowrap",
-  },
-  projectName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#222",
-    flexShrink: 1,
-    textAlign: !isRTL ? "left" : "right",
-  },
-  demoBadge: {
-    backgroundColor: "#EFF6FF",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    flexShrink: 0,
-  },
-  demoBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#3B82F6",
-  },
-  progressLabel: {
-    fontSize: 13,
-    color: "#777",
-    marginBottom: 6,
-    textAlign: !isRTL ? "left" : "right",
-  },
-  completed: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#4caf50",
-    marginBottom: 6,
-    textAlign: !isRTL ? "left" : "right",
-  },
-
-  amountRow: {
-    flexDirection: !isRTL ? "row" : "row-reverse",
-    alignItems: "center",
-  },
-  paid: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#4caf50",
-    marginRight: 6,
-  },
-  total: {
-    fontSize: 14,
-    color: "#777",
-  },
-  projectArrow: {
-    marginLeft: "auto",
-    paddingLeft: 12,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    width: "80%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  modalInput: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 16,
-    textAlign: "left",
-  },
-
-  modalButtons: {
-    flexDirection: !isRTL ? "row-reverse" : "row",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  cancelButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#eee",
-    marginLeft: 8,
-    alignItems: "center",
-  },
-  cancelText: {
-    color: "#333",
-    fontWeight: "500",
-  },
-  confirmButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#4caf50",
-    alignItems: "center",
-  },
-  confirmText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+const s = StyleSheet.create({
+  card:         { backgroundColor: "#FFFFFF", borderRadius: 20, borderWidth: 1, borderColor: "#E2E8F0", padding: 16, gap: 12 },
+  cardComplete: { backgroundColor: "#F8FAFC" },
+  top:          { flexDirection: "row", alignItems: "center" },
+  left:         { flex: 1, minWidth: 0, gap: 3 },
+  nameRow:      { flexDirection: "row", alignItems: "center", gap: 8 },
+  name:         { fontSize: 16, fontWeight: "600", color: "#0F172A", flexShrink: 1 },
+  nameComplete: { color: "#64748B" },
+  meta:         { fontSize: 13, color: "#64748B" },
+  right:        { alignItems: "flex-end", marginLeft: 12, gap: 2 },
+  amount:       { fontSize: 16, fontWeight: "700", color: "#0F172A", fontVariant: ["tabular-nums"] },
+  amountLabel:  { fontSize: 12, fontWeight: "600" },
+  noValue:      { fontSize: 13, color: "#94A3B8" },
+  donePill:     { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#ECFDF5", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  doneText:     { fontSize: 12, fontWeight: "600", color: "#047857" },
+  track:        { height: 6, borderRadius: 3, backgroundColor: "#F1F5F9", overflow: "hidden" },
+  fill:         { height: 6, borderRadius: 3, backgroundColor: "#059669" },
+  footer:       { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  footerText:   { flex: 1, fontSize: 13, color: "#475569" },
+  footerCount:  { fontSize: 13, color: "#94A3B8" },
+  demo:         { backgroundColor: "#EFF6FF", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  demoText:     { fontSize: 11, fontWeight: "600", color: "#3B82F6" },
 });
 
 export default Project;
