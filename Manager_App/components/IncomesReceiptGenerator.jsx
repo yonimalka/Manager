@@ -1002,6 +1002,7 @@ const styles = StyleSheet.create({
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 56,
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
     borderRadius: 12,
@@ -1021,7 +1022,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingLeft: 14,
     paddingRight: 14,
-    fontSize: 15,
+    fontSize: 16,
     color: "#111827",
   },
   inputSuffix: {

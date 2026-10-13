@@ -920,9 +920,9 @@ const HomeScreen = () => {
                     </View>
 
                     {/* Amount hero */}
-                    <View style={{ paddingVertical: kbHeight > 0 ? 10 : 20, paddingHorizontal: 22, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                    <View style={{ paddingVertical: 16, paddingHorizontal: 22, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
                       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                        <Text style={{ fontSize: kbHeight > 0 ? 22 : 26, fontWeight: "600", color: logIncomeAmount ? "#94A3B8" : "#CBD5E1", marginTop: kbHeight > 0 ? 6 : 8, marginRight: 2 }}>$</Text>
+                        <Text style={{ fontSize: 26, fontWeight: "600", color: logIncomeAmount ? "#94A3B8" : "#CBD5E1", marginTop: 8, marginRight: 4 }}>$</Text>
                         <TextInput
                           ref={logIncomeAmountRef}
                           value={logIncomeAmount}
@@ -931,7 +931,7 @@ const HomeScreen = () => {
                           inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
                           placeholder="0.00"
                           placeholderTextColor="#94A3B8"
-                          style={{ fontSize: kbHeight > 0 ? 44 : 56, fontWeight: "700", color: "#0F172A", letterSpacing: -2, minWidth: 80, maxWidth: 280, textAlign: "center", padding: 0 }}
+                          style={{ fontSize: 48, lineHeight: 56, fontWeight: "700", color: "#0F172A", letterSpacing: 0, minWidth: 90, maxWidth: 280, textAlign: "center", padding: 0 }}
                         />
                       </View>
                       <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
@@ -963,7 +963,7 @@ const HomeScreen = () => {
                     {/* Field rows — paid path */}
                     {logIncomePaidStatus === "paid" && (
                       <View style={{ paddingHorizontal: 22, marginTop: 12 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
                           <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" }}>
                             <Ionicons name="pencil-outline" size={16} color="#3B82F6" />
                           </View>
@@ -973,7 +973,7 @@ const HomeScreen = () => {
                             ref={logIncomeDescRef}
                             placeholder="What was it for?"
                             placeholderTextColor="#94A3B8"
-                            style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
+                            style={{ flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 10 }}
                             returnKeyType="done"
                             autoCorrect={false}
                             spellCheck={false}
@@ -1015,7 +1015,7 @@ const HomeScreen = () => {
                     {logIncomePaidStatus === "owed" && (
                       <View style={{ paddingHorizontal: 22, marginTop: 12 }}>
                         {/* Client name */}
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
                           <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" }}>
                             <Ionicons name="person-outline" size={16} color="#3B82F6" />
                           </View>
@@ -1025,7 +1025,7 @@ const HomeScreen = () => {
                             ref={logIncomeClientRef}
                             placeholder="Client name"
                             placeholderTextColor="#94A3B8"
-                            style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
+                            style={{ flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 10 }}
                             returnKeyType="next"
                             submitBehavior="submit"
                             onSubmitEditing={() => logIncomePhoneRef.current?.focus()}
@@ -1037,7 +1037,7 @@ const HomeScreen = () => {
                           />
                         </View>
                         {/* Phone */}
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
                           <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center" }}>
                             <Ionicons name="call-outline" size={16} color="#10B981" />
                           </View>
@@ -1049,7 +1049,7 @@ const HomeScreen = () => {
                             placeholderTextColor="#94A3B8"
                             keyboardType="phone-pad"
                             inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
-                            style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
+                            style={{ flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 10 }}
                             returnKeyType="done"
                             onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
                           />
@@ -1677,12 +1677,11 @@ const SpotlightOverlay = ({ visible, measurement, measurementKey }) => {
 
   const { width: SW, height: SH } = Dimensions.get("window");
   const { pageX, pageY, width: mW, height: mH } = measurement;
-  const PAD = 8;
-  const holeTop    = Math.floor(pageY) - PAD;
-  const holeLeft   = Math.floor(pageX) - PAD;
-  const holeWidth  = Math.ceil(mW) + PAD * 2;
-  const holeHeight = Math.ceil(mH) + PAD * 2;
-  const radii = { heroCard: 32, addIncome: 24, addExpense: 24, owed: 24, cashFlow: 20 };
+  const holeTop    = Math.round(pageY);
+  const holeLeft   = Math.round(pageX);
+  const holeWidth  = Math.round(mW);
+  const holeHeight = Math.round(mH);
+  const radii = { heroCard: 24, addIncome: 16, addExpense: 16, cashFlow: 12, owed: 16 };
   const radius = radii[measurementKey] ?? 24;
   const RGBA = "rgb(15,23,42)";
 
@@ -1769,8 +1768,8 @@ const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRe
 
   if (m) {
     const targetCenterX = m.pageX + m.width / 2;
-    const targetBottom  = m.pageY + m.height + 8;
-    const targetTop     = m.pageY - 8;
+    const targetBottom  = m.pageY + m.height;
+    const targetTop     = m.pageY;
     const cardHeight    = cardHeightRef.current;
     const spaceBelow    = SCREEN_H - targetBottom;
 
