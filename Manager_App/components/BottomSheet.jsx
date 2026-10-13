@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Modal, View, Pressable, Animated, Platform, KeyboardAvoidingView } from "react-native";
+import { Modal, View, Pressable, Animated, Platform, KeyboardAvoidingView, ScrollView } from "react-native";
 
 export default function BottomSheet({ visible, onClose, children }) {
   const y = useRef(new Animated.Value(600)).current;
@@ -16,7 +16,9 @@ export default function BottomSheet({ visible, onClose, children }) {
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
           <Animated.View style={{ transform: [{ translateY: y }], backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: Platform.OS === "ios" ? 44 : 28, paddingHorizontal: 22 }}>
             <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12, marginBottom: 20 }} />
-            {children}
+            <ScrollView keyboardShouldPersistTaps="handled" bounces={false} style={{ maxHeight: "100%" }}>
+              {children}
+            </ScrollView>
           </Animated.View>
         </KeyboardAvoidingView>
       </View>

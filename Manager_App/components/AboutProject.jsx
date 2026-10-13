@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  InputAccessoryView,
+  Keyboard,
   Modal,
   Platform,
   ScrollView,
@@ -16,7 +18,6 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { SERVER_URL } from "@env";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../services/api";
 import { useAuth } from "./useAuth";
@@ -39,6 +40,26 @@ const C = {
   spentDot: "#C2410C",
   track:    "#EDEDE9",
 };
+
+const KeyboardDone = ({ id }) =>
+  Platform.OS === "ios" ? (
+    <InputAccessoryView nativeID={id}>
+      <View style={{ flexDirection: "row", justifyContent: "flex-end", backgroundColor: "#F1F1EE", borderTopWidth: 1, borderTopColor: "#E6E6E1", paddingHorizontal: 12 }}>
+        <TouchableOpacity onPress={Keyboard.dismiss} style={{ paddingVertical: 10, paddingHorizontal: 8 }}>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: "#2457D6" }}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    </InputAccessoryView>
+  ) : null;
+
+const SheetHeader = ({ title, onClose }) => (
+  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+    <Text style={{ fontSize: 18, fontWeight: "700", color: "#17181C", flex: 1 }}>{title}</Text>
+    <TouchableOpacity onPress={() => { Keyboard.dismiss(); onClose(); }} accessibilityLabel="Close" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#F7F7F5", alignItems: "center", justifyContent: "center" }}>
+      <Ionicons name="close" size={18} color="#17181C" />
+    </TouchableOpacity>
+  </View>
+);
 
 export default function AboutProject() {
   const navigation      = useNavigation();
@@ -335,7 +356,7 @@ export default function AboutProject() {
       const token   = await AsyncStorage.getItem("token");
       const fileUri = FileSystem.documentDirectory + "Receipts.zip";
       const res     = await FileSystem.downloadAsync(
-        `${SERVER_URL}/downloadReceiptsZip?projectId=${projectId}`,
+        `${api.defaults.baseURL}/downloadReceiptsZip?projectId=${projectId}`,
         fileUri,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -777,7 +798,8 @@ export default function AboutProject() {
 
       {/* ── Edit sheet ────────────────────────────────────────────────────── */}
       <BottomSheet visible={editSheetVisible} onClose={() => setEditSheetVisible(false)}>
-        <Text style={s.sheetTitle}>Edit project</Text>
+        <SheetHeader title="Edit project" onClose={() => setEditSheetVisible(false)} />
+        <KeyboardDone id="acc-edit" />
         {[
           { label: "Name",                   value: editName,        set: setEditName,        kb: "default" },
           { label: "Client",                  value: editClient,      set: setEditClient,      kb: "default" },
@@ -793,6 +815,9 @@ export default function AboutProject() {
               keyboardType={f.kb}
               placeholder={f.label}
               placeholderTextColor={C.muted}
+              inputAccessoryViewID="acc-edit"
+              returnKeyType="done"
+              onSubmitEditing={Keyboard.dismiss}
             />
           </View>
         ))}
@@ -807,7 +832,8 @@ export default function AboutProject() {
 
       {/* ── Job value sheet ───────────────────────────────────────────────── */}
       <BottomSheet visible={jobValueSheetVisible} onClose={() => setJobValueSheetVisible(false)}>
-        <Text style={s.sheetTitle}>Job value</Text>
+        <SheetHeader title="Job value" onClose={() => setJobValueSheetVisible(false)} />
+        <KeyboardDone id="acc-value" />
         <Text style={s.sheetBody}>
           The total you agreed with the client. Maggo uses it to show what's still owed.
         </Text>
@@ -821,6 +847,7 @@ export default function AboutProject() {
             placeholder="0"
             placeholderTextColor={C.muted}
             autoFocus
+            inputAccessoryViewID="acc-value"
           />
         </View>
         {!!jobValueInput && (
@@ -851,7 +878,8 @@ export default function AboutProject() {
 
       {/* ── Bill client sheet ─────────────────────────────────────────────── */}
       <BottomSheet visible={billSheetVisible} onClose={() => setBillSheetVisible(false)}>
-        <Text style={s.sheetTitle}>Bill {client || "client"}</Text>
+        <SheetHeader title={`Bill ${client || "client"}`} onClose={() => setBillSheetVisible(false)} />
+        <KeyboardDone id="acc-bill" />
         <Text style={s.sheetBody}>
           {fmt(owed)} is still owed on this job. How much are you asking for now?
         </Text>
@@ -865,6 +893,7 @@ export default function AboutProject() {
               placeholder="Required"
               placeholderTextColor={C.muted}
               autoCapitalize="words"
+              inputAccessoryViewID="acc-bill"
             />
           </View>
         )}
@@ -893,6 +922,7 @@ export default function AboutProject() {
             keyboardType="decimal-pad"
             placeholder="Amount"
             placeholderTextColor={C.muted}
+            inputAccessoryViewID="acc-bill"
           />
         )}
         <Text style={[s.sheetLabel, { marginTop: 14 }]}>Due in</Text>
@@ -937,9 +967,8 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    height: 48,
     paddingHorizontal: 16,
-    paddingBottom: 6,
+    paddingBottom: 10,
     backgroundColor: C.bg,
   },
   iconBtn: {
