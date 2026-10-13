@@ -472,6 +472,7 @@ const HomeScreen = () => {
           totalDays={item.days}
           totalAmount={item.payment}
           isDemo={item.isDemo === true}
+          initial={item}
         />
       </TouchableOpacity>
     </Animated.View>
@@ -1129,7 +1130,7 @@ const HomeScreen = () => {
           <View style={styles.section}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 }}>
-                {`Projects · ${projectDetails.length} active`}
+                {`Projects · ${projectDetails.filter((p) => p.status !== "complete").length} active`}
               </Text>
               <TouchableOpacity
                 style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: "#EFF6FF" }}
@@ -1148,7 +1149,7 @@ const HomeScreen = () => {
               renderEmptyProjects()
             ) : (
               <FlatList
-                data={projectDetails}
+                data={[...projectDetails].sort((a, b) => (a.status === "complete") - (b.status === "complete"))}
                 scrollEnabled={false}
                 keyExtractor={(item) => item._id}
                 renderItem={renderProjectCard}
