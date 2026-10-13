@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TextInput,
+  InputAccessoryView,
   ScrollView,
   ActivityIndicator,
   FlatList,
@@ -15,6 +16,7 @@ import {
   Image,
   Animated,
   Dimensions,
+  useWindowDimensions,
   Modal,
   Platform,
   PixelRatio,
@@ -48,9 +50,12 @@ import Svg, { Path, Rect } from "react-native-svg";
 import { Building2 } from "lucide-react-native";
 import { registerPushToken } from "../utils/registerPushToken";
 import { track } from "../utils/analytics";
-
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import OwedSection from "./OwedSection";
 
 const { width } = Dimensions.get("window");
+
+const SHOW_TAX_ESTIMATE = false;
 
 export const firebaseLogin = async () => {
   if (!auth.currentUser) {
@@ -63,6 +68,8 @@ const HomeScreen = () => {
   const navigation = useNavigation();
   const { userId, authLoading, isAuthenticated, userDetails } = useAuth();
   const isFocused = useIsFocused();
+  const { height: windowHeight } = useWindowDimensions();
+  const { top: topInset } = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,6 +90,13 @@ const HomeScreen = () => {
 
   // Lightweight log income modal
   const [logIncomeVisible, setLogIncomeVisible] = useState(false);
+  const logIncomeSheetY = useRef(new Animated.Value(600)).current;
+  useEffect(() => {
+    if (logIncomeVisible) {
+      logIncomeSheetY.setValue(0);
+      requestAnimationFrame(() => logIncomeAmountRef.current?.focus());
+    }
+  }, [logIncomeVisible]);
   const [logIncomeAmount, setLogIncomeAmount] = useState("");
   const [logIncomeDescription, setLogIncomeDescription] = useState("");
   const [logIncomeProject, setLogIncomeProject] = useState(null);
@@ -90,12 +104,30 @@ const HomeScreen = () => {
   const [logIncomeDate, setLogIncomeDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Income context menu
-  const [incomeMenuVisible, setIncomeMenuVisible] = useState(false);
-  const incomeButtonRef = useRef(null);
-  const logIncomeAmountRef = useRef(null);
+  // Log income: paid vs owed segmented control
+  const [logIncomePaidStatus, setLogIncomePaidStatus] = useState("paid");
+  const [logIncomeClient, setLogIncomeClient] = useState("");
+  const [logIncomeClientPhone, setLogIncomeClientPhone] = useState("");
+  const [logIncomeDueDays, setLogIncomeDueDays] = useState(14);
 
-  const [incomeMenuPosition, setIncomeMenuPosition] = useState({ x: 0, y: 0, width: 0 });
+  // Owed to You section
+  const [owedSummary, setOwedSummary] = useState({ totalOwed: 0, overdueCount: 0, items: [] });
+
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const s = Keyboard.addListener(showEvt, (e) => setKbHeight(e.endCoordinates.height));
+    const h = Keyboard.addListener(hideEvt, () => setKbHeight(0));
+    return () => { s.remove(); h.remove(); };
+  }, []);
+
+  const logIncomeAmountRef = useRef(null);
+  const logIncomeClientRef = useRef(null);
+  const logIncomePhoneRef = useRef(null);
+  const logIncomeDescRef = useRef(null);
+  const logIncomeScrollRef = useRef(null);
+  const LOG_INCOME_ACCESSORY_ID = "logIncomeAccessory";
 
   // First-run onboarding
   const [welcomeVisible, setWelcomeVisible] = useState(false);
@@ -107,10 +139,12 @@ const HomeScreen = () => {
   // One ref per tour target — measured at runtime
   const refHeroCard   = useRef(null);
   const refAddIncome  = useRef(null);
-  const refNewProject = useRef(null);
+  const refOwed       = useRef(null);
   const refAddExpense = useRef(null);
   const refCashFlow   = useRef(null);
 
+  // Scroll view ref for programmatic scrolling during tour
+  const scrollViewRef = useRef(null);
 
   // Tracks current scroll offset — ref to avoid re-renders
   const scrollOffsetRef = useRef(0);
@@ -139,7 +173,10 @@ const HomeScreen = () => {
         return;
       }
 
-      const response = await api.get("/getUser");
+      const [response, owedRes] = await Promise.all([
+        api.get("/getUser"),
+        api.get("/invoices/summary").catch(() => null),
+      ]);
       setUserName(response.data?.name ?? "User");
       setUserLogo(response.data.logo);
       setProjectDetails(response.data?.projects ?? []);
@@ -147,6 +184,7 @@ const HomeScreen = () => {
       setTotalIncomes(response.data?.totalIncomes ?? 0);
       const net = (response.data?.totalIncomes ?? 0) - (response.data?.totalExpenses ?? 0);
       setNetBalance(net);
+      if (owedRes?.data) setOwedSummary(owedRes.data);
       
     } catch (err) {
       console.error("Error fetching user data: ", err);
@@ -160,50 +198,45 @@ const HomeScreen = () => {
     fetchData(true);
   }, []);
 
-  /* ── Measurement ── */
-  const measureTargets = () => {
-    const keys = ["heroCard", "newProject", "addIncome", "addExpense", "cashFlow"];
-    const refs = [refHeroCard, refNewProject, refAddIncome, refAddExpense, refCashFlow];
-    const next = {};
-    let done = 0;
-    const ratio = PixelRatio.get();
+  /* ── Tour: bring target into view, measure it, then show the step ── */
+  const TOUR_REFS = { heroCard: refHeroCard, addIncome: refAddIncome, addExpense: refAddExpense, cashFlow: refCashFlow, owed: refOwed };
 
-    refs.forEach((ref, i) => {
-      if (ref.current) {
-        ref.current.measure((x, y, width, height, pageX, pageY) => {
-          // .measure() should return points but some Android versions return pixels.
-          // Detect: if pageX > SCREEN_W, values are in pixels — divide by ratio.
-          const { width: screenW } = Dimensions.get("window");
-          const needsRatio = pageX > screenW;
-          const px = needsRatio ? pageX / ratio : pageX;
-          const py = needsRatio ? pageY / ratio : pageY;
-          const pw = needsRatio ? width  / ratio : width;
-          const ph = needsRatio ? height / ratio : height;
-          next[keys[i]] = { pageX: px, pageY: py, width: pw, height: ph };
-          done++;
-          if (done === keys.length) setMeasurements({ ...next });
-        });
-      }
+  const showTourStep = (n) => {
+    const key = TOUR_STEPS[n - 1]?.key;
+    const ref = TOUR_REFS[key];
+    if (!ref?.current) return;
+    const { height: SH } = Dimensions.get("window");
+    const TOP_ROOM = 140;
+    const BOTTOM_ROOM = 240;
+
+    const measureAndShow = () => {
+      ref.current?.measureInWindow((x, y, width, height) => {
+        setMeasurements((prev) => ({ ...prev, [key]: { pageX: x, pageY: y, width, height } }));
+        setTourStep(n);
+        setTourVisible(true);
+        AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(n));
+      });
+    };
+
+    ref.current.measureInWindow((x, y, width, height) => {
+      if (y >= TOP_ROOM && y + height <= SH - BOTTOM_ROOM) { measureAndShow(); return; }
+      const sv = scrollViewRef.current;
+      const scroller = sv?.scrollTo ? sv : sv?.getScrollResponder?.();
+      scroller?.scrollTo({ y: Math.max(0, scrollOffsetRef.current + y - TOP_ROOM), animated: false });
+      setTimeout(measureAndShow, 80);
     });
   };
 
   /* ── Tour handlers ── */
-  const handleTourStart = useCallback(() => {
+  const handleTourStart = () => {
     setTimeout(() => {
-      measureTargets();
-    }, 200);
-    setTimeout(() => {
-      // console.log("[TOUR] 800ms setTimeout firing, calling setTourVisible");
-      // console.log("[TOUR] About to setTourVisible true");
-      setTourStep(1);
-      setTourVisible(true);
+      showTourStep(1);
       track("tour_started");
-      AsyncStorage.setItem(`maggo_tour_step_${userId}`, "1");
     }, 800);
-  }, []);
+  };
 
   const handleTourNext = async () => {
-    if (tourStep >= 5) {
+    if (tourStep >= TOUR_STEPS.length) {
       setTourVisible(false);
       setTourStep(1);
       setShowNudge(true);
@@ -212,9 +245,7 @@ const HomeScreen = () => {
       await AsyncStorage.setItem(`maggo_tour_step_${userId}`, "0");
       await AsyncStorage.setItem(`maggo_checklist_dismissed_${userId}`, "true");
     } else {
-      const next = tourStep + 1;
-      setTourStep(next);
-      await AsyncStorage.setItem(`maggo_tour_step_${userId}`, String(next));
+      showTourStep(tourStep + 1);
     }
   };
 
@@ -246,8 +277,6 @@ const HomeScreen = () => {
     if (isFocused && !authLoading && isAuthenticated) {
       fetchData();
       api.post("/user/ping").catch(() => {});
-      // Small delay lets the layout settle before measuring
-      setTimeout(measureTargets, 400);
     }
   }, [isFocused, authLoading, isAuthenticated]);
 
@@ -266,11 +295,10 @@ const HomeScreen = () => {
       }
       // Returning user — resume tour only if interrupted mid-session
       const savedStep = await AsyncStorage.getItem(`maggo_tour_step_${userId}`);
-      const step = parseInt(savedStep, 10) || 0;
+      const rawStep = parseInt(savedStep, 10) || 0;
+      const step = Math.min(rawStep, TOUR_STEPS.length);
       if (step > 0) {
-        setTourStep(step);
-        setTourVisible(true);
-        setTimeout(measureTargets, 400);
+        setTimeout(() => showTourStep(step), 400);
       }
     };
 
@@ -316,6 +344,18 @@ const HomeScreen = () => {
     });
   };
 
+  const resetLogIncomeModal = () => {
+    setLogIncomeAmount("");
+    setLogIncomeDescription("");
+    setLogIncomeProject(null);
+    setLogIncomeDate(new Date());
+    setShowDatePicker(false);
+    setLogIncomePaidStatus("paid");
+    setLogIncomeClient("");
+    setLogIncomeClientPhone("");
+    setLogIncomeDueDays(14);
+  };
+
   const handleLogIncomeSubmit = async () => {
     logIncomeAmountRef.current?.blur();
     Keyboard.dismiss();
@@ -323,6 +363,37 @@ const HomeScreen = () => {
       Alert.alert("Invalid amount", "Please enter a valid amount.");
       return;
     }
+
+    if (logIncomePaidStatus === "owed") {
+      if (!logIncomeClient.trim()) {
+        Alert.alert("Client name required", "Please enter the client's name.");
+        return;
+      }
+      setLogIncomeSaving(true);
+      try {
+        await api.post("/invoices", {
+          client: logIncomeClient.trim(),
+          clientPhone: logIncomeClientPhone.trim() || null,
+          amount: Number(logIncomeAmount),
+          projectId: logIncomeProject?._id || null,
+          dueDays: logIncomeDueDays,
+        });
+        setLogIncomeVisible(false);
+        resetLogIncomeModal();
+        track("owed_entry_created", {
+          amount: Number(logIncomeAmount),
+          dueDays: logIncomeDueDays,
+          hasProject: !!logIncomeProject,
+        });
+        await fetchData();
+      } catch (e) {
+        Alert.alert("Error", "Could not save. Please try again.");
+      } finally {
+        setLogIncomeSaving(false);
+      }
+      return;
+    }
+
     setLogIncomeSaving(true);
     try {
       await api.post("/income", {
@@ -332,11 +403,7 @@ const HomeScreen = () => {
         date: logIncomeDate.toISOString(),
       });
       setLogIncomeVisible(false);
-      setLogIncomeAmount("");
-      setLogIncomeDescription("");
-      setLogIncomeProject(null);
-      setLogIncomeDate(new Date());
-      setShowDatePicker(false);
+      resetLogIncomeModal();
       track("income_saved", {
         amount: Number(logIncomeAmount),
         hasProject: !!logIncomeProject,
@@ -507,6 +574,7 @@ const HomeScreen = () => {
       </View>
 
       <Animated.ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!receiptModalVisible}
@@ -593,12 +661,8 @@ const HomeScreen = () => {
                 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#34d399" }} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Income</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(
-                                            totalIncomes,
-                                            userDetails?.currency || "USD",
-                                            userDetails?.locale || "en-US"
-                                          )}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Earned</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(totalIncomes, userDetails?.currency || "USD", userDetails?.locale || "en-US")}</Text>
                   </View>
                 </View>
                 {/* Expense pill */}
@@ -611,31 +675,91 @@ const HomeScreen = () => {
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#f87171" }} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 10, fontWeight: "600", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Expenses</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(
-                                            totalExpenses,
-                                            userDetails?.currency || "USD",
-                                            userDetails?.locale || "en-US"
-                                          )}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{formatCurrency(totalExpenses, userDetails?.currency || "USD", userDetails?.locale || "en-US")}</Text>
                   </View>
                 </View>
               </View>
+
+              {/* Tax estimate */}
+              {SHOW_TAX_ESTIMATE && netBalance > 0 && (
+                <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 10, fontWeight: "500" }}>
+                  {`Keep about ${formatCurrency(netBalance * 0.25, userDetails?.currency || "USD", userDetails?.locale || "en-US")} aside for tax.`}
+                </Text>
+              )}
             </View>
+          </View>
+
+          {/* Primary Actions */}
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+            {/* Log Payment */}
+            <TouchableOpacity
+              ref={refAddIncome}
+              style={[styles.primaryActionBtn, { backgroundColor: "#10B981" }]}
+              onPress={() => {
+                track("income_modal_opened", { source: "primary_btn" });
+                setLogIncomeVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="cash" size={20} color="#fff" />
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Log Payment</Text>
+            </TouchableOpacity>
+
+            {/* Add Expense */}
+            <TouchableOpacity
+              ref={refAddExpense}
+              style={[
+                styles.primaryActionBtn,
+                {
+                  backgroundColor: "#fff",
+                  borderWidth: 1.5,
+                  borderColor: "#E2E8F0",
+                  shadowOpacity: 0.06,
+                  elevation: 3,
+                },
+              ]}
+              onPress={() => setReceiptModalVisible(true)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="card" size={20} color="#EF4444" />
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#0F172A" }}>Add Expense</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Secondary Actions */}
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 28 }}>
+            <TouchableOpacity
+              style={styles.secondaryActionBtn}
+              onPress={() => {
+                track("payment_receipt_opened");
+                handleGenerateInvoicePress();
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="document-text-outline" size={16} color="#F59E0B" />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151" }}>Payment Receipt</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              ref={refCashFlow}
+              style={[
+                styles.secondaryActionBtn,
+              ]}
+              onPress={() => {
+                track("cashflow_opened");
+                navigation.navigate("CashFlow");
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="stats-chart" size={16} color="#8B5CF6" />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151" }}>CashFlow</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Post-tour nudge card */}
           {showNudge && (
-            <View style={{
-              backgroundColor: "#111827",
-              borderRadius: 14,
-              borderWidth: 0.5,
-              borderColor: "rgba(255,255,255,0.08)",
-              overflow: "hidden",
-              marginBottom: 12,
-            }}>
+            <View style={{ backgroundColor: "#111827", borderRadius: 14, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: 20 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 0 }}>
-                <Text style={{ fontSize: 11, color: "#34d399", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "500" }}>
-                  Get started
-                </Text>
+                <Text style={{ fontSize: 11, color: "#34d399", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "500" }}>Get started</Text>
                 <TouchableOpacity onPress={() => setShowNudge(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                   <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Dismiss</Text>
                 </TouchableOpacity>
@@ -650,20 +774,12 @@ const HomeScreen = () => {
               </View>
               <View style={{ height: 0.5, backgroundColor: "rgba(255,255,255,0.07)", marginHorizontal: 16, marginBottom: 14 }} />
               <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingBottom: 14 }}>
-                <TouchableOpacity
-                  style={{ flex: 1, paddingVertical: 9, borderRadius: 8, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }}
-                  onPress={() => setShowNudge(false)}
-                >
+                <TouchableOpacity style={{ flex: 1, paddingVertical: 9, borderRadius: 8, borderWidth: 0.5, borderColor: "rgba(255,255,255,0.1)", alignItems: "center" }} onPress={() => setShowNudge(false)}>
                   <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>Later</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{ flex: 2, paddingVertical: 9, borderRadius: 8, backgroundColor: "#34d399", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}
-                  onPress={() => {
-                    track("nudge_log_payment_tapped");
-                    setShowNudge(false);
-                    track("income_modal_opened", { source: "nudge" });
-                    setLogIncomeVisible(true);
-                  }}
+                  onPress={() => { track("nudge_log_payment_tapped"); setShowNudge(false); track("income_modal_opened", { source: "nudge" }); setLogIncomeVisible(true); }}
                 >
                   <Text style={{ fontSize: 12, fontWeight: "600", color: "#052e16" }}>Log payment</Text>
                   <Ionicons name="arrow-forward" size={13} color="#052e16" />
@@ -672,63 +788,21 @@ const HomeScreen = () => {
             </View>
           )}
 
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.quickActions}>
+          {/* Owed to You */}
+          <View ref={refOwed} style={{ marginBottom: 28 }}>
+            <OwedSection
+              summary={owedSummary}
+              currency={userDetails?.currency || "USD"}
+              locale={userDetails?.locale || "en-US"}
+              region={userDetails?.address?.country}
+              userName={userName}
+              onAdd={() => { track("income_modal_opened", { source: "owed_add" }); setLogIncomePaidStatus("owed"); setLogIncomeVisible(true); }}
+              onChanged={fetchData}
+            />
+          </View>
 
-              {/* New Project */}
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => { track("project_create_started"); navigation.navigate("NewProject"); }}
-              >
-                <View ref={refNewProject} style={[styles.actionIcon, tourVisible && tourStep === 2 && { shadowOpacity: 0, elevation: 0 }]}>
-                  <Ionicons name="add-circle" size={24} color="#3B82F6" />
-                </View>
-                <Text style={styles.actionText}>New Project</Text>
-              </TouchableOpacity>
-
-              {/* Income — combined button with context menu */}
-              <TouchableOpacity
-                ref={incomeButtonRef}
-                style={styles.actionButton}
-                onPress={() => {
-                  incomeButtonRef.current?.measure((x, y, w, h, pageX, pageY) => {
-                    setIncomeMenuPosition({ x: pageX, y: pageY, width: w });
-                    setIncomeMenuVisible(true);
-                  });
-                }}
-              >
-                <View ref={refAddIncome} style={[styles.actionIcon, tourVisible && tourStep === 3 && { shadowOpacity: 0, elevation: 0 }]}>
-                  <Ionicons name="cash" size={24} color="#10B981" />
-                </View>
-                <Text style={styles.actionText}>Income</Text>
-              </TouchableOpacity>
-
-              {/* Add Expense */}
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => setReceiptModalVisible(true)}
-              >
-                <View ref={refAddExpense} style={[styles.actionIcon, tourVisible && tourStep === 4 && { shadowOpacity: 0, elevation: 0 }]}>
-                  <Ionicons name="card" size={24} color="#EF4444" />
-                </View>
-                <Text style={styles.actionText}>Add Expense</Text>
-              </TouchableOpacity>
-
-              {/* CashFlow */}
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate("CashFlow")}
-              >
-                <View ref={refCashFlow} style={[styles.actionIcon, tourVisible && tourStep === 5 && { shadowOpacity: 0, elevation: 0 }]}>
-                  <Ionicons name="stats-chart" size={24} color="#8B5CF6" />
-                </View>
-                <Text style={styles.actionText}>CashFlow</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Modals live outside the flex row to avoid layout side-effects */}
+          {/* Modals */}
+          <View>
             <Modal visible={receiptModalVisible} transparent animationType="fade" statusBarTranslucent>
               <View style={styles.backdrop}>
                 <View style={styles.modalCard}>
@@ -740,240 +814,270 @@ const HomeScreen = () => {
               </View>
             </Modal>
 
-            {/* Log Income Modal — lightweight, no PDF, no biz details required */}
+            {/* Log Income / Log Owed Modal */}
             <Modal
               visible={logIncomeVisible}
-              animationType="slide"
+              animationType="fade"
               transparent
               statusBarTranslucent
               onRequestClose={() => {
                 logIncomeAmountRef.current?.blur();
                 Keyboard.dismiss();
+                resetLogIncomeModal();
                 setLogIncomeVisible(false);
-                setShowDatePicker(false);
               }}
             >
               <View style={{ flex: 1 }}>
-                {/* Dimmed backdrop — dismisses keyboard first, if keyboard is up, else closes modal */}
                 <Pressable
                   style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }}
                   onPress={() => {
                     logIncomeAmountRef.current?.blur();
                     Keyboard.dismiss();
+                    resetLogIncomeModal();
                     setLogIncomeVisible(false);
-                    setShowDatePicker(false);
                   }}
                 />
                 <KeyboardAvoidingView
                   behavior={Platform.OS === "ios" ? "padding" : "height"}
                   style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}
                 >
-                  <View style={{
-                    backgroundColor: "#FFFFFF",
-                    borderTopLeftRadius: 28,
-                    borderTopRightRadius: 28,
-                    paddingBottom: Platform.OS === "ios" ? 40 : 28,
-                  }}>
-
+                  <Animated.View style={{ transform: [{ translateY: logIncomeSheetY }] }}>
+                  <ScrollView
+                    ref={logIncomeScrollRef}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderTopLeftRadius: 28,
+                      borderTopRightRadius: 28,
+                      maxHeight: kbHeight > 0
+                        ? windowHeight - kbHeight - topInset - 24
+                        : windowHeight * 0.88,
+                    }}
+                    contentContainerStyle={{ paddingBottom: Platform.OS === "ios" ? 40 : 28 }}
+                    bounces={false}
+                  >
                     {/* Drag pill */}
-                    <View style={{
-                      width: 36, height: 4, borderRadius: 2,
-                      backgroundColor: "#E5E7EB",
-                      alignSelf: "center",
-                      marginTop: 12,
-                    }} />
+                    <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12 }} />
 
                     {/* Header */}
-                    <View style={{
-                      flexDirection: "row", alignItems: "center",
-                      justifyContent: "space-between",
-                      paddingHorizontal: 22, paddingTop: 18, paddingBottom: 4,
-                    }}>
-                      <Text style={{ fontSize: 17, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 }}>
-                        Log income
-                      </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 22, paddingTop: 18, paddingBottom: 4 }}>
+                      <Text style={{ fontSize: 17, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 }}>Log income</Text>
                       <Pressable
                         onPress={() => {
                           logIncomeAmountRef.current?.blur();
                           Keyboard.dismiss();
                           track("income_modal_closed_no_save");
+                          resetLogIncomeModal();
                           setLogIncomeVisible(false);
-                          setShowDatePicker(false);
                         }}
-                        style={({ pressed }) => ({
-                          width: 28, height: 28, borderRadius: 14,
-                          backgroundColor: "#F1F5F9",
-                          alignItems: "center", justifyContent: "center",
-                          opacity: pressed ? 0.6 : 1,
-                        })}
+                        style={({ pressed }) => ({ width: 28, height: 28, borderRadius: 14, backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
                         <Ionicons name="close" size={15} color="#64748B" />
                       </Pressable>
                     </View>
 
+                    {/* Segmented control: Has the money arrived? */}
+                    <View style={{ paddingHorizontal: 22, paddingTop: 14, paddingBottom: 4 }}>
+                      <Text style={{ fontSize: 12, fontWeight: "600", color: "#64748B", marginBottom: 8 }}>Has the money arrived?</Text>
+                      <View style={{ flexDirection: "row", backgroundColor: "#F1F5F9", borderRadius: 10, padding: 3 }}>
+                        <TouchableOpacity
+                          style={{
+                            flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center",
+                            backgroundColor: logIncomePaidStatus === "paid" ? "#fff" : "transparent",
+                            shadowColor: logIncomePaidStatus === "paid" ? "#000" : "transparent",
+                            shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
+                            elevation: logIncomePaidStatus === "paid" ? 2 : 0,
+                          }}
+                          onPress={() => setLogIncomePaidStatus("paid")}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: "600", color: logIncomePaidStatus === "paid" ? "#10B981" : "#94A3B8" }}>Yes, paid</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{
+                            flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center",
+                            backgroundColor: logIncomePaidStatus === "owed" ? "#fff" : "transparent",
+                            shadowColor: logIncomePaidStatus === "owed" ? "#000" : "transparent",
+                            shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
+                            elevation: logIncomePaidStatus === "owed" ? 2 : 0,
+                          }}
+                          onPress={() => setLogIncomePaidStatus("owed")}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: "600", color: logIncomePaidStatus === "owed" ? "#F59E0B" : "#94A3B8" }}>Not yet</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
                     {/* Amount hero */}
-                    <View style={{
-                      paddingVertical: 24, paddingHorizontal: 22,
-                      alignItems: "center",
-                      borderBottomWidth: 1,
-                      borderBottomColor: "#F1F5F9",
-                    }}>
+                    <View style={{ paddingVertical: 16, paddingHorizontal: 22, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
                       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                        <Text style={{
-                          fontSize: 26, fontWeight: "600",
-                          color: logIncomeAmount ? "#94A3B8" : "#CBD5E1",
-                          marginTop: 8, marginRight: 2,
-                        }}>$</Text>
+                        <Text style={{ fontSize: 26, fontWeight: "600", color: logIncomeAmount ? "#94A3B8" : "#CBD5E1", marginTop: 8, marginRight: 4 }}>$</Text>
                         <TextInput
                           ref={logIncomeAmountRef}
                           value={logIncomeAmount}
                           onChangeText={setLogIncomeAmount}
                           keyboardType="decimal-pad"
-                          placeholder="0"
-                          placeholderTextColor="#CBD5E1"
-                          style={{
-                            fontSize: 56,
-                            fontWeight: "700",
-                            color: "#0F172A",
-                            letterSpacing: -2,
-                            minWidth: 60,
-                            maxWidth: 220,
-                            textAlign: "center",
-                            padding: 0,
-                          }}
+                          inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
+                          placeholder="0.00"
+                          placeholderTextColor="#94A3B8"
+                          style={{ fontSize: 48, lineHeight: 56, fontWeight: "700", color: "#0F172A", letterSpacing: 0, minWidth: 90, maxWidth: 280, textAlign: "center", padding: 0 }}
                         />
                       </View>
-                      <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 6 }}>
-                        Enter amount received
+                      <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
+                        {logIncomePaidStatus === "paid" ? "Enter amount received" : "Enter amount owed"}
                       </Text>
                     </View>
 
                     {/* Project pills */}
                     {projectDetails.length > 0 && (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 14, paddingBottom: 2, gap: 8 }}
-                      >
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 14, paddingBottom: 2, gap: 8 }}>
                         <TouchableOpacity
                           onPress={() => setLogIncomeProject(null)}
-                          style={{
-                            paddingHorizontal: 14, paddingVertical: 7,
-                            borderRadius: 20,
-                            backgroundColor: !logIncomeProject ? "#ECFDF5" : "#F8FAFC",
-                            borderWidth: 1,
-                            borderColor: !logIncomeProject ? "#34d399" : "#E2E8F0",
-                          }}
+                          style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: !logIncomeProject ? "#ECFDF5" : "#F8FAFC", borderWidth: 1, borderColor: !logIncomeProject ? "#34d399" : "#E2E8F0" }}
                         >
-                          <Text style={{
-                            fontSize: 12, fontWeight: !logIncomeProject ? "600" : "400",
-                            color: !logIncomeProject ? "#059669" : "#94A3B8",
-                          }}>No project</Text>
+                          <Text style={{ fontSize: 12, fontWeight: !logIncomeProject ? "600" : "400", color: !logIncomeProject ? "#059669" : "#94A3B8" }}>No project</Text>
                         </TouchableOpacity>
                         {projectDetails.map((p) => (
                           <TouchableOpacity
                             key={p._id}
                             onPress={() => setLogIncomeProject(p)}
-                            style={{
-                              paddingHorizontal: 14, paddingVertical: 7,
-                              borderRadius: 20,
-                              backgroundColor: logIncomeProject?._id === p._id ? "#ECFDF5" : "#F8FAFC",
-                              borderWidth: 1,
-                              borderColor: logIncomeProject?._id === p._id ? "#34d399" : "#E2E8F0",
-                            }}
+                            style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: logIncomeProject?._id === p._id ? "#ECFDF5" : "#F8FAFC", borderWidth: 1, borderColor: logIncomeProject?._id === p._id ? "#34d399" : "#E2E8F0" }}
                           >
-                            <Text style={{
-                              fontSize: 12,
-                              fontWeight: logIncomeProject?._id === p._id ? "600" : "400",
-                              color: logIncomeProject?._id === p._id ? "#059669" : "#64748B",
-                            }}>{p.name}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: logIncomeProject?._id === p._id ? "600" : "400", color: logIncomeProject?._id === p._id ? "#059669" : "#64748B" }}>{p.name}</Text>
                           </TouchableOpacity>
                         ))}
                       </ScrollView>
                     )}
 
-                    {/* Field rows */}
-                    <View style={{ paddingHorizontal: 22, marginTop: 12 }}>
-
-                      {/* Description */}
-                      <View style={{
-                        flexDirection: "row", alignItems: "center", gap: 12,
-                        paddingVertical: 12,
-                        borderBottomWidth: 1, borderBottomColor: "#F1F5F9",
-                      }}>
-                        <View style={{
-                          width: 34, height: 34, borderRadius: 10,
-                          backgroundColor: "#EFF6FF",
-                          alignItems: "center", justifyContent: "center",
-                        }}>
-                          <Ionicons name="pencil-outline" size={16} color="#3B82F6" />
+                    {/* Field rows — paid path */}
+                    {logIncomePaidStatus === "paid" && (
+                      <View style={{ paddingHorizontal: 22, marginTop: 12 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" }}>
+                            <Ionicons name="pencil-outline" size={16} color="#3B82F6" />
+                          </View>
+                          <TextInput
+                            value={logIncomeDescription}
+                            onChangeText={setLogIncomeDescription}
+                            ref={logIncomeDescRef}
+                            placeholder="What was it for?"
+                            placeholderTextColor="#94A3B8"
+                            style={{ flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 10 }}
+                            returnKeyType="done"
+                            autoCorrect={false}
+                            spellCheck={false}
+                            autoComplete="off"
+                            onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
+                          />
                         </View>
-                        <TextInput
-                          value={logIncomeDescription}
-                          onChangeText={setLogIncomeDescription}
-                          placeholder="Description (optional)"
-                          placeholderTextColor="#CBD5E1"
-                          style={{ flex: 1, fontSize: 14, color: "#0F172A", padding: 0 }}
-                          returnKeyType="done"
-                        />
+                        <TouchableOpacity onPress={() => setShowDatePicker(!showDatePicker)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 }} activeOpacity={0.7}>
+                          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#FFFBEB", alignItems: "center", justifyContent: "center" }}>
+                            <Ionicons name="calendar-outline" size={16} color="#F59E0B" />
+                          </View>
+                          <Text style={{ flex: 1, fontSize: 14, color: "#64748B" }}>Date</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#F8FAFC", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "#E2E8F0" }}>
+                            <Text style={{ fontSize: 13, fontWeight: "600", color: "#0F172A" }}>
+                              {logIncomeDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </Text>
+                            <Ionicons name="chevron-down" size={13} color="#94A3B8" />
+                          </View>
+                        </TouchableOpacity>
+                        {showDatePicker && (
+                          <DateTimePicker
+                            value={logIncomeDate}
+                            mode="date"
+                            display={Platform.OS === "ios" ? "inline" : "default"}
+                            onChange={(event, selectedDate) => {
+                              if (Platform.OS === "android") setShowDatePicker(false);
+                              if (selectedDate) setLogIncomeDate(selectedDate);
+                            }}
+                            maximumDate={new Date()}
+                            style={{ marginBottom: 8 }}
+                            accentColor="#34d399"
+                            themeVariant="light"
+                          />
+                        )}
                       </View>
+                    )}
 
-                      {/* Date picker row */}
-                      <TouchableOpacity
-                        onPress={() => setShowDatePicker(!showDatePicker)}
-                        style={{
-                          flexDirection: "row", alignItems: "center", gap: 12,
-                          paddingVertical: 12,
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <View style={{
-                          width: 34, height: 34, borderRadius: 10,
-                          backgroundColor: "#FFFBEB",
-                          alignItems: "center", justifyContent: "center",
-                        }}>
-                          <Ionicons name="calendar-outline" size={16} color="#F59E0B" />
+                    {/* Field rows — owed path */}
+                    {logIncomePaidStatus === "owed" && (
+                      <View style={{ paddingHorizontal: 22, marginTop: 12 }}>
+                        {/* Client name */}
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" }}>
+                            <Ionicons name="person-outline" size={16} color="#3B82F6" />
+                          </View>
+                          <TextInput
+                            value={logIncomeClient}
+                            onChangeText={setLogIncomeClient}
+                            ref={logIncomeClientRef}
+                            placeholder="Client name"
+                            placeholderTextColor="#94A3B8"
+                            style={{ flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 10 }}
+                            returnKeyType="next"
+                            submitBehavior="submit"
+                            onSubmitEditing={() => logIncomePhoneRef.current?.focus()}
+                            autoCapitalize="words"
+                            autoCorrect={false}
+                            spellCheck={false}
+                            autoComplete="off"
+                            onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
+                          />
                         </View>
-                        <Text style={{ flex: 1, fontSize: 14, color: "#64748B" }}>Date</Text>
-                        <View style={{
-                          flexDirection: "row", alignItems: "center", gap: 6,
-                          backgroundColor: "#F8FAFC",
-                          paddingHorizontal: 12, paddingVertical: 6,
-                          borderRadius: 8, borderWidth: 1, borderColor: "#E2E8F0",
-                        }}>
-                          <Text style={{ fontSize: 13, fontWeight: "600", color: "#0F172A" }}>
-                            {logIncomeDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                          </Text>
-                          <Ionicons name="chevron-down" size={13} color="#94A3B8" />
+                        {/* Phone */}
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#F0FDF4", alignItems: "center", justifyContent: "center" }}>
+                            <Ionicons name="call-outline" size={16} color="#10B981" />
+                          </View>
+                          <TextInput
+                            value={logIncomeClientPhone}
+                            onChangeText={setLogIncomeClientPhone}
+                            ref={logIncomePhoneRef}
+                            placeholder="Phone (optional)"
+                            placeholderTextColor="#94A3B8"
+                            keyboardType="phone-pad"
+                            inputAccessoryViewID={LOG_INCOME_ACCESSORY_ID}
+                            style={{ flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 10 }}
+                            returnKeyType="done"
+                            onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
+                          />
                         </View>
-                      </TouchableOpacity>
-
-                      {showDatePicker && (
-                        <DateTimePicker
-                          value={logIncomeDate}
-                          mode="date"
-                          display={Platform.OS === "ios" ? "inline" : "default"}
-                          onChange={(event, selectedDate) => {
-                            if (Platform.OS === "android") setShowDatePicker(false);
-                            if (selectedDate) setLogIncomeDate(selectedDate);
-                          }}
-                          maximumDate={new Date()}
-                          style={{ marginBottom: 8 }}
-                          accentColor="#34d399"
-                          themeVariant="light"
-                        />
-                      )}
-                    </View>
+                        {/* Due date chips */}
+                        <View style={{ paddingVertical: 14 }}>
+                          <Text style={{ fontSize: 12, fontWeight: "600", color: "#64748B", marginBottom: 10 }}>Due in</Text>
+                          <View style={{ flexDirection: "row", gap: 8 }}>
+                            {[7, 14, 30].map((d) => (
+                              <TouchableOpacity
+                                key={d}
+                                onPress={() => setLogIncomeDueDays(d)}
+                                style={{
+                                  paddingHorizontal: 18, paddingVertical: 8,
+                                  borderRadius: 20,
+                                  backgroundColor: logIncomeDueDays === d ? "#FEF3C7" : "#F8FAFC",
+                                  borderWidth: 1.5,
+                                  borderColor: logIncomeDueDays === d ? "#F59E0B" : "#E2E8F0",
+                                }}
+                              >
+                                <Text style={{ fontSize: 13, fontWeight: "600", color: logIncomeDueDays === d ? "#92400E" : "#94A3B8" }}>{d} days</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+                    )}
 
                     {/* Save button */}
-                    <View style={{ paddingHorizontal: 22, marginTop: 20 }}>
+                    <View style={{ paddingHorizontal: 22, marginTop: 16 }}>
                       <TouchableOpacity
                         onPress={handleLogIncomeSubmit}
                         disabled={logIncomeSaving || !logIncomeAmount}
                         activeOpacity={0.85}
                         style={{
-                          backgroundColor: logIncomeAmount ? "#10B981" : "#D1FAE5",
+                          backgroundColor: !logIncomeAmount
+                            ? (logIncomePaidStatus === "owed" ? "#FDE68A" : "#D1FAE5")
+                            : (logIncomePaidStatus === "owed" ? "#F59E0B" : "#10B981"),
                           borderRadius: 14,
                           paddingVertical: 15,
                           alignItems: "center",
@@ -986,111 +1090,56 @@ const HomeScreen = () => {
                           <ActivityIndicator size="small" color="#fff" />
                         ) : (
                           <>
-                            <Text style={{
-                              fontSize: 15, fontWeight: "700",
-                              color: logIncomeAmount ? "#fff" : "#6EE7B7",
-                            }}>Save payment</Text>
-                            <Ionicons
-                              name="arrow-forward"
-                              size={15}
-                              color={logIncomeAmount ? "#fff" : "#6EE7B7"}
-                            />
+                            <Text style={{ fontSize: 15, fontWeight: "700", color: !logIncomeAmount ? (logIncomePaidStatus === "owed" ? "#92400E" : "#6EE7B7") : "#fff" }}>
+                              {logIncomePaidStatus === "owed" ? "Add to Owed" : "Save payment"}
+                            </Text>
+                            <Ionicons name="arrow-forward" size={15} color={!logIncomeAmount ? (logIncomePaidStatus === "owed" ? "#92400E" : "#6EE7B7") : "#fff"} />
                           </>
                         )}
                       </TouchableOpacity>
                     </View>
-
-                  </View>
+                  </ScrollView>
+                  </Animated.View>
                 </KeyboardAvoidingView>
+                {Platform.OS === "ios" && (
+                  <InputAccessoryView nativeID={LOG_INCOME_ACCESSORY_ID}>
+                    <View style={{ flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 20, paddingHorizontal: 18, height: 44, backgroundColor: "#F8FAFC", borderTopWidth: 1, borderTopColor: "#E2E8F0" }}>
+                      <Pressable
+                        hitSlop={8}
+                        onPress={() => {
+                          if (logIncomePhoneRef.current?.isFocused()) { Keyboard.dismiss(); return; }
+                          if (logIncomePaidStatus === "owed") logIncomeClientRef.current?.focus();
+                          else logIncomeDescRef.current?.focus();
+                        }}
+                      >
+                        <Text style={{ fontSize: 16, fontWeight: "600", color: "#3B82F6" }}>Next</Text>
+                      </Pressable>
+                      <Pressable hitSlop={8} onPress={() => Keyboard.dismiss()}>
+                        <Text style={{ fontSize: 16, fontWeight: "700", color: "#0F172A" }}>Done</Text>
+                      </Pressable>
+                    </View>
+                  </InputAccessoryView>
+                )}
               </View>
             </Modal>
 
-            {/* Income context menu popup */}
-            <Modal
-              visible={incomeMenuVisible}
-              transparent
-              animationType="none"
-              statusBarTranslucent
-              onRequestClose={() => setIncomeMenuVisible(false)}
-            >
-              <TouchableOpacity
-                style={{ flex: 1 }}
-                activeOpacity={1}
-                onPress={() => setIncomeMenuVisible(false)}
-              >
-                <View style={{
-                  position: "absolute",
-                  left: Math.max(12, incomeMenuPosition.x - 80),
-                  top: incomeMenuPosition.y - 120,
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: 14,
-                  width: 210,
-                  borderWidth: 0.5,
-                  borderColor: "#E2E8F0",
-                  shadowColor: "#000",
-                  shadowOpacity: 0.12,
-                  shadowRadius: 20,
-                  shadowOffset: { width: 0, height: 8 },
-                  elevation: 20,
-                  overflow: "hidden",
-                }}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIncomeMenuVisible(false);
-                      track("income_modal_opened", { source: "log_income" });
-                      setLogIncomeVisible(true);
-                    }}
-                    activeOpacity={0.75}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 12,
-                      paddingHorizontal: 16, paddingVertical: 14,
-                      borderBottomWidth: 0.5, borderBottomColor: "#F1F5F9",
-                    }}
-                  >
-                    <View style={{
-                      width: 32, height: 32, borderRadius: 9,
-                      backgroundColor: "rgba(16,185,129,0.15)",
-                      alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Ionicons name="cash-outline" size={16} color="#10B981" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Log income</Text>
-                      <Text style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>Quick — no receipt</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => { setIncomeMenuVisible(false); handleGenerateInvoicePress(); }}
-                    activeOpacity={0.75}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 12,
-                      paddingHorizontal: 16, paddingVertical: 14,
-                    }}
-                  >
-                    <View style={{
-                      width: 32, height: 32, borderRadius: 9,
-                      backgroundColor: "rgba(245,158,11,0.15)",
-                      alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Ionicons name="document-text-outline" size={16} color="#F59E0B" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Create Payment Receipt</Text>
-                      <Text style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>PDF with biz details</Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            </Modal>
           </View>
 
           {/* Projects Section */}
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                Active Projects | {projectDetails.length}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A", letterSpacing: -0.3 }}>
+                {`Projects · ${projectDetails.length} active`}
               </Text>
+              <TouchableOpacity
+                style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: "#EFF6FF" }}
+                onPress={() => {
+                  track("project_create_started", { source: "home_projects_row" });
+                  navigation.navigate("NewProject");
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#2563EB" }}>+ Add</Text>
+              </TouchableOpacity>
             </View>
 
             {loading && !refreshing ? (
@@ -1136,15 +1185,6 @@ const HomeScreen = () => {
         <View style={{ height: 30 }} />
       </View>
 
-      <SpotlightOverlay
-        visible={tourVisible}
-        measurement={measurements[TOUR_STEPS[tourStep - 1]?.key]}
-        onPress={handleTourSkip}
-        measurementKey={TOUR_STEPS[tourStep - 1]?.key}
-        cardHeights={{ heroCard: heroCardHeight }}
-        scrollOffset={scrollOffsetRef.current}
-      />
-
       <TourOverlay
         visible={tourVisible}
         step={tourStep}
@@ -1152,7 +1192,6 @@ const HomeScreen = () => {
         onNext={handleTourNext}
         onSkip={handleTourSkip}
         cardHeightRef={tourCardHeightRef}
-        scrollOffset={scrollOffsetRef.current}
       />
 
       {/* Post-income success modal */}
@@ -1373,36 +1412,37 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Quick Actions
-  quickActions: {
+  // v5 Action buttons
+  primaryActionBtn: {
+    flex: 1,
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  actionButton: {
-    width: (width - 80) / 4,
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 30
-  },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 16,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 3,
   },
-  actionText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#374151",
-    textAlign: "center",
+  secondaryActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   backdrop: {
     flex: 1,
@@ -1622,63 +1662,35 @@ const styles = StyleSheet.create({
 /* ─────────────────────────────────────────────
    SPOTLIGHT OVERLAY
 ───────────────────────────────────────────── */
-const SpotlightOverlay = ({ visible, measurement, onPress, measurementKey, cardHeights = {}, scrollOffset = 0 }) => {
+const SpotlightOverlay = ({ visible, measurement, measurementKey }) => {
   if (!visible || !measurement) return null;
 
   const { width: SW, height: SH } = Dimensions.get("window");
-  const statusBarHeight = StatusBar.currentHeight || 0;
   const { pageX, pageY, width: mW, height: mH } = measurement;
+  const INSET = 1;
+  const holeTop    = pageY + INSET;
+  const holeLeft   = pageX + INSET;
+  const holeWidth  = mW - INSET * 2;
+  const holeHeight = mH - INSET * 2;
+  const radii = { heroCard: 24, addIncome: 16, addExpense: 16, cashFlow: 12, owed: 16 };
+  const radius = radii[measurementKey] ?? 24;
+  const RGBA = "rgb(15,23,42)";
 
-  const adjustedH = (measurementKey === "heroCard" && cardHeights.heroCard > 0)
-    ? cardHeights.heroCard
-    : mH;
-
-  const holeTop    = Math.floor(pageY - statusBarHeight - scrollOffset);
-  const holeLeft   = Math.floor(pageX);
-  const holeWidth  = Math.ceil(mW);
-  const holeHeight = Math.ceil(adjustedH - 1);
-  const radius     = measurementKey === "heroCard" ? 30 : 16;
-  const RGBA       = "rgb(15,23,42)";
-
-  // SVG even-odd path: full screen rect minus a rounded rect hole
-  const r = radius;
+  const r = Math.max(0, radius - INSET);
   const x = holeLeft;
   const y = holeTop;
   const w = holeWidth;
   const h = holeHeight;
 
-  const holePath   = `M${x + r} ${y} H${x + w - r} Q${x + w} ${y} ${x + w} ${y + r} V${y + h - r} Q${x + w} ${y + h} ${x + w - r} ${y + h} H${x + r} Q${x} ${y + h} ${x} ${y + h - r} V${y + r} Q${x} ${y} ${x + r} ${y} Z`;
+  const holePath = `M${x + r} ${y} H${x + w - r} A${r} ${r} 0 0 1 ${x + w} ${y + r} V${y + h - r} A${r} ${r} 0 0 1 ${x + w - r} ${y + h} H${x + r} A${r} ${r} 0 0 1 ${x} ${y + h - r} V${y + r} A${r} ${r} 0 0 1 ${x + r} ${y} Z`;
   const screenPath = `M0 0 H${SW} V${SH} H0 Z`;
   const svgPath    = `${screenPath} ${holePath}`;
 
   return (
-    <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}>
-      <TouchableOpacity
-        activeOpacity={1}
-        onPress={onPress}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-      >
-        <Svg width={SW} height={SH}>
-          <Path
-            d={svgPath}
-            fill={RGBA}
-            fillOpacity={0.62}
-            fillRule="evenodd"
-          />
-          {/* White border ring around hole */}
-          {/* <Rect
-            x={x - 1}
-            y={y - 1}
-            width={w + 2}
-            height={h + 2}
-            rx={r }
-            ry={r + 1}
-            fill="none"
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth={2}
-          /> */}
-        </Svg>
-      </TouchableOpacity>
+    <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+      <Svg width={SW} height={SH}>
+        <Path d={svgPath} fill={RGBA} fillOpacity={0.62} fillRule="evenodd" />
+      </Svg>
     </View>
   );
 };
@@ -1691,11 +1703,6 @@ const TOUR_STEPS = [
     key: "heroCard",
     headline: "Your business at a glance",
     body: "Net balance updates in real time. Green means you're profitable this month — red means it's time to check your expenses.",
-  },
-  {
-    key: "newProject",
-    headline: "Start a project",
-    body: "Each project gets tasks, a timeline, and its own invoice. Your work — finally in one place.",
   },
   {
     key: "addIncome",
@@ -1712,15 +1719,19 @@ const TOUR_STEPS = [
     headline: "See your cash flow",
     body: "The clearest view of money in vs out. Finally know if you're actually making money this month.",
   },
+  {
+    key: "owed",
+    headline: "Track what you're owed",
+    body: "Add unpaid invoices here. When the client pays, tap Paid and it's logged as income.",
+  },
 ];
 
 const CARD_WIDTH  = 260;
 const CARD_PADDING = 18;
 const ARROW_SIZE  = 8;
 
-const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRef, scrollOffset = 0 }) => {
+const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRef }) => {
   const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-  const statusBarHeight = StatusBar.currentHeight || 0;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(8)).current;
 
@@ -1748,8 +1759,8 @@ const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRe
 
   if (m) {
     const targetCenterX = m.pageX + m.width / 2;
-    const targetBottom  = m.pageY - statusBarHeight - scrollOffset + m.height;
-    const targetTop     = m.pageY - statusBarHeight - scrollOffset;
+    const targetBottom  = m.pageY + m.height;
+    const targetTop     = m.pageY;
     const cardHeight    = cardHeightRef.current;
     const spaceBelow    = SCREEN_H - targetBottom;
 
@@ -1763,6 +1774,7 @@ const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRe
       arrowPointsUp = true;
     }
 
+    cardTop  = Math.max(54, Math.min(SCREEN_H - cardHeight - 24, cardTop));
     cardLeft = Math.max(16, Math.min(SCREEN_W - CARD_WIDTH - 16, targetCenterX - CARD_WIDTH / 2));
 
     const arrowX = Math.max(16, Math.min(CARD_WIDTH - 24, targetCenterX - cardLeft - ARROW_SIZE));
@@ -1778,6 +1790,7 @@ const TourOverlay = ({ visible, step, measurements, onNext, onSkip, cardHeightRe
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
       <View style={{ flex: 1 }}>
+        <SpotlightOverlay visible={visible} measurement={m} measurementKey={stepData?.key} />
 
         {/* Tooltip card */}
         <Animated.View

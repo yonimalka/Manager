@@ -79,7 +79,7 @@ const InputField = ({
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor="#94A3B8"
         style={styles.inputField}
         keyboardType={keyboardType}
         rejectResponderTermination={false}
@@ -465,7 +465,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                   <TextInput
                     style={[styles.colDescription, styles.serviceInput]}
                     placeholder="Service…"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#94A3B8"
                     value={service.description}
                     onChangeText={(val) => updateService(service.id, "description", val)}
                     rejectResponderTermination={false}
@@ -485,7 +485,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     style={[styles.colUnit, styles.serviceInput]}
                     value={service.unitPrice}
                     placeholder="0.00"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#94A3B8"
                     keyboardType="decimal-pad"
                     onChangeText={(val) =>
                       updateService(service.id, "unitPrice", val.replace(/[^0-9.]/g, ""))
@@ -735,7 +735,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     value={bizId}
                     onChangeText={(v) => { setBizId(v); setBizErrors((e) => ({ ...e, bizId: null })); }}
                     placeholder="e.g. 1 2-3 4 5 6 7 8 9"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#94A3B8"
                     keyboardType="numeric"
                   />
                   {bizErrors.bizId ? <Text style={bizStyles.errText}>{bizErrors.bizId}</Text> : null}
@@ -748,7 +748,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     value={bizAddress}
                     onChangeText={(v) => { setBizAddress(v); setBizErrors((e) => ({ ...e, bizAddress: null })); }}
                     placeholder="123 Main St"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#94A3B8"
                   />
                   {bizErrors.bizAddress ? <Text style={bizStyles.errText}>{bizErrors.bizAddress}</Text> : null}
                 </View>
@@ -760,7 +760,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     value={bizStateVal}
                     onChangeText={(v) => { setBizStateVal(v); setBizErrors((e) => ({ ...e, bizStateVal: null })); }}
                     placeholder="e.g. NY"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#94A3B8"
                     autoCapitalize="characters"
                     maxLength={2}
                   />
@@ -774,7 +774,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     value={bizCountry}
                     onChangeText={(v) => { setBizCountry(v); setBizErrors((e) => ({ ...e, bizCountry: null })); }}
                     placeholder="e.g. US"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#94A3B8"
                     autoCapitalize="characters"
                     maxLength={2}
                   />
@@ -788,7 +788,7 @@ export default function IncomeReceiptGenerator({ onSubmit, onClose, projectId })
                     value={bizZip}
                     onChangeText={(v) => { setBizZip(v); setBizErrors((e) => ({ ...e, bizZip: null })); }}
                     placeholder="10001"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#94A3B8"
                     keyboardType="numeric"
                   />
                   {bizErrors.bizZip ? <Text style={bizStyles.errText}>{bizErrors.bizZip}</Text> : null}
@@ -1002,6 +1002,7 @@ const styles = StyleSheet.create({
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 56,
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
     borderRadius: 12,
@@ -1018,9 +1019,10 @@ const styles = StyleSheet.create({
   },
   inputField: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    paddingLeft: 14,
     paddingRight: 14,
-    fontSize: 15,
+    fontSize: 16,
     color: "#111827",
   },
   inputSuffix: {
