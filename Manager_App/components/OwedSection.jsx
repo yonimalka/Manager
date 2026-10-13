@@ -470,7 +470,7 @@ export default function OwedSection({
                       <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                         <View style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
                           <Text numberOfLines={1} style={{ fontSize: 16, lineHeight: 20, fontWeight: "600", color: "#0F172A" }}>{inv.client}</Text>
-                          <Text style={{ fontSize: 13, lineHeight: 17, marginTop: 2, fontWeight: statusWeight, color: statusColor }}>
+                          <Text style={{ fontSize: 13, lineHeight: 17, marginTop: 7, fontWeight: statusWeight, color: statusColor }}>
                             {statusLabel}
                             {showRemindedAgo && (
                               <Text style={{ fontWeight: "400" }}>{` · reminded ${remDaysAgo}d ago`}</Text>
@@ -532,7 +532,7 @@ export default function OwedSection({
               autoComplete="tel"
               placeholder="+1 555 000 0000"
               placeholderTextColor="#CBD5E1"
-              style={{ fontSize: 14, color: "#0F172A", backgroundColor: "#F8FAFC", borderRadius: 10, borderWidth: 1, borderColor: "#E2E8F0", paddingHorizontal: 12, paddingVertical: 10 }}
+              style={{ height: 52, paddingHorizontal: 16, paddingVertical: 0, fontSize: 16, color: "#0F172A", textAlignVertical: "center", backgroundColor: "#F8FAFC", borderRadius: 10, borderWidth: 1, borderColor: "#E2E8F0" }}
             />
           </View>
         )}

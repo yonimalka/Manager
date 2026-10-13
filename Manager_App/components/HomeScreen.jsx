@@ -680,16 +680,6 @@ const HomeScreen = () => {
                 </View>
               </View>
 
-              {/* In/out bar */}
-              {(totalIncomes + totalExpenses) > 0 && (
-                <View style={{ marginTop: 14, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-                  <View style={{
-                    height: 4, borderRadius: 2, backgroundColor: "#34d399",
-                    width: `${Math.round(totalIncomes / (totalIncomes + totalExpenses) * 100)}%`,
-                  }} />
-                </View>
-              )}
-
               {/* Tax estimate */}
               {SHOW_TAX_ESTIMATE && netBalance > 0 && (
                 <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 10, fontWeight: "500" }}>
