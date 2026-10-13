@@ -1677,21 +1677,22 @@ const SpotlightOverlay = ({ visible, measurement, measurementKey }) => {
 
   const { width: SW, height: SH } = Dimensions.get("window");
   const { pageX, pageY, width: mW, height: mH } = measurement;
-  const holeTop    = Math.round(pageY);
-  const holeLeft   = Math.round(pageX);
-  const holeWidth  = Math.round(mW);
-  const holeHeight = Math.round(mH);
+  const INSET = 1;
+  const holeTop    = pageY + INSET;
+  const holeLeft   = pageX + INSET;
+  const holeWidth  = mW - INSET * 2;
+  const holeHeight = mH - INSET * 2;
   const radii = { heroCard: 24, addIncome: 16, addExpense: 16, cashFlow: 12, owed: 16 };
   const radius = radii[measurementKey] ?? 24;
   const RGBA = "rgb(15,23,42)";
 
-  const r = radius;
+  const r = Math.max(0, radius - INSET);
   const x = holeLeft;
   const y = holeTop;
   const w = holeWidth;
   const h = holeHeight;
 
-  const holePath   = `M${x + r} ${y} H${x + w - r} Q${x + w} ${y} ${x + w} ${y + r} V${y + h - r} Q${x + w} ${y + h} ${x + w - r} ${y + h} H${x + r} Q${x} ${y + h} ${x} ${y + h - r} V${y + r} Q${x} ${y} ${x + r} ${y} Z`;
+  const holePath = `M${x + r} ${y} H${x + w - r} A${r} ${r} 0 0 1 ${x + w} ${y + r} V${y + h - r} A${r} ${r} 0 0 1 ${x + w - r} ${y + h} H${x + r} A${r} ${r} 0 0 1 ${x} ${y + h - r} V${y + r} A${r} ${r} 0 0 1 ${x + r} ${y} Z`;
   const screenPath = `M0 0 H${SW} V${SH} H0 Z`;
   const svgPath    = `${screenPath} ${holePath}`;
 
