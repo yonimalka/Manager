@@ -532,7 +532,7 @@ export default function OwedSection({
               autoComplete="tel"
               placeholder="+1 555 000 0000"
               placeholderTextColor="#CBD5E1"
-              style={{ height: 52, paddingHorizontal: 16, paddingVertical: 0, fontSize: 16, color: "#0F172A", textAlignVertical: "center", backgroundColor: "#F8FAFC", borderRadius: 10, borderWidth: 1, borderColor: "#E2E8F0" }}
+              style={{ height: 42, paddingHorizontal: 16, paddingVertical: 0, fontSize: 16, color: "#0F172A", textAlign: "left", backgroundColor: "#F8FAFC", borderRadius: 10, borderWidth: 1, borderColor: "#E2E8F0" }}
             />
           </View>
         )}
