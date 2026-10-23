@@ -29,7 +29,7 @@ import { useUndoToast } from "./UndoToast";
 
 const COUNTRY_CODES = { US: "1", CA: "1", GB: "44", IL: "972", AU: "61", IE: "353" };
 
-const toIntl = (raw, region) => {
+export const toIntl = (raw, region) => {
   if (!raw) return "";
   let s = String(raw).trim();
   if (s.startsWith("+")) return s.replace(/\D/g, "");

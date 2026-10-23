@@ -44,11 +44,11 @@ import { auth } from "./firebase";
 import { formatCurrency } from "../services/formatCurrency";
 import { refreshSubscriptionStatus, hasProAccess } from "../services/subscription";
 import { presentRevenueCatPaywallIfNeeded } from "../services/revenuecat";
-import WelcomeModal from "./WelcomeModal";
+import FirstRun from "./FirstRun";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Svg, { Path, Rect } from "react-native-svg";
 import { Building2 } from "lucide-react-native";
-import { registerPushToken } from "../utils/registerPushToken";
+import { registerPushTokenIfGranted } from "../utils/registerPushToken";
 import { track } from "../utils/analytics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import OwedSection from "./OwedSection";
@@ -112,6 +112,19 @@ const HomeScreen = () => {
 
   // Owed to You section
   const [owedSummary, setOwedSummary] = useState({ totalOwed: 0, overdueCount: 0, items: [] });
+  const [showPaidTip, setShowPaidTip] = useState(false);
+  const [starterDismissed, setStarterDismissed] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    AsyncStorage.getItem(`maggo_starter_dismissed_${userId}`).then((v) => setStarterDismissed(v === "true"));
+  }, [userId]);
+
+  const dismissStarter = () => {
+    setStarterDismissed(true);
+    AsyncStorage.setItem(`maggo_starter_dismissed_${userId}`, "true");
+    track("starter_dismissed");
+  };
 
   const [kbHeight, setKbHeight] = useState(0);
   useEffect(() => {
@@ -313,25 +326,12 @@ const HomeScreen = () => {
     other:      { name: "My first project",             task: "First task",      payment: 2500 },
   };
 
-  const handleWelcomeComplete = async (userType) => {
+  const handleFirstRunDone = async (result) => {
     await AsyncStorage.setItem(`maggo_onboarding_complete_${userId}`, "true");
-    await AsyncStorage.setItem(`maggo_user_type_${userId}`, userType);
     setWelcomeVisible(false);
-    // Seed demo project
-    const demo = DEMO_PROJECTS[userType] || DEMO_PROJECTS.other;
-    try {
-      await api.post("/newProject", {
-        name: demo.name,
-        payment: demo.payment,
-        days: 30,
-        toDoList: [{ task: demo.task, details: "" }],
-        isDemo: true,
-      });
-      fetchData();
-    } catch (e) {
-      console.error("Demo project creation failed:", e);
-    }
-    handleTourStart();
+    track("first_run_completed", { result });
+    fetchData();
+    if (result === "owed_added") setShowPaidTip(true);
   };
 
   const handleGenerateInvoicePress = () => {
@@ -414,7 +414,7 @@ const HomeScreen = () => {
       const alreadyAsked = await AsyncStorage.getItem("maggo_push_asked");
       if (!alreadyAsked) {
         await AsyncStorage.setItem("maggo_push_asked", "true");
-        registerPushToken().catch(console.warn);
+        registerPushTokenIfGranted().catch(console.warn);
       }
     } catch (e) {
       Alert.alert("Error", "Could not save income. Please try again.");
@@ -529,7 +529,7 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <WelcomeModal visible={welcomeVisible} onComplete={handleWelcomeComplete} />
+      <FirstRun visible={welcomeVisible} userName={userName} onDone={handleFirstRunDone} />
 
       {/* Animated Header Background */}
       <Animated.View style={[styles.headerBackground, { opacity: headerOpacity }]}>
@@ -690,6 +690,34 @@ const HomeScreen = () => {
             </View>
           </View>
 
+          {totalIncomes === 0 && !(owedSummary?.items?.length) && !starterDismissed && (
+            <View style={{ backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 24, padding: 20, marginBottom: 16, gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A" }}>Start with your next job</Text>
+                <TouchableOpacity onPress={dismissStarter} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+              <Text style={{ fontSize: 15, color: "#475569", marginBottom: 4 }}>Pick one. Each takes under a minute.</Text>
+              <TouchableOpacity onPress={() => { track("starter_receipt_tapped"); handleGenerateInvoicePress(); }} style={{ flexDirection: "row", alignItems: "center", gap: 14, minHeight: 64, paddingHorizontal: 14, borderRadius: 16, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0" }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center" }}><Ionicons name="document-text-outline" size={20} color="#B45309" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: "600", color: "#0F172A" }}>Send a payment receipt</Text>
+                  <Text style={{ fontSize: 13, color: "#64748B" }}>A clean PDF with your logo, sent in seconds</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { track("starter_owed_tapped"); setLogIncomePaidStatus("owed"); setLogIncomeVisible(true); }} style={{ flexDirection: "row", alignItems: "center", gap: 14, minHeight: 64, paddingHorizontal: 14, borderRadius: 16, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0" }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center" }}><Ionicons name="time-outline" size={20} color="#1D4ED8" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: "600", color: "#0F172A" }}>Track a job you'll be paid for</Text>
+                  <Text style={{ fontSize: 13, color: "#64748B" }}>Add it now, get reminded when it's due</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Primary Actions */}
           <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
             {/* Log Payment */}
@@ -790,6 +818,16 @@ const HomeScreen = () => {
           )}
 
           {/* Owed to You */}
+          {showPaidTip && owedSummary?.items?.[0] && (
+            <View style={{ backgroundColor: "#1E293B", borderRadius: 16, padding: 14, marginBottom: 12, gap: 10 }}>
+              <Text style={{ color: "#F1F5F9", fontSize: 15, lineHeight: 21 }}>
+                When {owedSummary.items[0].client} pays, tap <Text style={{ fontWeight: "700" }}>Paid</Text>. It's logged as income automatically.
+              </Text>
+              <TouchableOpacity onPress={() => setShowPaidTip(false)} style={{ alignSelf: "flex-end", backgroundColor: "#FFFFFF", borderRadius: 10, paddingHorizontal: 14, minHeight: 36, justifyContent: "center" }}>
+                <Text style={{ color: "#0F172A", fontSize: 14, fontWeight: "600" }}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View ref={refOwed} style={{ marginBottom: 28 }}>
             <OwedSection
               summary={owedSummary}
