@@ -20,7 +20,7 @@ import * as Notifications from "expo-notifications";
 import api from "../services/api";
 import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
-import { registerPushToken } from "../utils/registerPushToken";
+import { registerPushToken, registerPushTokenIfGranted } from "../utils/registerPushToken";
 import { useAuth } from "./useAuth";
 import { toIntl } from "./OwedSection";
 
@@ -71,15 +71,22 @@ export default function FirstRun({ visible, userName, onDone }) {
   const [due,         setDue]         = useState("late");
   const [saving,      setSaving]      = useState(false);
   const [invoice,     setInvoice]     = useState(null);
+  const [pushStatus,  setPushStatus]  = useState(null);
 
   useEffect(() => {
     if (visible) {
       track("first_run_viewed");
       setScreen("ask");
       setAmount(""); setClient(""); setDescription(""); setPhone(""); setDue("late");
-      setInvoice(null); setSaving(false);
+      setInvoice(null); setSaving(false); setPushStatus(null);
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (screen === "remind") {
+      Notifications.getPermissionsAsync().then(({ status }) => setPushStatus(status));
+    }
+  }, [screen]);
 
   const fmt = (n) => formatCurrency(n || 0, currency, locale);
 
@@ -133,25 +140,44 @@ export default function FirstRun({ visible, userName, onDone }) {
     }
   };
 
+  const scheduleLocalNotif = async () => {
+    const trigger = new Date();
+    trigger.setDate(trigger.getDate() + 3);
+    trigger.setHours(9, 0, 0, 0);
+    const invoiceId = invoice?._id || null;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `Has ${client.trim().split(/\s+/)[0]} paid?`,
+        body:  `${fmt(Number(amount))} for ${description.trim() || "your job"} is still open in Maggo.`,
+        data:  { type: "owed_nudge", invoiceId },
+      },
+      trigger,
+    });
+    track("notification_scheduled", { type: "owed_nudge", invoiceId, inDays: 3 });
+  };
+
   const handlePush = async () => {
+    const statusBefore = pushStatus;
+
+    if (statusBefore === "denied") {
+      await Linking.openSettings();
+      return;
+    }
+
+    if (statusBefore === "granted") {
+      try { await scheduleLocalNotif(); } catch (_) {}
+      try { await registerPushTokenIfGranted(); } catch (_) {}
+      track("first_run_push", { status_before: statusBefore, granted: true });
+      onDone("owed_added");
+      return;
+    }
+
+    // undetermined (or null while still loading)
     await registerPushToken();
     const { status } = await Notifications.getPermissionsAsync();
     const granted = status === "granted";
-    track("first_run_push", { granted });
-    if (granted) {
-      try {
-        const trigger = new Date();
-        trigger.setDate(trigger.getDate() + 3);
-        trigger.setHours(9, 0, 0, 0);
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `Has ${client.trim().split(/\s+/)[0]} paid?`,
-            body:  `${fmt(Number(amount))} for ${description.trim() || "your job"} is still open in Maggo.`,
-          },
-          trigger,
-        });
-      } catch (_) {}
-    }
+    track("first_run_push", { status_before: statusBefore, granted });
+    if (granted) { try { await scheduleLocalNotif(); } catch (_) {} }
     onDone("owed_added");
   };
 
@@ -342,13 +368,29 @@ export default function FirstRun({ visible, userName, onDone }) {
             <Ionicons name="notifications-outline" size={22} color="#B45309" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.pushTitle}>Get a nudge if they still haven't paid</Text>
-            <Text style={s.pushBody}>
-              We'll tell you in 3 days, so you never chase money from memory.
-            </Text>
-            <TouchableOpacity style={s.pushBtn} onPress={handlePush}>
-              <Text style={s.pushBtnText}>Turn on reminders</Text>
-            </TouchableOpacity>
+            {pushStatus === "denied" ? (
+              <>
+                <Text style={s.pushTitle}>Notifications are off for Maggo</Text>
+                <Text style={s.pushBody}>
+                  Turn them on to get a nudge when {client.trim().split(/\s+/)[0]} still hasn't paid.
+                </Text>
+                <TouchableOpacity style={s.pushBtn} onPress={handlePush}>
+                  <Text style={s.pushBtnText}>Turn on in Settings</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={s.pushTitle}>Get a nudge if they still haven't paid</Text>
+                <Text style={s.pushBody}>
+                  We'll tell you in 3 days, so you never chase money from memory.
+                </Text>
+                <TouchableOpacity style={s.pushBtn} onPress={handlePush}>
+                  <Text style={s.pushBtnText}>
+                    {pushStatus === "granted" ? "Remind me in 3 days" : "Turn on reminders"}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 

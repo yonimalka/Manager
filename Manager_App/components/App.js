@@ -2,13 +2,13 @@ import React, { useEffect } from "react";
 import { I18nManager } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Updates from "expo-updates";
-import * as Notifications from "expo-notifications";
 import { PostHogProvider } from "posthog-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import MainApp from "./MainApp";
 import { UndoToastProvider } from "./UndoToast";
-import { usePostHogBridge, track } from "../utils/analytics";
+import { usePostHogBridge } from "../utils/analytics";
+import useNotificationTracking from "../utils/useNotificationTracking";
 
 const PostHogBridge = () => {
   usePostHogBridge();
@@ -33,12 +33,7 @@ const App = () => {
     })();
   }, []);
 
-  useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener(() => {
-      track("notification_tapped");
-    });
-    return () => sub.remove();
-  }, []);
+  useNotificationTracking();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
