@@ -2303,7 +2303,7 @@ cron.schedule("0 * * * *", async () => {
           user.pushToken,
           `Your workspace is ready, ${firstName} 👋`,
           "Log your first payment and see your balance update live.",
-          { screen: "Home" }
+          { screen: "Home", type: "welcome_nudge" }
         );
         await UserModel.findByIdAndUpdate(user._id, { "notificationsSent.welcome": true });
         continue;
@@ -2319,7 +2319,7 @@ cron.schedule("0 * * * *", async () => {
             user.pushToken,
             "Jobs don't track themselves",
             "Add your first real project and keep all your work in one place.",
-            { screen: "NewProject" }
+            { screen: "NewProject", type: "first_project_nudge" }
           );
         }
         await UserModel.findByIdAndUpdate(user._id, { "notificationsSent.firstProject": true });
@@ -2333,7 +2333,7 @@ cron.schedule("0 * * * *", async () => {
             user.pushToken,
             "Have you been paid recently?",
             "Log a payment in 20 seconds. Your balance updates instantly.",
-            { screen: "Home" }
+            { screen: "Home", type: "first_income_nudge" }
           );
         }
         await UserModel.findByIdAndUpdate(user._id, { "notificationsSent.firstIncome": true });
@@ -2348,7 +2348,7 @@ cron.schedule("0 * * * *", async () => {
             user.pushToken,
             "Your business doesn't stop.",
             "Check in on your projects and see where your money stands.",
-            { screen: "Home" }
+            { screen: "Home", type: "reengagement_nudge" }
           );
         }
         await UserModel.findByIdAndUpdate(user._id, { "notificationsSent.reengagement": true });
@@ -2375,7 +2375,7 @@ cron.schedule("0 8 * * 1", async () => {
         user.pushToken,
         "New week, new jobs? 📋",
         "Log any work from last week and stay on top of your cash flow.",
-        { screen: "Home" }
+        { screen: "Home", type: "weekly_nudge" }
       );
     }
     console.log("[CRON] Weekly nudge sent");
