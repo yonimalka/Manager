@@ -113,6 +113,18 @@ const HomeScreen = () => {
   // Owed to You section
   const [owedSummary, setOwedSummary] = useState({ totalOwed: 0, overdueCount: 0, items: [] });
   const [showPaidTip, setShowPaidTip] = useState(false);
+  const [starterDismissed, setStarterDismissed] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    AsyncStorage.getItem(`maggo_starter_dismissed_${userId}`).then((v) => setStarterDismissed(v === "true"));
+  }, [userId]);
+
+  const dismissStarter = () => {
+    setStarterDismissed(true);
+    AsyncStorage.setItem(`maggo_starter_dismissed_${userId}`, "true");
+    track("starter_dismissed");
+  };
 
   const [kbHeight, setKbHeight] = useState(0);
   useEffect(() => {
@@ -678,9 +690,14 @@ const HomeScreen = () => {
             </View>
           </View>
 
-          {totalIncomes === 0 && !(owedSummary?.items?.length) && (
+          {totalIncomes === 0 && !(owedSummary?.items?.length) && !starterDismissed && (
             <View style={{ backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 24, padding: 20, marginBottom: 16, gap: 8 }}>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A" }}>Start with your next job</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A" }}>Start with your next job</Text>
+                <TouchableOpacity onPress={dismissStarter} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
               <Text style={{ fontSize: 15, color: "#475569", marginBottom: 4 }}>Pick one. Each takes under a minute.</Text>
               <TouchableOpacity onPress={() => { track("starter_receipt_tapped"); handleGenerateInvoicePress(); }} style={{ flexDirection: "row", alignItems: "center", gap: 14, minHeight: 64, paddingHorizontal: 14, borderRadius: 16, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0" }}>
                 <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center" }}><Ionicons name="document-text-outline" size={20} color="#B45309" /></View>
