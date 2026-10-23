@@ -168,15 +168,20 @@ export default function FirstRun({ visible, userName, onDone }) {
     trigger.setDate(trigger.getDate() + 3);
     trigger.setHours(9, 0, 0, 0);
     const invoiceId = invoice?._id || null;
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `Has ${client.trim().split(/\s+/)[0]} paid?`,
-        body:  `${fmt(Number(amount))} for ${description.trim() || "your job"} is still open in Maggo.`,
-        data:  { type: "owed_nudge", invoiceId },
-      },
-      trigger,
-    });
-    track("notification_scheduled", { type: "owed_nudge", invoiceId, inDays: 3 });
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Has ${client.trim()} paid?`,
+          body:  `${fmt(Number(amount))} for ${description.trim() || "your job"} is still open in Maggo.`,
+          data:  { type: "owed_nudge", invoiceId },
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: trigger },
+      });
+      track("notification_scheduled", { type: "owed_nudge", invoiceId, inDays: 3 });
+    } catch (err) {
+      notifScheduledRef.current = false;
+      track("notification_schedule_failed", { type: "owed_nudge", message: String(err?.message || err) });
+    }
   };
 
   const handlePush = async () => {
