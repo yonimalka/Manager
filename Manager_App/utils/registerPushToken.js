@@ -51,3 +51,10 @@ export async function registerPushToken() {
 
   hasRegisteredThisSession = true;
 }
+
+// Call this on app launch / after login: registers the token only when the user
+// has already granted permission. Never shows the system permission prompt.
+export async function registerPushTokenIfGranted() {
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status === "granted") return registerPushToken();
+}

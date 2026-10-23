@@ -48,7 +48,7 @@ import FirstRun from "./FirstRun";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import Svg, { Path, Rect } from "react-native-svg";
 import { Building2 } from "lucide-react-native";
-import { registerPushToken } from "../utils/registerPushToken";
+import { registerPushTokenIfGranted } from "../utils/registerPushToken";
 import { track } from "../utils/analytics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import OwedSection from "./OwedSection";
@@ -402,7 +402,7 @@ const HomeScreen = () => {
       const alreadyAsked = await AsyncStorage.getItem("maggo_push_asked");
       if (!alreadyAsked) {
         await AsyncStorage.setItem("maggo_push_asked", "true");
-        registerPushToken().catch(console.warn);
+        registerPushTokenIfGranted().catch(console.warn);
       }
     } catch (e) {
       Alert.alert("Error", "Could not save income. Please try again.");
