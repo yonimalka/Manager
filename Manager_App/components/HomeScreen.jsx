@@ -114,6 +114,7 @@ const HomeScreen = () => {
   const [owedSummary, setOwedSummary] = useState({ totalOwed: 0, overdueCount: 0, items: [] });
   const [showPaidTip, setShowPaidTip] = useState(false);
   const [starterDismissed, setStarterDismissed] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -198,6 +199,7 @@ const HomeScreen = () => {
       const net = (response.data?.totalIncomes ?? 0) - (response.data?.totalExpenses ?? 0);
       setNetBalance(net);
       if (owedRes?.data) setOwedSummary(owedRes.data);
+      setHasLoaded(true);
       
     } catch (err) {
       console.error("Error fetching user data: ", err);
@@ -690,7 +692,7 @@ const HomeScreen = () => {
             </View>
           </View>
 
-          {totalIncomes === 0 && !(owedSummary?.items?.length) && !starterDismissed && (
+          {hasLoaded && totalIncomes === 0 && !(owedSummary?.items?.length) && !starterDismissed && (
             <View style={{ backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 24, padding: 20, marginBottom: 16, gap: 8 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A" }}>Start with your next job</Text>
