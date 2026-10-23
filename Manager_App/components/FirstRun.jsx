@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AppState,
   InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
@@ -72,21 +73,41 @@ export default function FirstRun({ visible, userName, onDone }) {
   const [saving,      setSaving]      = useState(false);
   const [invoice,     setInvoice]     = useState(null);
   const [pushStatus,  setPushStatus]  = useState(null);
+  const [notifScheduled, setNotifScheduled] = useState(false);
+  const notifScheduledRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
       track("first_run_viewed");
       setScreen("ask");
       setAmount(""); setClient(""); setDescription(""); setPhone(""); setDue("late");
-      setInvoice(null); setSaving(false); setPushStatus(null);
+      setInvoice(null); setSaving(false); setPushStatus(null); setNotifScheduled(false);
+      notifScheduledRef.current = false;
     }
   }, [visible]);
 
-  useEffect(() => {
-    if (screen === "remind") {
-      Notifications.getPermissionsAsync().then(({ status }) => setPushStatus(status));
+  const refreshPermission = useCallback(async () => {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status === "granted" && pushStatus === "denied") {
+      try { await registerPushTokenIfGranted(); } catch (_) {}
+      try { await scheduleLocalNotif(); } catch (_) {}
+      track("first_run_push", { status_before: "denied", granted: true, via: "settings" });
+      setNotifScheduled(true);
     }
-  }, [screen]);
+    setPushStatus(status);
+  }, [pushStatus]); // scheduleLocalNotif is safe to omit: state is frozen while app is in Settings
+
+  useEffect(() => {
+    if (screen === "remind") refreshPermission();
+  }, [screen, refreshPermission]);
+
+  useEffect(() => {
+    if (screen !== "remind") return;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshPermission();
+    });
+    return () => sub.remove();
+  }, [screen, refreshPermission]);
 
   const fmt = (n) => formatCurrency(n || 0, currency, locale);
 
@@ -141,6 +162,8 @@ export default function FirstRun({ visible, userName, onDone }) {
   };
 
   const scheduleLocalNotif = async () => {
+    if (notifScheduledRef.current) return;
+    notifScheduledRef.current = true;
     const trigger = new Date();
     trigger.setDate(trigger.getDate() + 3);
     trigger.setHours(9, 0, 0, 0);
@@ -168,7 +191,7 @@ export default function FirstRun({ visible, userName, onDone }) {
       try { await scheduleLocalNotif(); } catch (_) {}
       try { await registerPushTokenIfGranted(); } catch (_) {}
       track("first_run_push", { status_before: statusBefore, granted: true });
-      onDone("owed_added");
+      setNotifScheduled(true);
       return;
     }
 
@@ -177,8 +200,12 @@ export default function FirstRun({ visible, userName, onDone }) {
     const { status } = await Notifications.getPermissionsAsync();
     const granted = status === "granted";
     track("first_run_push", { status_before: statusBefore, granted });
-    if (granted) { try { await scheduleLocalNotif(); } catch (_) {} }
-    onDone("owed_added");
+    if (granted) {
+      try { await scheduleLocalNotif(); } catch (_) {}
+      setNotifScheduled(true);
+    } else {
+      onDone("owed_added");
+    }
   };
 
   // ── Ask screen ─────────────────────────────────────────────────────────────
@@ -364,12 +391,27 @@ export default function FirstRun({ visible, userName, onDone }) {
         )}
 
         <View style={s.pushCard}>
-          <View style={s.pushIconWrap}>
-            <Ionicons name="notifications-outline" size={22} color="#B45309" />
-          </View>
-          <View style={{ flex: 1 }}>
-            {pushStatus === "denied" ? (
-              <>
+          {notifScheduled ? (
+            <>
+              <View style={[s.pushIconWrap, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="checkmark" size={22} color="#15803D" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.pushTitle}>Reminders are on</Text>
+                <Text style={s.pushBody}>
+                  We'll nudge you in 3 days if {client.trim().split(/\s+/)[0]} hasn't paid.
+                </Text>
+                <TouchableOpacity style={s.pushBtn} onPress={() => onDone("owed_added")}>
+                  <Text style={s.pushBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : pushStatus === "denied" ? (
+            <>
+              <View style={s.pushIconWrap}>
+                <Ionicons name="notifications-outline" size={22} color="#B45309" />
+              </View>
+              <View style={{ flex: 1 }}>
                 <Text style={s.pushTitle}>Notifications are off for Maggo</Text>
                 <Text style={s.pushBody}>
                   Turn them on to get a nudge when {client.trim().split(/\s+/)[0]} still hasn't paid.
@@ -377,9 +419,14 @@ export default function FirstRun({ visible, userName, onDone }) {
                 <TouchableOpacity style={s.pushBtn} onPress={handlePush}>
                   <Text style={s.pushBtnText}>Turn on in Settings</Text>
                 </TouchableOpacity>
-              </>
-            ) : (
-              <>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={s.pushIconWrap}>
+                <Ionicons name="notifications-outline" size={22} color="#B45309" />
+              </View>
+              <View style={{ flex: 1 }}>
                 <Text style={s.pushTitle}>Get a nudge if they still haven't paid</Text>
                 <Text style={s.pushBody}>
                   We'll tell you in 3 days, so you never chase money from memory.
@@ -389,14 +436,16 @@ export default function FirstRun({ visible, userName, onDone }) {
                     {pushStatus === "granted" ? "Remind me in 3 days" : "Turn on reminders"}
                   </Text>
                 </TouchableOpacity>
-              </>
-            )}
-          </View>
+              </View>
+            </>
+          )}
         </View>
 
-        <TouchableOpacity style={s.ghostBtn} onPress={() => onDone("owed_added")}>
-          <Text style={s.ghostBtnText}>Skip for now</Text>
-        </TouchableOpacity>
+        {!notifScheduled && (
+          <TouchableOpacity style={s.ghostBtn} onPress={() => onDone("owed_added")}>
+            <Text style={s.ghostBtnText}>Skip for now</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     );
   };
