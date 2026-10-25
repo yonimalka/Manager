@@ -303,6 +303,18 @@ export default function ProfileDetails() {
                 </View>
               </View>
 
+              <Text style={styles.sectionLabel}>Payments</Text>
+              <View style={styles.group}>
+                <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("PaymentMethods")}>
+                  <View style={[styles.rowIcon, { backgroundColor: "#34d399" }]}><Ionicons name="card-outline" size={14} color="#fff" /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rowLabel}>How clients pay you</Text>
+                    <Text style={{ fontSize: 12, color: "#8e8e93" }}>Shown on your pay links</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color="#c7c7cc" />
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
                 <Trash2 size={16} color="#ff3b30" />
                 <Text style={styles.deleteText}>Delete account</Text>

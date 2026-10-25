@@ -45,6 +45,7 @@ import AgentScreen from "./AgentScreen";
 import AgentHistory from "./AgentHistory";
 import AgentTasks from "./AgentTasks";
 import InvoiceGeneratorScreen from "./InvoiceGeneratorScreen";
+import PaymentMethods from "./PaymentMethods";
 // React Navigation Setup
 const Stack = createStackNavigator();
 
@@ -108,6 +109,7 @@ const MainApp = () => {
         <Stack.Screen name="AgentHistory" component={AgentHistory} options={{ headerShown: false }}/>
         <Stack.Screen name="AgentTasks" component={AgentTasks} options={{ headerShown: false }}/>
         <Stack.Screen name="InvoiceGenerator" component={InvoiceGeneratorScreen} options={{ headerShown: false, presentation: "modal" }}/>
+        <Stack.Screen name="PaymentMethods" component={PaymentMethods} options={{ headerShown: false }}/>
         {/* <Stack.Screen name="testing" component={testing} options={{ headerShown: false }}/> */}
       </Stack.Navigator>
     </NavigationContainer>
