@@ -376,6 +376,7 @@ const HomeScreen = () => {
         await api.post("/invoices", {
           client: logIncomeClient.trim(),
           clientPhone: logIncomeClientPhone.trim() || null,
+          description: logIncomeDescription.trim() || null,
           amount: Number(logIncomeAmount),
           projectId: logIncomeProject?._id || null,
           dueDays: logIncomeDueDays,
@@ -1059,11 +1060,29 @@ const HomeScreen = () => {
                             style={{ flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 10 }}
                             returnKeyType="next"
                             submitBehavior="submit"
-                            onSubmitEditing={() => logIncomePhoneRef.current?.focus()}
+                            onSubmitEditing={() => logIncomeDescRef.current?.focus()}
                             autoCapitalize="words"
                             autoCorrect={false}
                             spellCheck={false}
                             autoComplete="off"
+                            onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
+                          />
+                        </View>
+                        {/* What was it for? */}
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center" }}>
+                            <Ionicons name="pencil-outline" size={16} color="#3B82F6" />
+                          </View>
+                          <TextInput
+                            value={logIncomeDescription}
+                            onChangeText={setLogIncomeDescription}
+                            ref={logIncomeDescRef}
+                            placeholder="What was it for?"
+                            placeholderTextColor="#94A3B8"
+                            style={{ flex: 1, fontSize: 16, color: "#0F172A", paddingVertical: 10 }}
+                            returnKeyType="next"
+                            submitBehavior="submit"
+                            onSubmitEditing={() => logIncomePhoneRef.current?.focus()}
                             onFocus={() => setTimeout(() => logIncomeScrollRef.current?.scrollToEnd({ animated: true }), 50)}
                           />
                         </View>
