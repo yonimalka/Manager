@@ -2692,12 +2692,16 @@ app.post("/p/:token/claim", async (req, res) => {
           style: "currency", currency: invoice.currency || "USD",
         }).format(invoice.amount);
       } catch (_) { amtStr = String(invoice.amount); }
-      const methodLabel = { paypal: "PayPal", venmo: "Venmo", cashapp: "Cash App", zelle: "Zelle", bank: "bank transfer", other: "another method" }[method] || method;
+      const METHOD_LABELS = { paypal: "PayPal", venmo: "Venmo", cashapp: "Cash App", zelle: "Zelle", bank: "bank transfer" };
+      const methodLabel = METHOD_LABELS[method];
+      const pushBody = methodLabel
+        ? `${invoice.client} says they paid ${amtStr} by ${methodLabel}. Tap to confirm.`
+        : `${invoice.client} says they paid ${amtStr}. Tap to confirm.`;
       await sendPush(
         owner.pushToken,
         "Payment reported",
-        `${invoice.client} says they paid ${amtStr} by ${methodLabel}. Tap to confirm.`,
-        { type: "payment_claimed", invoiceId: String(invoice._id), screen: "Home" }
+        pushBody,
+        { type: "payment_claimed", invoiceId: String(invoice._id), screen: "Home", client: invoice.client || "" }
       );
     }
 
