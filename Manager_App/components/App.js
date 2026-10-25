@@ -5,7 +5,9 @@ import * as Updates from "expo-updates";
 import { PostHogProvider } from "posthog-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { View } from "react-native";
 import MainApp from "./MainApp";
+import InAppBanner from "./InAppBanner";
 import { UndoToastProvider } from "./UndoToast";
 import { usePostHogBridge } from "../utils/analytics";
 import useNotificationTracking from "../utils/useNotificationTracking";
@@ -13,8 +15,8 @@ import * as Notifications from "expo-notifications";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
+    shouldShowAlert: false,
+    shouldShowBanner: false,
     shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
@@ -65,7 +67,10 @@ const App = () => {
             }}
           >
             <PostHogBridge />
-            <MainApp />
+            <View style={{ flex: 1 }}>
+              <MainApp />
+              <InAppBanner />
+            </View>
           </PostHogProvider>
         </UndoToastProvider>
       </SafeAreaProvider>

@@ -46,6 +46,12 @@ export default function useNotificationTracking() {
       if (p.type === "payment_claimed") {
         DeviceEventEmitter.emit("maggo:refresh-owed");
       }
+      const content = n?.request?.content;
+      DeviceEventEmitter.emit("maggo:in-app-banner", {
+        title: content?.title || "",
+        body:  content?.body  || "",
+        data:  content?.data  || {},
+      });
     });
 
     return () => { tapSub.remove(); recvSub.remove(); };
