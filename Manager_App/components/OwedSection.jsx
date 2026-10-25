@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   Platform,
   ActionSheetIOS,
   useWindowDimensions,
+  Switch,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
   useAnimatedStyle,
@@ -19,6 +21,7 @@ import Reanimated, {
   useSharedValue,
   runOnJS,
 } from "react-native-reanimated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
 import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
@@ -71,6 +74,25 @@ const calcRemDaysAgo = (lastRemindedAt) => {
   return Math.round((today - d) / 86400000);
 };
 
+const relativeTime = (date) => {
+  const diff = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
+  const d = Math.floor(diff / 86400);
+  return `${d} day${d !== 1 ? "s" : ""} ago`;
+};
+
+const methodLabel = (method) => {
+  if (!method) return "";
+  const map = { paypalMe: "PayPal", venmo: "Venmo", cashApp: "Cash App", zelle: "Zelle", bank: "bank transfer" };
+  return map[method] ? ` via ${map[method]}` : "";
+};
+
+const hasAnyPaymentMethod = (pm) => pm && Object.values(pm).some(Boolean);
+
+const PAY_BASE = "https://pay.maggoapp.com";
+
 // ─── Swipe action panel ───────────────────────────────────────────────────────
 
 function RightAction({ prog, onDelete, onFullSwipe, screenWidth }) {
@@ -118,10 +140,14 @@ export default function OwedSection({
   region: regionProp,
   onAdd,
   onChanged,
+  paymentMethods,
+  pendingClaimId,
+  onClaimHandled,
 }) {
   const region = regionProp || locale.split("-")[1] || "US";
   const { width: screenWidth } = useWindowDimensions();
   const { showUndo } = useUndoToast();
+  const navigation = useNavigation();
 
   // Remind sheet
   const [remindSheetVisible, setRemindSheetVisible] = useState(false);
@@ -130,9 +156,43 @@ export default function OwedSection({
   const [remindPhone, setRemindPhone] = useState("");
   const remindPhoneRef = useRef(null);
 
+  // Pay link
+  const [includePayLink, setIncludePayLink] = useState(true);
+  const [payLinkUrl, setPayLinkUrl] = useState(null);
+  const [payLinkLoading, setPayLinkLoading] = useState(false);
+  const [payMethodsSheetVisible, setPayMethodsSheetVisible] = useState(false);
+  const pendingSendChannelRef = useRef(null);
+
+  // Claim sheet (§3)
+  const [claimSheetVisible, setClaimSheetVisible] = useState(false);
+  const [claimInvoice, setClaimInvoice] = useState(null);
+
   // Swipe-to-delete
   const [pendingDeleteIds, setPendingDeleteIds] = useState({});
   const openSwipeableRef = useRef(null);
+
+  // Load persisted pay link preference
+  useEffect(() => {
+    AsyncStorage.getItem("maggo_include_pay_link").then((v) => {
+      if (v !== null) setIncludePayLink(v === "true");
+    }).catch(() => {});
+  }, []);
+
+  const saveIncludePayLink = (val) => {
+    setIncludePayLink(val);
+    AsyncStorage.setItem("maggo_include_pay_link", String(val)).catch(() => {});
+  };
+
+  // Open claim sheet from notification (§4)
+  useEffect(() => {
+    if (!pendingClaimId || !summary?.items) return;
+    const inv = summary.items.find((i) => i._id === pendingClaimId);
+    if (inv?.claimedAt) {
+      setClaimInvoice(inv);
+      setClaimSheetVisible(true);
+    }
+    onClaimHandled?.();
+  }, [pendingClaimId, summary]);
 
   const startDelete = useCallback(
     (inv, method) => {
@@ -208,7 +268,28 @@ export default function OwedSection({
     }
     setRemindInvoice(invoice);
     setRemindPhone(invoice.clientPhone || "");
+    setPayLinkUrl(null);
     setRemindSheetVisible(true);
+    // Load pay link URL
+    setPayLinkLoading(true);
+    if (invoice.publicToken) {
+      setPayLinkUrl(`${PAY_BASE}/${invoice.publicToken}`);
+      setPayLinkLoading(false);
+    } else {
+      api.get(`/invoices/${invoice._id}/link`)
+        .then((res) => setPayLinkUrl(res.data.url))
+        .catch(() => {})
+        .finally(() => setPayLinkLoading(false));
+    }
+  }, []);
+
+  const openClaimSheet = useCallback((invoice) => {
+    if (openSwipeableRef.current) {
+      openSwipeableRef.current.close();
+      openSwipeableRef.current = null;
+    }
+    setClaimInvoice(invoice);
+    setClaimSheetVisible(true);
   }, []);
 
   const markReminded = async (invoice, channel) => {
@@ -226,20 +307,23 @@ export default function OwedSection({
     } catch (e) {}
   };
 
-  const getRemindMessage = (invoice) => {
+  const getRemindMessage = (invoice, payUrl = null) => {
     if (!invoice) return "";
     const clientFirst = (invoice.client || "there").trim().split(/\s+/)[0];
     const userFirst = (userName || "").trim().split(/\s+/)[0] || "me";
     const amt = formatCurrency(invoice.amount || 0, currency, locale);
     const days = calcDayDiff(invoice.dueDate);
+    let body;
     if (days < 0) {
       const n = Math.abs(days);
-      return `Hi ${clientFirst}, a quick reminder about the ${amt} payment for the job I did for you. It was due ${n} day${n !== 1 ? "s" : ""} ago. Could you take care of it this week? Thanks, ${userFirst}`;
+      body = `Hi ${clientFirst}, a quick reminder about the ${amt} payment for the job I did for you. It was due ${n} day${n !== 1 ? "s" : ""} ago. Could you take care of it this week?`;
     } else if (days === 0) {
-      return `Hi ${clientFirst}, just a reminder that the ${amt} payment is due today. Thanks, ${userFirst}`;
+      body = `Hi ${clientFirst}, just a reminder that the ${amt} payment is due today.`;
     } else {
-      return `Hi ${clientFirst}, a friendly heads-up that the ${amt} payment is due in ${days} day${days !== 1 ? "s" : ""}. Thanks, ${userFirst}`;
+      body = `Hi ${clientFirst}, a friendly heads-up that the ${amt} payment is due in ${days} day${days !== 1 ? "s" : ""}.`;
     }
+    const payPart = payUrl ? ` You can pay here: ${payUrl}` : "";
+    return `${body}${payPart} Thanks, ${userFirst}`;
   };
 
   const handleLongPress = useCallback(
@@ -247,27 +331,116 @@ export default function OwedSection({
       if (Platform.OS === "ios") {
         ActionSheetIOS.showActionSheetWithOptions(
           {
-            options: ["Cancel", "Remind", "Mark paid", "Delete"],
-            destructiveButtonIndex: 3,
+            options: inv.claimedAt
+              ? ["Cancel", "Confirm payment", "Remind", "Mark paid", "Delete"]
+              : ["Cancel", "Remind", "Mark paid", "Delete"],
+            destructiveButtonIndex: inv.claimedAt ? 4 : 3,
             cancelButtonIndex: 0,
           },
           (idx) => {
-            if (idx === 1) handleOpenRemind(inv);
-            else if (idx === 2) handleMarkPaid(inv);
-            else if (idx === 3) startDelete(inv, "long_press");
+            if (inv.claimedAt) {
+              if (idx === 1) openClaimSheet(inv);
+              else if (idx === 2) handleOpenRemind(inv);
+              else if (idx === 3) handleMarkPaid(inv);
+              else if (idx === 4) startDelete(inv, "long_press");
+            } else {
+              if (idx === 1) handleOpenRemind(inv);
+              else if (idx === 2) handleMarkPaid(inv);
+              else if (idx === 3) startDelete(inv, "long_press");
+            }
           }
         );
       } else {
-        Alert.alert(inv.client, undefined, [
-          { text: "Remind", onPress: () => handleOpenRemind(inv) },
-          { text: "Mark paid", onPress: () => handleMarkPaid(inv) },
-          { text: "Delete", style: "destructive", onPress: () => startDelete(inv, "long_press") },
-          { text: "Cancel", style: "cancel" },
-        ]);
+        const buttons = inv.claimedAt
+          ? [
+              { text: "Confirm payment", onPress: () => openClaimSheet(inv) },
+              { text: "Remind", onPress: () => handleOpenRemind(inv) },
+              { text: "Mark paid", onPress: () => handleMarkPaid(inv) },
+              { text: "Delete", style: "destructive", onPress: () => startDelete(inv, "long_press") },
+              { text: "Cancel", style: "cancel" },
+            ]
+          : [
+              { text: "Remind", onPress: () => handleOpenRemind(inv) },
+              { text: "Mark paid", onPress: () => handleMarkPaid(inv) },
+              { text: "Delete", style: "destructive", onPress: () => startDelete(inv, "long_press") },
+              { text: "Cancel", style: "cancel" },
+            ];
+        Alert.alert(inv.client, undefined, buttons);
       }
     },
-    [handleOpenRemind, handleMarkPaid, startDelete]
+    [handleOpenRemind, handleMarkPaid, startDelete, openClaimSheet]
   );
+
+  const handleConfirmClaim = async (invoice) => {
+    setClaimSheetVisible(false);
+    try {
+      await api.patch(`/invoices/${invoice._id}/pay`);
+      track("claim_confirmed", { amount: invoice.amount });
+      await onChanged();
+    } catch (e) {
+      if (e.response?.status === 409) {
+        await onChanged();
+      } else {
+        Alert.alert("Error", "Could not mark as paid. Please try again.");
+      }
+    }
+  };
+
+  const handleRejectClaim = async (invoice) => {
+    setClaimSheetVisible(false);
+    try {
+      await api.patch(`/invoices/${invoice._id}/unclaim`);
+      track("claim_rejected", { amount: invoice.amount });
+      await onChanged();
+    } catch {
+      Alert.alert("Error", "Could not update. Please try again.");
+    }
+  };
+
+  // Executes the actual WA/SMS send after all checks pass
+  const executeSend = async (channel, invoice, phone, payUrl) => {
+    const msg = getRemindMessage(invoice, payUrl);
+    const rawPhone = invoice?.clientPhone || phone.trim();
+    let url;
+    if (channel === "whatsapp") {
+      const intlPhone = toIntl(rawPhone, region);
+      const encoded = encodeURIComponent(msg);
+      url = intlPhone ? `https://wa.me/${intlPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    } else {
+      const intlPhone = rawPhone ? "+" + toIntl(rawPhone, region) : "";
+      const encoded = encodeURIComponent(msg);
+      url = Platform.OS === "ios" ? `sms:${intlPhone}&body=${encoded}` : `sms:${intlPhone}?body=${encoded}`;
+    }
+    try {
+      await Linking.openURL(url);
+      if (!invoice?.clientPhone && phone.trim()) savePhone(invoice._id, phone.trim());
+      await markReminded(invoice, channel);
+      setRemindSheetVisible(false);
+    } catch {
+      Alert.alert(
+        channel === "whatsapp" ? "Couldn't open WhatsApp" : "Couldn't open Messages",
+        "Make sure it's installed, or try the other option."
+      );
+    }
+  };
+
+  const doSend = async (channel) => {
+    const effectiveUrl = includePayLink ? payLinkUrl : null;
+    track("pay_link_included", { included: !!effectiveUrl });
+
+    // If switch is ON, URL loaded, but no payment methods set, and not prompted yet — show setup nudge
+    if (includePayLink && payLinkUrl && !hasAnyPaymentMethod(paymentMethods)) {
+      const prompted = await AsyncStorage.getItem("maggo_paymethods_prompted").catch(() => null);
+      if (!prompted) {
+        await AsyncStorage.setItem("maggo_paymethods_prompted", "1").catch(() => {});
+        pendingSendChannelRef.current = channel;
+        setPayMethodsSheetVisible(true);
+        return;
+      }
+    }
+
+    await executeSend(channel, remindInvoice, remindPhone, effectiveUrl);
+  };
 
   // Derived display values — exclude pending-deleted rows
   const visibleItems = summary.items.filter((inv) => !pendingDeleteIds[inv._id]);
@@ -423,6 +596,8 @@ export default function OwedSection({
               remBg = "#fff"; remBorderW = 1; remBorderC = "#E2E8F0"; remTxt = "#334155"; remLabel = "Remind";
             }
 
+            const isClaimed = !!inv.claimedAt;
+
             return (
               <ReanimatedSwipeable
                 key={inv._id}
@@ -456,8 +631,9 @@ export default function OwedSection({
                 }}
               >
                 <TouchableOpacity
-                  activeOpacity={1}
+                  activeOpacity={isClaimed ? 0.7 : 1}
                   delayLongPress={350}
+                  onPress={isClaimed ? () => openClaimSheet(inv) : undefined}
                   onLongPress={() => handleLongPress(inv)}
                   style={{ flexDirection: "row", backgroundColor: "#fff" }}
                 >
@@ -476,6 +652,14 @@ export default function OwedSection({
                               <Text style={{ fontWeight: "400" }}>{` · reminded ${remDaysAgo}d ago`}</Text>
                             )}
                           </Text>
+                          {isClaimed && (
+                            <TouchableOpacity
+                              onPress={() => openClaimSheet(inv)}
+                              style={{ alignSelf: "flex-start", marginTop: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: "#ECFDF5" }}
+                            >
+                              <Text style={{ fontSize: 13, fontWeight: "600", color: "#047857" }}>Says paid · Confirm</Text>
+                            </TouchableOpacity>
+                          )}
                           <View style={{ width: 88, height: 4, marginTop: 7, borderRadius: 2, backgroundColor: "#F1F5F9", overflow: "hidden" }}>
                             <View style={{ width: Math.round(barPct * 88), height: 4, borderRadius: 2, backgroundColor: barColor }} />
                           </View>
@@ -537,28 +721,31 @@ export default function OwedSection({
           </View>
         )}
 
-        <View style={{ backgroundColor: "#F8FAFC", borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: "#E2E8F0" }}>
+        <View style={{ backgroundColor: "#F8FAFC", borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: "#E2E8F0" }}>
           <Text style={{ fontSize: 13, color: "#0F172A", lineHeight: 20 }}>
-            {getRemindMessage(remindInvoice)}
+            {getRemindMessage(remindInvoice, includePayLink && !payLinkLoading ? payLinkUrl : null)}
           </Text>
+        </View>
+
+        {/* Include pay link row */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingHorizontal: 2 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Include pay link</Text>
+            <Text style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
+              {payLinkLoading ? "Getting link…" : "Clients pay in one tap. You get notified."}
+            </Text>
+          </View>
+          <Switch
+            value={includePayLink}
+            onValueChange={saveIncludePayLink}
+            trackColor={{ false: "#E2E8F0", true: "#34d399" }}
+            thumbColor="#fff"
+          />
         </View>
 
         <TouchableOpacity
           style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#ECFDF5", borderRadius: 14, padding: 16, marginBottom: 10 }}
-          onPress={async () => {
-            const rawPhone = remindInvoice?.clientPhone || remindPhone.trim();
-            const intlPhone = toIntl(rawPhone, region);
-            const msg = encodeURIComponent(getRemindMessage(remindInvoice));
-            const url = intlPhone ? `https://wa.me/${intlPhone}?text=${msg}` : `https://wa.me/?text=${msg}`;
-            try {
-              await Linking.openURL(url);
-              if (!remindInvoice?.clientPhone && remindPhone.trim()) savePhone(remindInvoice._id, remindPhone.trim());
-              await markReminded(remindInvoice, "whatsapp");
-              setRemindSheetVisible(false);
-            } catch (e) {
-              Alert.alert("Couldn't open WhatsApp", "Make sure it's installed, or try the other option.");
-            }
-          }}
+          onPress={() => doSend("whatsapp")}
         >
           <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
           <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A" }}>Send via WhatsApp</Text>
@@ -566,24 +753,74 @@ export default function OwedSection({
 
         <TouchableOpacity
           style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#EFF6FF", borderRadius: 14, padding: 16, marginBottom: 4 }}
-          onPress={async () => {
-            const rawPhone = remindInvoice?.clientPhone || remindPhone.trim();
-            const intlPhone = rawPhone ? "+" + toIntl(rawPhone, region) : "";
-            const msg = encodeURIComponent(getRemindMessage(remindInvoice));
-            const url = Platform.OS === "ios" ? `sms:${intlPhone}&body=${msg}` : `sms:${intlPhone}?body=${msg}`;
-            try {
-              await Linking.openURL(url);
-              if (!remindInvoice?.clientPhone && remindPhone.trim()) savePhone(remindInvoice._id, remindPhone.trim());
-              await markReminded(remindInvoice, "sms");
-              setRemindSheetVisible(false);
-            } catch (e) {
-              Alert.alert("Couldn't open Messages", "Make sure it's installed, or try the other option.");
-            }
-          }}
+          onPress={() => doSend("sms")}
         >
           <Ionicons name="chatbubble-outline" size={22} color="#3B82F6" />
           <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A" }}>Send via SMS</Text>
         </TouchableOpacity>
+      </BottomSheet>
+
+      {/* Payment methods prompt sheet */}
+      <BottomSheet visible={payMethodsSheetVisible} onClose={() => setPayMethodsSheetVisible(false)}>
+        <Text style={{ fontSize: 17, fontWeight: "700", color: "#0F172A", marginBottom: 6 }}>Add how clients pay you</Text>
+        <Text style={{ fontSize: 14, color: "#64748B", lineHeight: 22, marginBottom: 24 }}>
+          So your pay link shows PayPal, Venmo or bank details. Takes 30 seconds.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: "#0F172A", borderRadius: 14, padding: 16, alignItems: "center", marginBottom: 10 }}
+          onPress={() => {
+            setPayMethodsSheetVisible(false);
+            setRemindSheetVisible(false);
+            navigation.navigate("PaymentMethods", { fromReminder: true });
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Add now</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{ padding: 16, alignItems: "center" }}
+          onPress={async () => {
+            setPayMethodsSheetVisible(false);
+            const ch = pendingSendChannelRef.current;
+            if (!ch) return;
+            pendingSendChannelRef.current = null;
+            // Send without URL (methods not set up)
+            await executeSend(ch, remindInvoice, remindPhone, null);
+          }}
+        >
+          <Text style={{ color: "#64748B", fontSize: 15 }}>Send without</Text>
+        </TouchableOpacity>
+      </BottomSheet>
+
+      {/* Claim confirm sheet */}
+      <BottomSheet visible={claimSheetVisible} onClose={() => setClaimSheetVisible(false)}>
+        {claimInvoice && (
+          <>
+            <Text style={{ fontSize: 20, fontWeight: "700", color: "#0F172A", marginBottom: 10 }}>
+              Did {formatCurrency(claimInvoice.amount, currency, locale)} arrive?
+            </Text>
+            <Text style={{ fontSize: 15, color: "#475569", lineHeight: 22, marginBottom: 24 }}>
+              {claimInvoice.client} marked {claimInvoice.description || "it"} as paid
+              {methodLabel(claimInvoice.claimedMethod)},{" "}
+              {relativeTime(claimInvoice.claimedAt)}.{" "}
+              Check your account, then confirm.
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: "#059669", borderRadius: 14, padding: 16, alignItems: "center", marginBottom: 10 }}
+              onPress={() => handleConfirmClaim(claimInvoice)}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Yes, mark as paid</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ backgroundColor: "#F8FAFC", borderRadius: 14, padding: 16, alignItems: "center", marginBottom: 8, borderWidth: 1, borderColor: "#E2E8F0" }}
+              onPress={() => handleRejectClaim(claimInvoice)}
+            >
+              <Text style={{ color: "#334155", fontWeight: "600", fontSize: 15 }}>Not yet, keep it open</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 12, color: "#94A3B8", textAlign: "center", lineHeight: 18 }}>
+              Confirming logs {formatCurrency(claimInvoice.amount, currency, locale)} as income and closes it in Owed to You.
+            </Text>
+          </>
+        )}
       </BottomSheet>
     </View>
   );

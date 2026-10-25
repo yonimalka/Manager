@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { DeviceEventEmitter } from "react-native";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { track } from "./analytics";
@@ -19,7 +20,11 @@ export default function useNotificationTracking() {
       const seen = await AsyncStorage.getItem(LAST_KEY);
       if (id && id !== seen) {
         await AsyncStorage.setItem(LAST_KEY, id);
-        track("notification_opened", props(res.notification, { coldStart: true }));
+        const p = props(res.notification, { coldStart: true });
+        track("notification_opened", p);
+        if (p.type === "payment_claimed") {
+          DeviceEventEmitter.emit("maggo:open-claim", p.invoiceId);
+        }
       }
     }).catch(() => {});
 
@@ -27,12 +32,20 @@ export default function useNotificationTracking() {
     const tapSub = Notifications.addNotificationResponseReceivedListener((res) => {
       const id = res.notification?.request?.identifier;
       if (id) AsyncStorage.setItem(LAST_KEY, id);
-      track("notification_opened", props(res.notification, { coldStart: false }));
+      const p = props(res.notification, { coldStart: false });
+      track("notification_opened", p);
+      if (p.type === "payment_claimed") {
+        DeviceEventEmitter.emit("maggo:open-claim", p.invoiceId);
+      }
     });
 
     // Arrived while the app was open
     const recvSub = Notifications.addNotificationReceivedListener((n) => {
-      track("notification_received_foreground", props(n));
+      const p = props(n);
+      track("notification_received_foreground", p);
+      if (p.type === "payment_claimed") {
+        DeviceEventEmitter.emit("maggo:refresh-owed");
+      }
     });
 
     return () => { tapSub.remove(); recvSub.remove(); };

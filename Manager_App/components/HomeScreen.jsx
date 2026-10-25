@@ -23,6 +23,7 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Keyboard,
+  DeviceEventEmitter,
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
 // import { SERVER_URL } from "@env";
@@ -52,6 +53,7 @@ import { registerPushTokenIfGranted } from "../utils/registerPushToken";
 import { track } from "../utils/analytics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import OwedSection from "./OwedSection";
+import BottomSheet from "./BottomSheet";
 
 const { width } = Dimensions.get("window");
 
@@ -115,6 +117,9 @@ const HomeScreen = () => {
   const [showPaidTip, setShowPaidTip] = useState(false);
   const [starterDismissed, setStarterDismissed] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState({});
+  const [pendingClaimId, setPendingClaimId] = useState(null);
+  const [whatsnewVisible, setWhatsnewVisible] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -201,6 +206,7 @@ const HomeScreen = () => {
       const net = (response.data?.totalIncomes ?? 0) - (response.data?.totalExpenses ?? 0);
       setNetBalance(net);
       if (owedRes?.data) setOwedSummary(owedRes.data);
+      setPaymentMethods(response.data?.paymentMethods || {});
       setHasLoaded(true);
       
     } catch (err) {
@@ -321,6 +327,39 @@ const HomeScreen = () => {
 
     checkFirstRun();
   }, [authLoading, userId]);
+
+  // What's new: pay links (§5) — once per user, only after onboarding complete
+  useEffect(() => {
+    if (authLoading || !userId || welcomeVisible) return;
+    AsyncStorage.getItem(`maggo_onboarding_complete_${userId}`).then(async (done) => {
+      if (!done) return;
+      const seen = await AsyncStorage.getItem(`maggo_whatsnew_paylink_${userId}`);
+      if (!seen) {
+        await AsyncStorage.setItem(`maggo_whatsnew_paylink_${userId}`, "1");
+        setWhatsnewVisible(true);
+        track("whatsnew_paylink_shown");
+      }
+    }).catch(() => {});
+  }, [authLoading, userId, welcomeVisible]);
+
+  // Notification events (§4)
+  useEffect(() => {
+    const refreshSub = DeviceEventEmitter.addListener("maggo:refresh-owed", () => {
+      api.get("/invoices/summary").then((res) => {
+        if (res?.data) setOwedSummary(res.data);
+      }).catch(() => {});
+    });
+    const claimSub = DeviceEventEmitter.addListener("maggo:open-claim", (invoiceId) => {
+      api.get("/invoices/summary").then((res) => {
+        if (res?.data) {
+          setOwedSummary(res.data);
+          setPendingClaimId(invoiceId);
+        }
+      }).catch(() => {});
+    });
+    return () => { refreshSub.remove(); claimSub.remove(); };
+  }, []);
+
 
   /* ── Demo project seeding ── */
   const DEMO_PROJECTS = {
@@ -560,6 +599,41 @@ const HomeScreen = () => {
   return (
     <View style={styles.screen}>
       <FirstRun visible={welcomeVisible} userName={userName} onDone={handleFirstRunDone} />
+
+      {/* What's new: pay links (§5) */}
+      <BottomSheet visible={whatsnewVisible} onClose={() => setWhatsnewVisible(false)}>
+        <View style={{ alignSelf: "flex-start", backgroundColor: "#DBEAFE", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 14 }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: "#1D4ED8", letterSpacing: 0.5 }}>NEW</Text>
+        </View>
+        <Text style={{ fontSize: 20, fontWeight: "700", color: "#0F172A", marginBottom: 10, letterSpacing: -0.3 }}>
+          Get paid from the reminder itself
+        </Text>
+        {[
+          "Send a reminder with a pay link attached",
+          "Your client taps it and marks themselves as paid",
+          "You get a notification and confirm it arrived",
+        ].map((step, i) => (
+          <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: "#EFF6FF", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#2563EB" }}>{i + 1}</Text>
+            </View>
+            <Text style={{ flex: 1, fontSize: 15, color: "#475569", lineHeight: 22 }}>{step}</Text>
+          </View>
+        ))}
+        <TouchableOpacity
+          style={{ backgroundColor: "#0F172A", borderRadius: 14, padding: 16, alignItems: "center", marginTop: 8, marginBottom: 10 }}
+          onPress={() => {
+            setWhatsnewVisible(false);
+            track("whatsnew_paylink_cta");
+            navigation.navigate("PaymentMethods");
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Add how clients pay you</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={{ padding: 12, alignItems: "center" }} onPress={() => setWhatsnewVisible(false)}>
+          <Text style={{ color: "#64748B", fontSize: 15 }}>Later</Text>
+        </TouchableOpacity>
+      </BottomSheet>
 
       {/* Animated Header Background */}
       <Animated.View style={[styles.headerBackground, { opacity: headerOpacity }]}>
@@ -867,6 +941,9 @@ const HomeScreen = () => {
               userName={userName}
               onAdd={() => { track("income_modal_opened", { source: "owed_add" }); setLogIncomePaidStatus("owed"); setLogIncomeVisible(true); }}
               onChanged={fetchData}
+              paymentMethods={paymentMethods}
+              pendingClaimId={pendingClaimId}
+              onClaimHandled={() => setPendingClaimId(null)}
             />
           </View>
 
