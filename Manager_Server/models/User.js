@@ -46,6 +46,13 @@ locale: {
     firstIncome:  { type: Boolean, default: false },
     reengagement: { type: Boolean, default: false },
   },
+  paymentMethods: {
+    paypalMe: { type: String, trim: true, default: "" },
+    venmo:    { type: String, trim: true, default: "" },
+    cashApp:  { type: String, trim: true, default: "" },
+    zelle:    { type: String, trim: true, default: "" },
+    bank:     { type: String, trim: true, default: "" },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);
