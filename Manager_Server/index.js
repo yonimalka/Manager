@@ -19,6 +19,7 @@ const puppeteer = require('puppeteer');
 const archiver = require("archiver");
 const { ObjectId } = require("mongodb");
 const fetch = require("node-fetch");
+const crypto = require("crypto");
 const UserModel = require("./models/User");
 const FixedExpenseModel = require("./models/FixedExpense");
 const ReceiptModel = require ("./models/Receipt");
@@ -48,6 +49,33 @@ const sendPush = async (pushToken, title, body, data = {}) => {
     console.error("[PUSH] Error:", err.message);
   }
 };
+
+// ── PostHog server-side analytics ─────────────────────────────────────────────
+let phClient = null;
+try {
+  const { PostHog } = require("posthog-node");
+  if (process.env.POSTHOG_API_KEY) {
+    phClient = new PostHog(process.env.POSTHOG_API_KEY, { host: "https://us.i.posthog.com" });
+    process.on("beforeExit", () => phClient.shutdown());
+  }
+} catch (_) {}
+function phCapture(distinctId, event, properties = {}) {
+  if (!phClient || !distinctId) return;
+  try { phClient.capture({ distinctId: String(distinctId), event, properties }); } catch (_) {}
+}
+
+// ── Invoice public-token helper ───────────────────────────────────────────────
+function randomToken() {
+  return crypto.randomBytes(6).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+async function generateInvoiceToken() {
+  for (let i = 0; i < 10; i++) {
+    const t = randomToken();
+    const exists = await InvoiceModel.exists({ publicToken: t });
+    if (!exists) return t;
+  }
+  throw new Error("Could not generate unique invoice token");
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -1141,7 +1169,7 @@ app.post("/income", authMiddleware, async (req, res) => {
 
 app.post("/invoices", authMiddleware, async (req, res) => {
   try {
-    const { client, clientPhone, amount, currency, projectId, dueDays, dueDate } = req.body;
+    const { client, clientPhone, amount, currency, projectId, dueDays, dueDate, description } = req.body;
     if (!client || !client.trim()) return res.status(400).json({ error: "Client name is required" });
     const parsed = Number(amount);
     if (!parsed || parsed <= 0) return res.status(400).json({ error: "Valid amount is required" });
@@ -1161,9 +1189,11 @@ app.post("/invoices", authMiddleware, async (req, res) => {
       projectId: projectId || null,
       client: client.trim(),
       clientPhone: clientPhone || null,
+      description: description ? String(description).trim().slice(0, 300) : null,
       amount: parsed,
       currency: currency || user?.currency || "USD",
       dueDate: due,
+      publicToken: await generateInvoiceToken(),
     });
     res.status(201).json(invoice);
   } catch (err) {
@@ -2382,6 +2412,338 @@ cron.schedule("0 8 * * 1", async () => {
   } catch (err) {
     console.error("[CRON] Weekly nudge error:", err.message);
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAY LINK — authenticated routes
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /invoices/:id/link — returns (or lazily creates) the public pay URL
+app.get("/invoices/:id/link", authMiddleware, async (req, res) => {
+  try {
+    const invoice = await InvoiceModel.findOne({ _id: req.params.id, userId: req.userId });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    if (!invoice.publicToken) {
+      invoice.publicToken = await generateInvoiceToken();
+      await invoice.save();
+    }
+    const base = (process.env.PAY_BASE_URL || "https://pay.maggoapp.com").replace(/\/$/, "");
+    res.json({ url: `${base}/${invoice.publicToken}` });
+  } catch (err) {
+    console.error("[PAY] link error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /users/payment-methods — save/update the owner's payment method handles
+app.patch("/users/payment-methods", authMiddleware, async (req, res) => {
+  const VALID_KEYS = ["paypalMe", "venmo", "cashApp", "zelle", "bank"];
+  const update = {};
+  for (const key of VALID_KEYS) {
+    if (typeof req.body[key] === "string") {
+      update[`paymentMethods.${key}`] = req.body[key].trim().slice(0, 120);
+    }
+  }
+  if (!Object.keys(update).length) return res.status(400).json({ error: "Nothing to update" });
+  try {
+    const user = await UserModel.findByIdAndUpdate(
+      req.userId,
+      { $set: update },
+      { new: true, select: "-password" }
+    );
+    res.json({ paymentMethods: user.paymentMethods });
+  } catch (err) {
+    console.error("[PAY] payment-methods error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAY PAGE — public helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function esc(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+function page404() {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="robots" content="noindex"><style>body{font-family:-apple-system,sans-serif;background:#F8FAFC;color:#0F172A;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}</style></head><body><div><div style="font-size:52px;margin-bottom:16px">🔗</div><h2 style="margin-bottom:8px;font-size:20px">This link is no longer active.</h2><p style="color:#64748B;font-size:15px">The payment request may have been removed or expired.</p></div></body></html>`;
+}
+
+function buildPayPage({ invoice, user, token }) {
+  const isPaid  = invoice.status === "paid";
+  const claimed = !isPaid && !!invoice.claimedAt;
+  const pm      = user.paymentMethods || {};
+
+  const displayName = esc(user.businessName || user.name || "");
+  const firstName   = esc(((user.businessName || user.name || "Us").trim().split(/\s+/)[0]));
+  const clientName  = esc(invoice.client || "");
+  const descText    = esc(invoice.description || "");
+
+  let amtStr;
+  try {
+    amtStr = new Intl.NumberFormat("en-US", {
+      style: "currency", currency: invoice.currency || "USD", minimumFractionDigits: 2,
+    }).format(invoice.amount);
+  } catch (_) { amtStr = `${invoice.currency || "USD"} ${invoice.amount}`; }
+
+  const now      = new Date();
+  const due      = new Date(invoice.dueDate);
+  const daysLate = Math.floor((now - due) / 86400000);
+  const isLate   = daysLate > 0;
+  const dateStr  = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const dueChip  = isLate
+    ? `<span class="chip red">Due ${esc(dateStr)} · ${daysLate} day${daysLate !== 1 ? "s" : ""} late</span>`
+    : `<span class="chip green">Due ${esc(dateStr)}</span>`;
+
+  const initials = ((user.businessName || user.name || "M").trim().slice(0, 2)).toUpperCase();
+  const logoHtml = user.logo
+    ? `<img class="logo" src="${esc(user.logo)}" alt="">`
+    : `<div class="logo init">${esc(initials)}</div>`;
+
+  // ── Payment method rows ───────────────────────────────────────────────────
+  const methods = [];
+  if (pm.paypalMe && pm.paypalMe.trim())
+    methods.push(`<a class="meth-btn paypal" href="/p/${token}/go/paypal">Pay with PayPal</a>`);
+  if (pm.venmo && pm.venmo.trim())
+    methods.push(`<a class="meth-btn venmo" href="/p/${token}/go/venmo">Pay with Venmo</a>`);
+  if (pm.cashApp && pm.cashApp.trim())
+    methods.push(`<a class="meth-btn cash" href="/p/${token}/go/cashapp">Pay with Cash App</a>`);
+  if (pm.zelle && pm.zelle.trim())
+    methods.push(`<div class="copy-row"><span class="clbl">Zelle</span><span class="cval">${esc(pm.zelle)}</span><button class="copy-btn" data-copy="${esc(pm.zelle)}" onclick="doCopy(this)">Copy</button></div>`);
+  if (pm.bank && pm.bank.trim())
+    methods.push(`<div class="copy-row"><span class="clbl">Bank</span><span class="cval">${esc(pm.bank)}</span><button class="copy-btn" data-copy="${esc(pm.bank)}" onclick="doCopy(this)">Copy</button></div>`);
+
+  const methodsSection = !isPaid
+    ? (methods.length > 0
+        ? `<div class="methods"><p class="sec-lbl">Pay ${firstName} with:</p>${methods.join("")}</div>`
+        : `<div class="no-methods"><p>Ask ${firstName} how to pay</p></div>`)
+    : "";
+
+  // ── Method picker (claim form) ────────────────────────────────────────────
+  const PM_KEY    = { paypal: "paypalMe", venmo: "venmo", cashapp: "cashApp", zelle: "zelle", bank: "bank" };
+  const M_LABELS  = { paypal: "PayPal", venmo: "Venmo", cashapp: "Cash App", zelle: "Zelle", bank: "Bank", other: "Other" };
+  const CLAIM_OPTS = ["paypal", "venmo", "cashapp", "zelle", "bank", "other"];
+
+  const radioOptions = CLAIM_OPTS
+    .filter(m => m === "other" || (pm[PM_KEY[m]] && pm[PM_KEY[m]].trim()))
+    .map(m => `<label class="radio"><input type="radio" name="method" value="${m}" required> ${M_LABELS[m]}</label>`)
+    .join("") || `<label class="radio"><input type="radio" name="method" value="other" required> Other</label>`;
+
+  const claimSection = isPaid
+    ? ""
+    : claimed
+    ? `<div class="claimed">Thanks, ${firstName} has been notified.</div>`
+    : `<div class="claim-wrap">
+        <button class="claim-btn" onclick="showPicker(this)">I've paid, let ${firstName} know</button>
+        <div id="picker" hidden>
+          <p class="picker-lbl">How did you pay?</p>
+          <form method="POST" action="/p/${token}/claim">
+            <div class="radio-grid">${radioOptions}</div>
+            <button type="submit" class="confirm-btn">Confirm</button>
+          </form>
+        </div>
+       </div>`;
+
+  const cardContent = isPaid
+    ? `<div class="paid-done">&#10003; Paid. Thank you!</div>`
+    : `<p class="hi">Hi ${clientName}, this is for</p>
+       <p class="desc-txt">${descText || "your job"}</p>
+       <p class="amt">${esc(amtStr)}</p>
+       ${dueChip}`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="robots" content="noindex">
+<title>Payment request — ${displayName}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#F8FAFC;color:#0F172A;min-height:100vh;padding:0 0 48px}
+.wrap{max-width:480px;margin:0 auto;padding:16px}
+.hdr{display:flex;align-items:center;gap:12px;padding:16px 0 20px}
+.logo{width:52px;height:52px;border-radius:14px;object-fit:cover;flex-shrink:0}
+.init{background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700}
+.biz{font-size:17px;font-weight:700;color:#0F172A;margin-bottom:2px}
+.sub{font-size:13px;color:#64748B}
+.card{background:#fff;border-radius:20px;border:1px solid #E2E8F0;padding:20px 20px 24px;margin-bottom:14px}
+.hi{font-size:15px;color:#64748B;margin-bottom:8px}
+.desc-txt{font-size:20px;font-weight:600;color:#0F172A;margin-bottom:14px;line-height:1.3}
+.amt{font-size:40px;font-weight:700;color:#0F172A;letter-spacing:-1px;margin-bottom:14px}
+.chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
+.red{background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA}
+.green{background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0}
+.paid-done{text-align:center;padding:24px 0;font-size:22px;font-weight:700;color:#15803D}
+.methods{margin-bottom:14px}
+.sec-lbl{font-size:15px;font-weight:600;color:#0F172A;margin-bottom:12px}
+.meth-btn{display:block;padding:16px;border-radius:14px;text-align:center;font-size:16px;font-weight:600;text-decoration:none;margin-bottom:10px;color:#fff}
+.paypal{background:#003087}
+.venmo{background:#3D95CE}
+.cash{background:#00D64F;color:#000}
+.copy-row{display:flex;align-items:center;gap:10px;background:#F8FAFC;border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid #E2E8F0}
+.clbl{font-size:13px;font-weight:700;color:#0F172A;min-width:40px}
+.cval{flex:1;font-size:14px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-btn{background:#0F172A;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
+.no-methods{text-align:center;color:#64748B;padding:8px 0 14px;font-size:15px}
+.claim-wrap{margin-bottom:14px}
+.claim-btn{width:100%;padding:18px;border-radius:16px;background:#0F172A;color:#fff;font-size:16px;font-weight:700;border:none;cursor:pointer}
+.picker-lbl{font-size:15px;font-weight:600;color:#0F172A;margin:16px 0 12px}
+.radio-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.radio{display:flex;align-items:center;gap:8px;background:#F8FAFC;border-radius:12px;padding:12px 14px;font-size:15px;cursor:pointer;border:1px solid #E2E8F0}
+.confirm-btn{width:100%;padding:16px;border-radius:14px;background:#059669;color:#fff;font-size:16px;font-weight:700;border:none;cursor:pointer}
+.claimed{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:16px;padding:20px;text-align:center;font-size:16px;font-weight:600;color:#15803D;margin-bottom:14px}
+.footer{text-align:center;padding:24px 0 0}
+.footer a{font-size:13px;color:#94A3B8;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    ${logoHtml}
+    <div><div class="biz">${displayName}</div><div class="sub">Payment request</div></div>
+  </div>
+  <div class="card">${cardContent}</div>
+  ${methodsSection}
+  ${claimSection}
+  <div class="footer"><a href="/p/${token}/app">Sent with Maggo &middot; free money app for contractors</a></div>
+</div>
+<script>
+function showPicker(b){document.getElementById('picker').removeAttribute('hidden');b.style.display='none';}
+function doCopy(b){if(navigator.clipboard)navigator.clipboard.writeText(b.dataset.copy).then(function(){b.textContent='Copied!'});else b.textContent='Copied!';}
+</script>
+</body>
+</html>`;
+}
+
+async function servePayPage(req, res, token) {
+  if (!/^[A-Za-z0-9_-]{8}$/.test(token)) return res.status(404).send(page404());
+  try {
+    const invoice = await InvoiceModel.findOneAndUpdate(
+      { publicToken: token },
+      { $inc: { linkViews: 1 } },
+      { new: true }
+    ).lean();
+    if (!invoice) return res.status(404).send(page404());
+
+    const user = await UserModel.findById(invoice.userId).select("-password").lean();
+    if (!user) return res.status(404).send(page404());
+
+    phCapture(String(invoice.userId), "pay_link_viewed", { invoiceId: String(invoice._id) });
+
+    const html = buildPayPage({ invoice, user, token });
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("X-Robots-Tag", "noindex");
+    res.send(html);
+  } catch (err) {
+    console.error("[PAY] page error:", err.message);
+    res.status(500).send("Server error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAY PAGE — public routes (registered LAST to avoid shadowing existing routes)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// POST /p/:token/claim — client reports they've paid
+app.post("/p/:token/claim", async (req, res) => {
+  const { token } = req.params;
+  if (!/^[A-Za-z0-9_-]{8}$/.test(token)) return res.status(404).send(page404());
+  const VALID_METHODS = ["paypal", "venmo", "cashapp", "zelle", "bank", "other"];
+  const method = req.body.method;
+  if (!VALID_METHODS.includes(method)) return res.redirect(303, `/p/${token}`);
+  try {
+    const invoice = await InvoiceModel.findOne({ publicToken: token }).lean();
+    if (!invoice) return res.status(404).send(page404());
+    if (invoice.status !== "unpaid") return res.redirect(303, `/p/${token}`);
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
+    if (invoice.claimedAt && invoice.claimedAt > tenMinAgo) return res.redirect(303, `/p/${token}`);
+
+    await InvoiceModel.findByIdAndUpdate(invoice._id, { claimedAt: new Date(), claimedMethod: method });
+
+    // Push to invoice owner
+    const owner = await UserModel.findById(invoice.userId).select("pushToken currency").lean();
+    if (owner?.pushToken) {
+      let amtStr;
+      try {
+        amtStr = new Intl.NumberFormat("en-US", {
+          style: "currency", currency: invoice.currency || "USD",
+        }).format(invoice.amount);
+      } catch (_) { amtStr = String(invoice.amount); }
+      const methodLabel = { paypal: "PayPal", venmo: "Venmo", cashapp: "Cash App", zelle: "Zelle", bank: "bank transfer", other: "another method" }[method] || method;
+      await sendPush(
+        owner.pushToken,
+        "Payment reported",
+        `${invoice.client} says they paid ${amtStr} by ${methodLabel}. Tap to confirm.`,
+        { type: "payment_claimed", invoiceId: String(invoice._id), screen: "Home" }
+      );
+    }
+
+    phCapture(String(invoice.userId), "pay_link_claimed", { method, invoiceId: String(invoice._id) });
+    res.redirect(303, `/p/${token}`);
+  } catch (err) {
+    console.error("[PAY] claim error:", err.message);
+    res.redirect(303, `/p/${token}`);
+  }
+});
+
+// GET /p/:token/go/:method — log tap + redirect to payment URL
+app.get("/p/:token/go/:method", async (req, res) => {
+  const { token, method } = req.params;
+  if (!/^[A-Za-z0-9_-]{8}$/.test(token)) return res.status(404).send(page404());
+  try {
+    const invoice = await InvoiceModel.findOne({ publicToken: token }).lean();
+    if (!invoice) return res.status(404).send(page404());
+    const user = await UserModel.findById(invoice.userId).select("paymentMethods").lean();
+    const pm   = user?.paymentMethods || {};
+    const amt  = invoice.amount;
+    const descEnc = encodeURIComponent(invoice.description || invoice.client || "payment");
+
+    phCapture(String(invoice.userId), "pay_link_method_tapped", { method, invoiceId: String(invoice._id) });
+
+    let url = null;
+    if (method === "paypal" && pm.paypalMe && pm.paypalMe.trim()) {
+      const handle = pm.paypalMe.trim().replace(/^https?:\/\/paypal\.me\/?/, "").replace(/^@/, "");
+      if (handle) url = `https://paypal.me/${encodeURIComponent(handle)}/${amt}`;
+    } else if (method === "venmo" && pm.venmo && pm.venmo.trim()) {
+      const handle = pm.venmo.trim().replace(/^@/, "");
+      url = `https://venmo.com/${encodeURIComponent(handle)}?txn=pay&amount=${amt}&note=${descEnc}`;
+    } else if (method === "cashapp" && pm.cashApp && pm.cashApp.trim()) {
+      url = `https://cash.app/${encodeURIComponent(pm.cashApp.trim())}/${amt}`;
+    }
+
+    if (url) return res.redirect(302, url);
+    res.redirect(303, `/p/${token}`);
+  } catch (err) {
+    console.error("[PAY] go error:", err.message);
+    res.redirect(303, `/p/${token}`);
+  }
+});
+
+// GET /p/:token/app — footer link with tracking
+app.get("/p/:token/app", async (req, res) => {
+  const { token } = req.params;
+  try {
+    const invoice = await InvoiceModel.findOne({ publicToken: token }).select("userId _id").lean();
+    if (invoice) phCapture(String(invoice.userId), "pay_link_footer_tapped", { invoiceId: String(invoice._id) });
+  } catch (_) {}
+  res.redirect(302, "https://apps.apple.com/app/id6748068683");
+});
+
+// GET /p/:token — public pay page
+app.get("/p/:token", (req, res) => servePayPage(req, res, req.params.token));
+
+// GET /:token on pay.* custom domain
+app.get("/:token", (req, res, next) => {
+  if (!req.hostname.startsWith("pay.")) return next();
+  servePayPage(req, res, req.params.token);
 });
 
 app.listen(PORT, () => {
