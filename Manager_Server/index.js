@@ -1306,6 +1306,21 @@ app.delete("/invoices/:id", authMiddleware, async (req, res) => {
   }
 });
 
+app.patch("/invoices/:id/unclaim", authMiddleware, async (req, res) => {
+  try {
+    const invoice = await InvoiceModel.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
+      { $set: { claimedAt: null, claimedMethod: null } },
+      { new: true }
+    );
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+    res.json(invoice);
+  } catch (err) {
+    console.error("Unclaim error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.patch("/users/business-details", authMiddleware, async (req, res) => {
   try {
     const { businessId, businessAddress, businessState, businessCountry, businessZip } = req.body;
