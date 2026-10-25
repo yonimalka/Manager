@@ -140,6 +140,8 @@ const HomeScreen = () => {
   const logIncomeClientRef = useRef(null);
   const logIncomePhoneRef = useRef(null);
   const logIncomeDescRef = useRef(null);
+  const descAutoFilled   = useRef(false);
+  const clientAutoFilled = useRef(false);
   const logIncomeScrollRef = useRef(null);
   const LOG_INCOME_ACCESSORY_ID = "logIncomeAccessory";
 
@@ -346,6 +348,29 @@ const HomeScreen = () => {
     });
   };
 
+  const pickLogProject = (p) => {
+    setLogIncomeProject(p);
+    // Description
+    if (p && (!logIncomeDescription.trim() || descAutoFilled.current)) {
+      setLogIncomeDescription(p.name || "");
+      descAutoFilled.current = true;
+    } else if (!p && descAutoFilled.current) {
+      setLogIncomeDescription("");
+      descAutoFilled.current = false;
+    }
+    // Client + phone (owed path only, if the project has them)
+    if (logIncomePaidStatus === "owed") {
+      if (p?.client && (!logIncomeClient.trim() || clientAutoFilled.current)) {
+        setLogIncomeClient(p.client);
+        if (p.clientPhone && !logIncomeClientPhone.trim()) setLogIncomeClientPhone(p.clientPhone);
+        clientAutoFilled.current = true;
+      } else if (!p && clientAutoFilled.current) {
+        setLogIncomeClient("");
+        clientAutoFilled.current = false;
+      }
+    }
+  };
+
   const resetLogIncomeModal = () => {
     setLogIncomeAmount("");
     setLogIncomeDescription("");
@@ -356,6 +381,8 @@ const HomeScreen = () => {
     setLogIncomeClient("");
     setLogIncomeClientPhone("");
     setLogIncomeDueDays(14);
+    descAutoFilled.current = false;
+    clientAutoFilled.current = false;
   };
 
   const handleLogIncomeSubmit = async () => {
@@ -975,7 +1002,7 @@ const HomeScreen = () => {
                     {projectDetails.length > 0 && (
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 14, paddingBottom: 2, gap: 8 }}>
                         <TouchableOpacity
-                          onPress={() => setLogIncomeProject(null)}
+                          onPress={() => pickLogProject(null)}
                           style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: !logIncomeProject ? "#ECFDF5" : "#F8FAFC", borderWidth: 1, borderColor: !logIncomeProject ? "#34d399" : "#E2E8F0" }}
                         >
                           <Text style={{ fontSize: 12, fontWeight: !logIncomeProject ? "600" : "400", color: !logIncomeProject ? "#059669" : "#94A3B8" }}>No project</Text>
@@ -983,7 +1010,7 @@ const HomeScreen = () => {
                         {projectDetails.map((p) => (
                           <TouchableOpacity
                             key={p._id}
-                            onPress={() => setLogIncomeProject(p)}
+                            onPress={() => pickLogProject(p)}
                             style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: logIncomeProject?._id === p._id ? "#ECFDF5" : "#F8FAFC", borderWidth: 1, borderColor: logIncomeProject?._id === p._id ? "#34d399" : "#E2E8F0" }}
                           >
                             <Text style={{ fontSize: 12, fontWeight: logIncomeProject?._id === p._id ? "600" : "400", color: logIncomeProject?._id === p._id ? "#059669" : "#64748B" }}>{p.name}</Text>
@@ -1001,7 +1028,7 @@ const HomeScreen = () => {
                           </View>
                           <TextInput
                             value={logIncomeDescription}
-                            onChangeText={setLogIncomeDescription}
+                            onChangeText={(t) => { descAutoFilled.current = false; setLogIncomeDescription(t); }}
                             ref={logIncomeDescRef}
                             placeholder="What was it for?"
                             placeholderTextColor="#94A3B8"
@@ -1053,7 +1080,7 @@ const HomeScreen = () => {
                           </View>
                           <TextInput
                             value={logIncomeClient}
-                            onChangeText={setLogIncomeClient}
+                            onChangeText={(t) => { clientAutoFilled.current = false; setLogIncomeClient(t); }}
                             ref={logIncomeClientRef}
                             placeholder="Client name"
                             placeholderTextColor="#94A3B8"
@@ -1075,7 +1102,7 @@ const HomeScreen = () => {
                           </View>
                           <TextInput
                             value={logIncomeDescription}
-                            onChangeText={setLogIncomeDescription}
+                            onChangeText={(t) => { descAutoFilled.current = false; setLogIncomeDescription(t); }}
                             ref={logIncomeDescRef}
                             placeholder="What was it for?"
                             placeholderTextColor="#94A3B8"
