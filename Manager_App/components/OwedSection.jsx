@@ -657,7 +657,7 @@ export default function OwedSection({
                               onPress={() => openClaimSheet(inv)}
                               style={{ alignSelf: "flex-start", marginTop: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: "#ECFDF5" }}
                             >
-                              <Text style={{ fontSize: 13, fontWeight: "600", color: "#047857" }}>Says paid · Confirm</Text>
+                              <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "600", color: "#047857" }}>Says paid ›</Text>
                             </TouchableOpacity>
                           )}
                           <View style={{ width: 88, height: 4, marginTop: 7, borderRadius: 2, backgroundColor: "#F1F5F9", overflow: "hidden" }}>

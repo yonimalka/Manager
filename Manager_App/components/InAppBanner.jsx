@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   DeviceEventEmitter,
+  Image,
   PanResponder,
   StyleSheet,
   Text,
@@ -11,6 +12,34 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { track } from "../utils/analytics";
 
+// Same 3-pair palette as OwedSection avatar (late / soon / on-track)
+const AVATAR_PAIRS = [
+  { bg: "#EFF6FF", text: "#2563EB" },
+  { bg: "#FEF2F2", text: "#DC2626" },
+  { bg: "#FFFBEB", text: "#B45309" },
+];
+const avatarColors = (name) => {
+  if (!name) return AVATAR_PAIRS[0];
+  const sum = [...name].reduce((s, c) => s + c.charCodeAt(0), 0);
+  return AVATAR_PAIRS[sum % AVATAR_PAIRS.length];
+};
+
+const ICON = require("../assets/icon.png");
+
+function Avatar({ client }) {
+  if (!client) {
+    return <Image source={ICON} style={styles.iconFull} />;
+  }
+  const initial = client.trim()[0]?.toUpperCase() ?? "?";
+  const { bg, text } = avatarColors(client);
+  return (
+    <View style={[styles.avatarCircle, { backgroundColor: bg }]}>
+      <Text style={[styles.avatarInitial, { color: text }]}>{initial}</Text>
+      <Image source={ICON} style={styles.iconBadge} />
+    </View>
+  );
+}
+
 export default function InAppBanner() {
   const { top } = useSafeAreaInsets();
   const [banner, setBanner] = useState(null);
@@ -19,9 +48,8 @@ export default function InAppBanner() {
   const opacity    = useRef(new Animated.Value(0)).current;
   const timerRef   = useRef(null);
   const visibleRef = useRef(false);
-  // Stable mutable refs so PanResponder (created once) always calls the latest fn
-  const hideRef   = useRef(null);
-  const bannerRef = useRef(null); // mirrors state for tap handler
+  const hideRef    = useRef(null);
+  const bannerRef  = useRef(null);
 
   const hide = useCallback(() => {
     if (!visibleRef.current) return;
@@ -56,7 +84,6 @@ export default function InAppBanner() {
 
   const panResponder = useRef(
     PanResponder.create({
-      // Only steal the gesture when the user clearly swipes up
       onMoveShouldSetPanResponder: (_, { dy, dx }) => dy < -5 && Math.abs(dy) > Math.abs(dx),
       onPanResponderMove: (_, { dy }) => {
         if (dy < 0) translateY.setValue(dy);
@@ -73,7 +100,6 @@ export default function InAppBanner() {
     })
   ).current;
 
-  // Tap the card → route action then hide (reads bannerRef for stability)
   const handleTap = useCallback(() => {
     const b = bannerRef.current;
     if (!b) return;
@@ -93,9 +119,7 @@ export default function InAppBanner() {
       {...panResponder.panHandlers}
     >
       <TouchableOpacity activeOpacity={0.95} onPress={handleTap} style={styles.card}>
-        <View style={styles.tile}>
-          <Text style={styles.tileText}>M</Text>
-        </View>
+        <Avatar client={banner.data?.client} />
         <View style={{ flex: 1 }}>
           {!!banner.title && (
             <Text style={styles.title} numberOfLines={1}>{banner.title}</Text>
@@ -132,16 +156,34 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
-  tile: {
+  // Client avatar: 38×38 circle, relative so the badge can be absolute
+  avatarCircle: {
     width: 38,
     height: 38,
-    borderRadius: 10,
-    backgroundColor: "#0F172A",
+    borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  tileText: { fontSize: 15, fontWeight: "800", color: "#34D399" },
-  title:    { fontSize: 14, fontWeight: "700", color: "#0F172A", marginBottom: 2 },
-  body:     { fontSize: 14, lineHeight: 20, color: "#1E293B" },
+  avatarInitial: { fontSize: 15, fontWeight: "700" },
+  // 16×16 Maggo icon badge pinned to bottom-right of the circle
+  iconBadge: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  // Fallback: full 38×38 icon when no client name
+  iconFull: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    flexShrink: 0,
+  },
+  title: { fontSize: 14, fontWeight: "700", color: "#0F172A", marginBottom: 2 },
+  body:  { fontSize: 14, lineHeight: 20, color: "#1E293B" },
 });
