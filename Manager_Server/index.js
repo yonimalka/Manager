@@ -2721,11 +2721,10 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 <title>Payment request from ${displayName}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html{background:#F8FAFC}
-body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:transparent;min-height:100vh;min-height:100lvh;display:flex;flex-direction:column;align-items:center}
-.wrap{max-width:480px;width:100%;flex:1;display:flex;flex-direction:column;min-height:100vh}
-.top{position:relative;padding:calc(env(safe-area-inset-top) + 28px) 20px 56px;background:#0F172A}
-.top::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:100vh;background:#0F172A}
+html,body{background:#0F172A}
+body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;min-height:100vh;min-height:100lvh;display:flex;flex-direction:column;align-items:center}
+.wrap{max-width:480px;width:100%;flex:1;display:flex;flex-direction:column}
+.top{padding:calc(env(safe-area-inset-top) + 28px) 20px 56px}
 .urow{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px}
 .av{width:64px;height:64px;border-radius:18px;background:#34D399;color:#064E3B;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .av img{width:64px;height:64px;border-radius:18px;background:#fff;object-fit:contain;padding:6px}
@@ -2738,7 +2737,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:tra
 .chip{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;font-size:13px;font-weight:600}
 .chip-ok{color:#A7F3D0;background:rgba(52,211,153,.14)}
 .chip-late{color:#FECACA;background:rgba(248,113,113,.16)}
-.sheet{background:#F8FAFC;border-radius:28px 28px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom) + 24px);margin-top:-28px;flex:1}
+.sheet{position:relative;z-index:1;background:#F8FAFC;border-radius:28px;padding:20px 20px 20px;margin:-28px 8px 0}
 .clbl{font-size:15px;font-weight:700;color:#0F172A;margin-bottom:14px}
 .mlist{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
 .mrow{background:#fff;border:1.5px solid #E2E8F0;border-radius:16px;min-height:64px;cursor:pointer;transition:background .12s,border-color .12s}
@@ -2759,29 +2758,29 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:tra
 .crow{display:flex;align-items:center;padding:10px 14px;gap:10px;border-bottom:1px solid #D1FAE5}
 .crow:last-child{border-bottom:none}
 .clb{font-size:12px;color:#64748B;width:76px;flex-shrink:0}
-.cvl{flex:1;font-size:16px;font-weight:650;color:#0F172A;overflow-wrap:break-word;word-break:break-all}
+.cvl{flex:1;font-size:16px;font-weight:650;color:#0F172A;overflow-wrap:anywhere}
 .bkv{white-space:pre-wrap;font-size:14px}
 .cbtn{min-height:36px;padding:0 14px;border-radius:10px;background:#F1F5F9;color:#0F172A;font-size:14px;font-weight:600;border:none;cursor:pointer;flex-shrink:0;transition:background .15s,color .15s}
 .cbtn.ok{background:#047857;color:#fff}
 .no-m{background:#fff;border:1px solid #E2E8F0;border-radius:18px;padding:20px;text-align:center;font-size:15px;color:#64748B;margin-bottom:16px;line-height:1.5}
 .btn-p{display:flex;align-items:center;justify-content:center;height:56px;border-radius:18px;background:#0F172A;color:#fff;font-size:17px;font-weight:650;text-decoration:none;border:none;cursor:pointer;width:100%;margin-bottom:10px}
 .btn-s{display:flex;align-items:center;justify-content:center;height:48px;border-radius:16px;background:transparent;color:#0F172A;font-size:16px;font-weight:600;border:1.5px solid #CBD5E1;cursor:pointer;width:100%;margin-bottom:16px}
-.trust{display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:28px}
+.trust{text-align:center;line-height:1.5;padding:0 8px}
+.trust svg{display:inline-block;vertical-align:-2px;margin-right:6px}
 .trust-t{font-size:13px;color:#475569}
-.foot{text-align:center;padding-bottom:20px}
+.foot{text-align:center;padding:22px 20px calc(env(safe-area-inset-bottom) + 28px)}
 .foot span{font-size:13px;color:#94A3B8}
-.foot b{font-weight:700;color:#0F172A}
-.foot a{color:#047857;font-weight:600;text-decoration:none}
+.foot b{font-weight:700;color:#fff}
+.foot a{color:#34D399;font-weight:600;text-decoration:none}
 </style>
 </head>
 <body>
-<div aria-hidden="true" style="position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:#0F172A;z-index:10"></div>
 <div class="wrap">
   <div id="pay-cfg" data-token="${token}" hidden></div>
   <div class="top">
     <div class="urow">
-      <div class="av">${logoSrc
-        ? `<img src="${logoSrc}" alt="${displayName} logo" onerror="this.parentNode.innerHTML='${initial}'">`
+      <div class="av" data-i="${esc(initial)}">${logoSrc
+        ? `<img src="${logoSrc}" alt="${displayName} logo" onerror="this.parentNode.textContent=this.parentNode.dataset.i">`
         : esc(initial)}</div>
       <div class="unblock">
         <div class="uname">${displayName}</div>
@@ -2802,8 +2801,8 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:tra
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       <span class="trust-t">You pay ${firstName} directly. Maggo never holds your money.</span>
     </div>
-    <div class="foot"><span>Sent with <b>Maggo</b> &middot; <a href="/p/${token}/app">Get paid like this, free</a></span></div>
   </div>
+  <div class="foot"><span>Sent with <b>Maggo</b> &middot; <a href="/p/${token}/app">Get paid like this, free</a></span></div>
 </div>
 <script>
 (function(){
