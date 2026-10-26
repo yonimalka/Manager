@@ -2722,7 +2722,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:linear-gradient(#0F172A 0 50%,#F8FAFC 50% 100%)}
-body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8FAFC;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#0F172A;min-height:100vh;display:flex;flex-direction:column;align-items:center}
 .wrap{max-width:480px;width:100%;flex:1;display:flex;flex-direction:column;min-height:100vh}
 .top{padding:calc(env(safe-area-inset-top) + 28px) 20px 56px;background:#0F172A}
 .urow{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px}
@@ -2737,7 +2737,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 .chip{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;font-size:13px;font-weight:600}
 .chip-ok{color:#A7F3D0;background:rgba(52,211,153,.14)}
 .chip-late{color:#FECACA;background:rgba(248,113,113,.16)}
-.sheet{background:#F8FAFC;border-radius:28px 28px 0 0;padding:20px 20px 40px;margin-top:-28px;flex:1}
+.sheet{background:#F8FAFC;border-radius:28px 28px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom) + 24px);margin-top:-28px;flex:1}
 .clbl{font-size:15px;font-weight:700;color:#0F172A;margin-bottom:14px}
 .mlist{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
 .mrow{background:#fff;border:1.5px solid #E2E8F0;border-radius:16px;min-height:64px;cursor:pointer;transition:background .12s,border-color .12s}
@@ -2774,6 +2774,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 </style>
 </head>
 <body>
+<div aria-hidden="true" style="position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:#0F172A;z-index:10"></div>
 <div class="wrap">
   <div id="pay-cfg" data-token="${token}" hidden></div>
   <div class="top">
