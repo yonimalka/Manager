@@ -9,7 +9,6 @@ import {
   Platform,
   ActionSheetIOS,
   useWindowDimensions,
-  Switch,
   Pressable,
   DeviceEventEmitter,
 } from "react-native";
@@ -30,6 +29,7 @@ import { track } from "../utils/analytics";
 import BottomSheet from "./BottomSheet";
 import { useUndoToast } from "./UndoToast";
 import { hasAnyPaymentMethod } from "../utils/paymentMethods";
+import Toggle from "./Toggle";
 
 // ─── Phone helpers ──────────────────────────────────────────────────────────
 
@@ -852,15 +852,7 @@ export default function OwedSection({
                     <Text style={{ fontSize: 15, fontWeight: "600", color: "#065F46" }}>Include pay link</Text>
                     <Text style={{ fontSize: 13, color: "#92400E", marginTop: 2 }}>{subtitle}</Text>
                   </View>
-                  <View style={{ flexShrink: 0 }}>
-                    <Switch
-                      value={includePayLink}
-                      onValueChange={saveIncludePayLink}
-                      trackColor={{ false: "#CBD5E1", true: "#15803D" }}
-                      ios_backgroundColor="#CBD5E1"
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
+                  <Toggle value={includePayLink} onValueChange={saveIncludePayLink} accessibilityLabel="Include pay link" />
                 </View>
                 <TouchableOpacity
                   style={{ flexDirection: "row", alignItems: "center", minHeight: 48, borderTopWidth: 1, borderTopColor: "#FDE68A", marginTop: 8, marginHorizontal: -12, paddingHorizontal: 12 }}
@@ -886,15 +878,7 @@ export default function OwedSection({
                 <Text style={{ fontSize: 15, fontWeight: "600", color: includePayLink ? "#065F46" : "#0F172A" }}>Include pay link</Text>
                 <Text style={{ fontSize: 13, color: includePayLink ? "#047857" : "#64748B", marginTop: 2 }}>{subtitle}</Text>
               </View>
-              <View style={{ flexShrink: 0 }}>
-                <Switch
-                  value={includePayLink}
-                  onValueChange={saveIncludePayLink}
-                  trackColor={{ false: "#CBD5E1", true: "#15803D" }}
-                  ios_backgroundColor="#CBD5E1"
-                  thumbColor="#FFFFFF"
-                />
-              </View>
+              <Toggle value={includePayLink} onValueChange={saveIncludePayLink} accessibilityLabel="Include pay link" />
             </Pressable>
           );
         })()}

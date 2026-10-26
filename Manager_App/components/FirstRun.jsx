@@ -11,7 +11,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -25,6 +24,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import api from "../services/api";
 import { hasAnyPaymentMethod } from "../utils/paymentMethods";
+import Toggle from "./Toggle";
 import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
 import { registerPushToken, registerPushTokenIfGranted } from "../utils/registerPushToken";
@@ -469,15 +469,7 @@ export default function FirstRun({ visible, userName, onDone }) {
                     <Text style={{ fontSize: 15, fontWeight: "600", color: "#065F46" }}>Include pay link</Text>
                     <Text style={{ fontSize: 13, color: "#92400E", marginTop: 2 }}>{subtitle}</Text>
                   </View>
-                  <View style={{ flexShrink: 0 }}>
-                    <Switch
-                      value={includePayLink}
-                      onValueChange={togglePayLink}
-                      trackColor={{ false: "#CBD5E1", true: "#15803D" }}
-                      ios_backgroundColor="#CBD5E1"
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
+                  <Toggle value={includePayLink} onValueChange={togglePayLink} accessibilityLabel="Include pay link" />
                 </View>
                 <TouchableOpacity
                   style={{ flexDirection: "row", alignItems: "center", minHeight: 48, borderTopWidth: 1, borderTopColor: "#FDE68A", marginTop: 8, marginHorizontal: -12, paddingHorizontal: 12 }}
@@ -503,15 +495,7 @@ export default function FirstRun({ visible, userName, onDone }) {
                 <Text style={{ fontSize: 15, fontWeight: "600", color: includePayLink ? "#065F46" : "#0F172A" }}>Include pay link</Text>
                 <Text style={{ fontSize: 13, color: includePayLink ? "#047857" : "#64748B", marginTop: 2 }}>{subtitle}</Text>
               </View>
-              <View style={{ flexShrink: 0 }}>
-                <Switch
-                  value={includePayLink}
-                  onValueChange={togglePayLink}
-                  trackColor={{ false: "#CBD5E1", true: "#15803D" }}
-                  ios_backgroundColor="#CBD5E1"
-                  thumbColor="#FFFFFF"
-                />
-              </View>
+              <Toggle value={includePayLink} onValueChange={togglePayLink} accessibilityLabel="Include pay link" />
             </Pressable>
           );
         })()}
