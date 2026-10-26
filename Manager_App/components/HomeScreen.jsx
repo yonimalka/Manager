@@ -23,6 +23,7 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Keyboard,
+  LayoutAnimation,
   DeviceEventEmitter,
 } from "react-native";
 import { useRoute, useNavigation, useIsFocused } from "@react-navigation/native";
@@ -71,7 +72,7 @@ const HomeScreen = () => {
   const { userId, authLoading, isAuthenticated, userDetails } = useAuth();
   const isFocused = useIsFocused();
   const { height: windowHeight } = useWindowDimensions();
-  const { top: topInset } = useSafeAreaInsets();
+  const { top: topInset, bottom: bottomInset } = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,8 +137,14 @@ const HomeScreen = () => {
   useEffect(() => {
     const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const s = Keyboard.addListener(showEvt, (e) => setKbHeight(e.endCoordinates.height));
-    const h = Keyboard.addListener(hideEvt, () => setKbHeight(0));
+    const s = Keyboard.addListener(showEvt, (e) => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setKbHeight(e.endCoordinates.height);
+    });
+    const h = Keyboard.addListener(hideEvt, () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setKbHeight(0);
+    });
     return () => { s.remove(); h.remove(); };
   }, []);
 
@@ -1001,20 +1008,26 @@ const HomeScreen = () => {
                     setLogIncomeVisible(false);
                   }}
                 />
-                <KeyboardAvoidingView
-                  behavior={Platform.OS === "ios" ? "padding" : undefined}
-                  style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}
+                <View
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: Platform.OS === "ios" ? kbHeight : 0,
+                    alignItems: "center",
+                  }}
                 >
-                  <Animated.View style={{ transform: [{ translateY: logIncomeSheetY }] }}>
-                    <View
-                      style={{
-                        backgroundColor: "#FFFFFF",
-                        borderTopLeftRadius: 28,
-                        borderTopRightRadius: 28,
-                        maxHeight: windowHeight - topInset - 24,
-                        overflow: "hidden",
-                      }}
-                    >
+                  <View
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderTopLeftRadius: 28,
+                      borderTopRightRadius: 28,
+                      maxHeight: windowHeight - topInset - 24 - (Platform.OS === "ios" ? kbHeight : 0),
+                      overflow: "hidden",
+                      width: "100%",
+                      maxWidth: 560,
+                    }}
+                  >
                       {/* Drag pill */}
                       <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E7EB", alignSelf: "center", marginTop: 12 }} />
 
@@ -1040,8 +1053,8 @@ const HomeScreen = () => {
                       <ScrollView
                         ref={logIncomeScrollRef}
                         keyboardShouldPersistTaps="handled"
-                        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
                         showsVerticalScrollIndicator
+                        style={{ flexShrink: 1 }}
                         bounces={false}
                         onScroll={(e) => { logIncomeScrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
                         scrollEventThrottle={16}
@@ -1257,7 +1270,7 @@ const HomeScreen = () => {
                       </ScrollView>
 
                       {/* Sticky footer — save button always visible above keyboard */}
-                      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: 16, backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#F1F5F9" }}>
+                      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: kbHeight > 0 ? 12 : bottomInset + 12, backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#F1F5F9" }}>
                         <TouchableOpacity
                           onPress={handleLogIncomeSubmit}
                           disabled={logIncomeSaving || !logIncomeAmount}
@@ -1287,9 +1300,8 @@ const HomeScreen = () => {
                         </TouchableOpacity>
                       </View>
 
-                    </View>
-                  </Animated.View>
-                </KeyboardAvoidingView>
+                  </View>
+                </View>
                 {Platform.OS === "ios" && (
                   <InputAccessoryView nativeID={LOG_INCOME_ACCESSORY_ID}>
                     <View style={{ flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 20, paddingHorizontal: 18, height: 44, backgroundColor: "#F8FAFC", borderTopWidth: 1, borderTopColor: "#E2E8F0" }}>
