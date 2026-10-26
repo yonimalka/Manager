@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
   Pressable,
+  DeviceEventEmitter,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
@@ -51,6 +52,18 @@ export default function ProfileDetails() {
   useEffect(() => {
     fetchData();
   }, [userId]);
+
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", fetchData);
+    return unsub;
+  }, [navigation]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("maggo:paymethods-updated", (pm) => {
+      setUserDetails((prev) => ({ ...prev, paymentMethods: pm }));
+    });
+    return () => sub.remove();
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -301,6 +314,30 @@ export default function ProfileDetails() {
                   </Text>
                   {/* <Ionicons name="chevron-forward" size={14} color="#c7c7cc" /> */}
                 </View>
+              </View>
+
+              <Text style={styles.sectionLabel}>Payments</Text>
+              <View style={styles.group}>
+                <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("PaymentMethods")}>
+                  <View style={[styles.rowIcon, { backgroundColor: "#34d399" }]}><Ionicons name="card-outline" size={14} color="#fff" /></View>
+                  <View style={{ flex: 1, justifyContent: "center" }}>
+                    <Text style={{ fontSize: 15, color: "#1c1c1e", letterSpacing: -0.2 }}>How clients pay you</Text>
+                    <Text style={{ fontSize: 12, color: "#8e8e93", marginTop: 2 }} numberOfLines={1}>
+                      {(() => {
+                        const pm = userDetails.paymentMethods;
+                        if (!pm) return "Not set up";
+                        const names = [];
+                        if (pm.paypalMe) names.push("PayPal");
+                        if (pm.venmo)    names.push("Venmo");
+                        if (pm.cashApp)  names.push("Cash App");
+                        if (pm.zelle)    names.push("Zelle");
+                        if (pm.bank)     names.push("Bank");
+                        return names.length > 0 ? names.join(", ") : "Not set up";
+                      })()}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color="#c7c7cc" />
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>

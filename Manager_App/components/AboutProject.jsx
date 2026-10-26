@@ -342,6 +342,7 @@ export default function AboutProject() {
         amount:      billAmount,
         projectId,
         dueDays:     billDueDays,
+        description: projectDetails?.name || project?.name || null,
       });
       track("project_billed", { amount: billAmount, dueDays: billDueDays });
       await fetchProject();

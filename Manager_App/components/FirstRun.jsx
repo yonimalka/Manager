@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   AppState,
+  DeviceEventEmitter,
   InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
@@ -10,20 +11,26 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import api from "../services/api";
+import { hasAnyPaymentMethod } from "../utils/paymentMethods";
 import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
 import { registerPushToken, registerPushTokenIfGranted } from "../utils/registerPushToken";
 import { useAuth } from "./useAuth";
 import { toIntl } from "./OwedSection";
+
+const PAY_BASE = "https://pay.maggoapp.com";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +64,7 @@ const buildWaUrl = (phone, msg, region) => {
 export default function FirstRun({ visible, userName, onDone }) {
   const { userDetails } = useAuth();
   const { top }        = useSafeAreaInsets();
+  const navigation     = useNavigation();
 
   const currency = userDetails?.currency        || "USD";
   const locale   = userDetails?.locale          || "en-US";
@@ -76,6 +84,23 @@ export default function FirstRun({ visible, userName, onDone }) {
   const [notifScheduled, setNotifScheduled] = useState(false);
   const notifScheduledRef = useRef(false);
 
+  // Pay link
+  const [includePayLink, setIncludePayLink] = useState(true);
+  const [payLinkUrl, setPayLinkUrl]         = useState(null);
+  const [payLinkLoading, setPayLinkLoading] = useState(false);
+  const [pmLocal, setPmLocal]               = useState(null);
+
+  useEffect(() => {
+    setPmLocal(userDetails?.paymentMethods ?? null);
+  }, [userDetails?.paymentMethods]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("maggo:paymethods-updated", (pm) => {
+      setPmLocal(pm ?? null);
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     if (visible) {
       track("first_run_viewed");
@@ -83,8 +108,30 @@ export default function FirstRun({ visible, userName, onDone }) {
       setAmount(""); setClient(""); setDescription(""); setPhone(""); setDue("late");
       setInvoice(null); setSaving(false); setPushStatus(null); setNotifScheduled(false);
       notifScheduledRef.current = false;
+      setPayLinkUrl(null);
     }
   }, [visible]);
+
+  useEffect(() => {
+    AsyncStorage.getItem("maggo_include_pay_link").then((v) => {
+      if (v !== null) setIncludePayLink(v === "true");
+    }).catch(() => {});
+  }, []);
+
+  // Load pay link URL once invoice is saved
+  useEffect(() => {
+    if (!invoice?._id) return;
+    setPayLinkLoading(true);
+    if (invoice.publicToken) {
+      setPayLinkUrl(`${PAY_BASE}/${invoice.publicToken}`);
+      setPayLinkLoading(false);
+    } else {
+      api.get(`/invoices/${invoice._id}/link`)
+        .then((res) => setPayLinkUrl(res.data.url))
+        .catch(() => {})
+        .finally(() => setPayLinkLoading(false));
+    }
+  }, [invoice?._id]);
 
   const refreshPermission = useCallback(async () => {
     const { status } = await Notifications.getPermissionsAsync();
@@ -146,12 +193,24 @@ export default function FirstRun({ visible, userName, onDone }) {
     }
   };
 
-  const handleWhatsApp = async () => {
-    const msg = buildMsg(
+  const handleWhatsApp = async (skipPayLink = false) => {
+    const effectiveUrl = (!skipPayLink && includePayLink) ? payLinkUrl : null;
+    track("pay_link_included", { included: !!effectiveUrl });
+
+    let baseMsg = buildMsg(
       { client, amount: Number(amount), description, dueDate: invoice?.dueDate },
       userName, currency, locale
     );
-    const url = buildWaUrl(phone, msg, region);
+    if (effectiveUrl) {
+      // Insert URL before sign-off (last "Thanks, …")
+      const signIdx = baseMsg.lastIndexOf(" Thanks,");
+      if (signIdx !== -1) {
+        baseMsg = baseMsg.slice(0, signIdx) + ` You can pay here: ${effectiveUrl}` + baseMsg.slice(signIdx);
+      } else {
+        baseMsg += ` You can pay here: ${effectiveUrl}`;
+      }
+    }
+    const url = buildWaUrl(phone, baseMsg, region);
     try {
       await Linking.openURL(url);
       try { await api.patch(`/invoices/${invoice._id}/remind`); } catch (_) {}
@@ -356,10 +415,20 @@ export default function FirstRun({ visible, userName, onDone }) {
   // ── Remind screen ──────────────────────────────────────────────────────────
   const renderRemind = () => {
     const numAmount = Number(amount);
-    const msg = buildMsg(
+    const baseMsg = buildMsg(
       { client, amount: numAmount, description, dueDate: invoice?.dueDate },
       userName, currency, locale
     );
+    const effectiveUrl = includePayLink && !payLinkLoading ? payLinkUrl : null;
+    let msg = baseMsg;
+    if (effectiveUrl) {
+      const signIdx = baseMsg.lastIndexOf(" Thanks,");
+      if (signIdx !== -1) {
+        msg = baseMsg.slice(0, signIdx) + ` You can pay here: ${effectiveUrl}` + baseMsg.slice(signIdx);
+      } else {
+        msg = `${baseMsg} You can pay here: ${effectiveUrl}`;
+      }
+    }
     return (
       <ScrollView
         contentContainerStyle={[s.screen, { paddingTop: top + 24 }]}
@@ -383,8 +452,73 @@ export default function FirstRun({ visible, userName, onDone }) {
           <Text style={s.msgText}>{msg}</Text>
         </View>
 
+        {/* Include pay link row */}
+        {(() => {
+          const noMethods = includePayLink && !hasAnyPaymentMethod(pmLocal);
+          const subtitle = payLinkLoading
+            ? "Getting link…"
+            : noMethods
+            ? "Your link has no payment options yet"
+            : "Clients pay in one tap. You get notified.";
+          return (
+            <View
+              style={[
+                { marginBottom: 4 },
+                noMethods && {
+                  backgroundColor: "#FFFBEB",
+                  borderWidth: 1,
+                  borderColor: "#FCD34D",
+                  borderRadius: 16,
+                  padding: 12,
+                },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Include pay link</Text>
+                  <Text style={{ fontSize: 12, color: noMethods ? "#92400E" : "#64748B", marginTop: 2 }}>
+                    {subtitle}
+                  </Text>
+                </View>
+                <Switch
+                  value={includePayLink}
+                  onValueChange={(v) => {
+                    setIncludePayLink(v);
+                    AsyncStorage.setItem("maggo_include_pay_link", String(v)).catch(() => {});
+                  }}
+                  trackColor={{ false: "#E2E8F0", true: "#34d399" }}
+                  thumbColor="#fff"
+                />
+              </View>
+              {noMethods && (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    minHeight: 48,
+                    borderTopWidth: 1,
+                    borderTopColor: "#FDE68A",
+                    marginTop: 8,
+                    marginHorizontal: -12,
+                    paddingHorizontal: 12,
+                  }}
+                  onPress={() => {
+                    track("paymethods_prompt_tapped", { from: "firstrun" });
+                    navigation.navigate("PaymentMethods");
+                  }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#92400E", flex: 1 }}>
+                    Add PayPal, Venmo or bank
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color="#92400E" />
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })()}
+
         {phone.trim() ? (
-          <TouchableOpacity style={s.waBtn} onPress={handleWhatsApp}>
+          <TouchableOpacity style={s.waBtn} onPress={() => handleWhatsApp()}>
             <Ionicons name="logo-whatsapp" size={22} color="#fff" />
             <Text style={s.waBtnText}>Send on WhatsApp</Text>
           </TouchableOpacity>
