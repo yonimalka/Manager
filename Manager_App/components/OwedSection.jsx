@@ -10,6 +10,7 @@ import {
   ActionSheetIOS,
   useWindowDimensions,
   Switch,
+  DeviceEventEmitter,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -27,6 +28,7 @@ import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
 import BottomSheet from "./BottomSheet";
 import { useUndoToast } from "./UndoToast";
+import { hasAnyPaymentMethod } from "../utils/paymentMethods";
 
 // ─── Phone helpers ──────────────────────────────────────────────────────────
 
@@ -88,8 +90,6 @@ const methodLabel = (method) => {
   const map = { paypalMe: "PayPal", venmo: "Venmo", cashApp: "Cash App", zelle: "Zelle", bank: "bank transfer" };
   return map[method] ? ` via ${map[method]}` : "";
 };
-
-const hasAnyPaymentMethod = (pm) => pm && Object.values(pm).some(Boolean);
 
 const getMethodNames = (pm) => {
   if (!pm) return "";
@@ -185,6 +185,7 @@ export default function OwedSection({
   // Pay-link nudge card (board 8)
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const nudgeShownRef = useRef(false);
+  const [localPm, setLocalPm] = useState(paymentMethods ?? {});
 
   // Load persisted pay link preference
   useEffect(() => {
@@ -199,6 +200,15 @@ export default function OwedSection({
       .then((v) => { if (v === "1") setNudgeDismissed(true); })
       .catch(() => {});
   }, [userId]);
+
+  useEffect(() => { setLocalPm(paymentMethods ?? {}); }, [paymentMethods]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("maggo:paymethods-updated", (pm) => {
+      setLocalPm(pm ?? {});
+    });
+    return () => sub.remove();
+  }, []);
 
   const saveIncludePayLink = (val) => {
     setIncludePayLink(val);
@@ -489,7 +499,7 @@ export default function OwedSection({
   // Nudge card visibility
   const showNudge =
     visibleItems.length > 0 &&
-    !hasAnyPaymentMethod(paymentMethods) &&
+    !hasAnyPaymentMethod(localPm) &&
     !nudgeDismissed &&
     !firstRunVisible;
 
@@ -831,13 +841,13 @@ export default function OwedSection({
 
         {/* Include pay link row */}
         {(() => {
-          const noMethods = includePayLink && !hasAnyPaymentMethod(paymentMethods);
+          const noMethods = includePayLink && !hasAnyPaymentMethod(localPm);
           const subtitle = payLinkLoading
             ? "Getting link…"
             : noMethods
             ? "Your link has no payment options yet"
-            : hasAnyPaymentMethod(paymentMethods)
-            ? `Clients see: ${getMethodNames(paymentMethods)}`
+            : hasAnyPaymentMethod(localPm)
+            ? `Clients see: ${getMethodNames(localPm)}`
             : "Clients pay in one tap. You get notified.";
           return (
             <View

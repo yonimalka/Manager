@@ -357,7 +357,10 @@ const HomeScreen = () => {
         }
       }).catch(() => {});
     });
-    return () => { refreshSub.remove(); claimSub.remove(); };
+    const pmSub = DeviceEventEmitter.addListener("maggo:paymethods-updated", (pm) => {
+      setPaymentMethods(pm ?? {});
+    });
+    return () => { refreshSub.remove(); claimSub.remove(); pmSub.remove(); };
   }, []);
 
 

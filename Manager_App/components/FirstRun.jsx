@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   AppState,
+  DeviceEventEmitter,
   InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
@@ -22,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import api from "../services/api";
+import { hasAnyPaymentMethod } from "../utils/paymentMethods";
 import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
 import { registerPushToken, registerPushTokenIfGranted } from "../utils/registerPushToken";
@@ -29,7 +31,6 @@ import { useAuth } from "./useAuth";
 import { toIntl } from "./OwedSection";
 
 const PAY_BASE = "https://pay.maggoapp.com";
-const hasAnyPaymentMethod = (pm) => pm && Object.values(pm).some(Boolean);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,18 @@ export default function FirstRun({ visible, userName, onDone }) {
   const [includePayLink, setIncludePayLink] = useState(true);
   const [payLinkUrl, setPayLinkUrl]         = useState(null);
   const [payLinkLoading, setPayLinkLoading] = useState(false);
+  const [pmLocal, setPmLocal]               = useState(null);
+
+  useEffect(() => {
+    setPmLocal(userDetails?.paymentMethods ?? null);
+  }, [userDetails?.paymentMethods]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("maggo:paymethods-updated", (pm) => {
+      setPmLocal(pm ?? null);
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -440,23 +453,69 @@ export default function FirstRun({ visible, userName, onDone }) {
         </View>
 
         {/* Include pay link row */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2, marginBottom: 4 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Include pay link</Text>
-            <Text style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
-              {payLinkLoading ? "Getting link…" : "Clients pay in one tap. You get notified."}
-            </Text>
-          </View>
-          <Switch
-            value={includePayLink}
-            onValueChange={(v) => {
-              setIncludePayLink(v);
-              AsyncStorage.setItem("maggo_include_pay_link", String(v)).catch(() => {});
-            }}
-            trackColor={{ false: "#E2E8F0", true: "#34d399" }}
-            thumbColor="#fff"
-          />
-        </View>
+        {(() => {
+          const noMethods = includePayLink && !hasAnyPaymentMethod(pmLocal);
+          const subtitle = payLinkLoading
+            ? "Getting link…"
+            : noMethods
+            ? "Your link has no payment options yet"
+            : "Clients pay in one tap. You get notified.";
+          return (
+            <View
+              style={[
+                { marginBottom: 4 },
+                noMethods && {
+                  backgroundColor: "#FFFBEB",
+                  borderWidth: 1,
+                  borderColor: "#FCD34D",
+                  borderRadius: 16,
+                  padding: 12,
+                },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Include pay link</Text>
+                  <Text style={{ fontSize: 12, color: noMethods ? "#92400E" : "#64748B", marginTop: 2 }}>
+                    {subtitle}
+                  </Text>
+                </View>
+                <Switch
+                  value={includePayLink}
+                  onValueChange={(v) => {
+                    setIncludePayLink(v);
+                    AsyncStorage.setItem("maggo_include_pay_link", String(v)).catch(() => {});
+                  }}
+                  trackColor={{ false: "#E2E8F0", true: "#34d399" }}
+                  thumbColor="#fff"
+                />
+              </View>
+              {noMethods && (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    minHeight: 48,
+                    borderTopWidth: 1,
+                    borderTopColor: "#FDE68A",
+                    marginTop: 8,
+                    marginHorizontal: -12,
+                    paddingHorizontal: 12,
+                  }}
+                  onPress={() => {
+                    track("paymethods_prompt_tapped", { from: "firstrun" });
+                    navigation.navigate("PaymentMethods");
+                  }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#92400E", flex: 1 }}>
+                    Add PayPal, Venmo or bank
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color="#92400E" />
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })()}
 
         {phone.trim() ? (
           <TouchableOpacity style={s.waBtn} onPress={() => handleWhatsApp()}>

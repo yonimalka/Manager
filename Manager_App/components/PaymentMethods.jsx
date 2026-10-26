@@ -8,6 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
+  DeviceEventEmitter,
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,7 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../services/api";
 import { track } from "../utils/analytics";
-import { useAuth } from "./useAuth";
+export const PM_UPDATED_EVENT = "maggo:paymethods-updated";
 
 const METHODS = [
   {
@@ -126,27 +128,33 @@ function displayValue(key, stored) {
 export default function PaymentMethods() {
   const navigation = useNavigation();
   const { top } = useSafeAreaInsets();
-  const { userDetails } = useAuth();
 
   const [values, setValues] = useState(EMPTY);
+  const [pmLoaded, setPmLoaded] = useState(false);
   const [expandedKey, setExpandedKey] = useState(null);
   const [editBuffer, setEditBuffer] = useState("");
   const [saving, setSaving] = useState(false);
+  const [firstName, setFirstName] = useState("");
 
   const inputRef = useRef(null);
 
   useEffect(() => {
-    const pm = userDetails?.paymentMethods;
-    if (pm) {
-      setValues({
-        paypalMe: pm.paypalMe || "",
-        venmo:    pm.venmo    || "",
-        cashApp:  pm.cashApp  || "",
-        zelle:    pm.zelle    || "",
-        bank:     pm.bank     || "",
-      });
-    }
-  }, [userDetails]);
+    api.get("/getUserDetails").then((res) => {
+      const pm = res.data?.paymentMethods;
+      const name = res.data?.name || "";
+      if (pm) {
+        setValues({
+          paypalMe: pm.paypalMe || "",
+          venmo:    pm.venmo    || "",
+          cashApp:  pm.cashApp  || "",
+          zelle:    pm.zelle    || "",
+          bank:     pm.bank     || "",
+        });
+      }
+      setFirstName(name.trim().split(/\s+/)[0] || "");
+      setPmLoaded(true);
+    }).catch(() => setPmLoaded(true));
+  }, []);
 
   const toggleExpand = useCallback(
     (key) => {
@@ -182,8 +190,10 @@ export default function PaymentMethods() {
     }
     setSaving(true);
     try {
-      await api.patch("/users/payment-methods", finalValues);
-      const count = Object.values(finalValues).filter(Boolean).length;
+      const res = await api.patch("/users/payment-methods", finalValues);
+      const updated = res.data?.paymentMethods ?? finalValues;
+      DeviceEventEmitter.emit(PM_UPDATED_EVENT, updated);
+      const count = Object.values(updated).filter(Boolean).length;
       track("payment_methods_saved", { count });
       navigation.goBack();
     } catch {
@@ -195,8 +205,6 @@ export default function PaymentMethods() {
 
   const savedMethods = METHODS.filter((m) => !!values[m.key]);
   const saveCount = savedMethods.length;
-  const displayName = (userDetails?.businessName || userDetails?.name || "").trim();
-  const firstName = displayName.split(/\s+/)[0] || "You";
 
   return (
     <KeyboardAvoidingView
@@ -253,7 +261,11 @@ export default function PaymentMethods() {
 
         {/* Methods card */}
         <View style={s.methodsCard}>
-          {METHODS.map((m, i) => {
+          {!pmLoaded ? (
+            <View style={{ paddingVertical: 32, alignItems: "center" }}>
+              <ActivityIndicator size="small" color="#64748B" />
+            </View>
+          ) : METHODS.map((m, i) => {
             const isExpanded = expandedKey === m.key;
             const hasValue = !!values[m.key];
             const dispVal = displayValue(m.key, values[m.key]);
@@ -333,9 +345,9 @@ export default function PaymentMethods() {
       {/* Sticky footer */}
       <View style={[s.footer, { paddingBottom: Platform.OS === "ios" ? 28 : 16 }]}>
         <TouchableOpacity
-          style={[s.saveBtn, saving && { opacity: 0.6 }]}
+          style={[s.saveBtn, (!pmLoaded || saving) && { opacity: 0.6 }]}
           onPress={handleSave}
-          disabled={saving}
+          disabled={!pmLoaded || saving}
         >
           <Text style={s.saveBtnText}>
             {saving

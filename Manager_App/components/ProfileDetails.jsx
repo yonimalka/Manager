@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
   Pressable,
+  DeviceEventEmitter,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
@@ -56,6 +57,13 @@ export default function ProfileDetails() {
     const unsub = navigation.addListener("focus", fetchData);
     return unsub;
   }, [navigation]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("maggo:paymethods-updated", (pm) => {
+      setUserDetails((prev) => ({ ...prev, paymentMethods: pm }));
+    });
+    return () => sub.remove();
+  }, []);
 
   const fetchData = async () => {
     try {
