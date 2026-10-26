@@ -52,6 +52,11 @@ export default function ProfileDetails() {
     fetchData();
   }, [userId]);
 
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", fetchData);
+    return unsub;
+  }, [navigation]);
+
   const fetchData = async () => {
     try {
       const [res, subscriptionData] = await Promise.all([
@@ -307,9 +312,21 @@ export default function ProfileDetails() {
               <View style={styles.group}>
                 <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("PaymentMethods")}>
                   <View style={[styles.rowIcon, { backgroundColor: "#34d399" }]}><Ionicons name="card-outline" size={14} color="#fff" /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowLabel}>How clients pay you</Text>
-                    <Text style={{ fontSize: 12, color: "#8e8e93" }}>Shown on your pay links</Text>
+                  <View style={{ flex: 1, justifyContent: "center" }}>
+                    <Text style={{ fontSize: 15, color: "#1c1c1e", letterSpacing: -0.2 }}>How clients pay you</Text>
+                    <Text style={{ fontSize: 12, color: "#8e8e93", marginTop: 2 }} numberOfLines={1}>
+                      {(() => {
+                        const pm = userDetails.paymentMethods;
+                        if (!pm) return "Not set up";
+                        const names = [];
+                        if (pm.paypalMe) names.push("PayPal");
+                        if (pm.venmo)    names.push("Venmo");
+                        if (pm.cashApp)  names.push("Cash App");
+                        if (pm.zelle)    names.push("Zelle");
+                        if (pm.bank)     names.push("Bank");
+                        return names.length > 0 ? names.join(", ") : "Not set up";
+                      })()}
+                    </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={14} color="#c7c7cc" />
                 </TouchableOpacity>
