@@ -24,7 +24,7 @@ const avatarColors = (name) => {
   return AVATAR_PAIRS[sum % AVATAR_PAIRS.length];
 };
 
-const ICON = require("../assets/maggo-badge.png");
+const ICON = require("../assets/MaggoLogo.png");
 
 function Avatar({ client }) {
   if (!client) {
