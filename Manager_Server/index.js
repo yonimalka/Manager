@@ -2579,7 +2579,8 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 .rc-val{font-size:14px;font-weight:600;color:#0F172A;text-align:right}
 .rc-amt{font-size:20px;font-weight:800}
 .inst{background:#0F172A;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:flex-start}
-.inst-tile{width:44px;height:44px;border-radius:12px;background:#1E293B;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inst-tile{width:44px;height:44px;border-radius:12px;background:#1E293B;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.inst-tile img{width:44px;height:44px;display:block}
 .inst-m{font-size:20px;font-weight:800;color:#34D399}
 .inst-bd{flex:1}
 .inst-tt{font-size:16px;font-weight:700;color:#fff;margin-bottom:4px}
@@ -2601,7 +2602,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
     <div class="rc-row"><span class="rc-lbl">Amount</span><span class="rc-val rc-amt">${amtEsc}</span></div>
   </div>
   <div class="inst">
-    <div class="inst-tile"><span class="inst-m">M</span></div>
+    <div class="inst-tile"><img src="/maggo-icon.png" alt="Maggo" onerror="this.outerHTML='<span class=&quot;inst-m&quot;>M</span>'"></div>
     <div class="inst-bd">
       <p class="inst-tt">Do you send invoices too?</p>
       <p class="inst-sub">Maggo reminds clients and gets you paid like this. Free on iPhone.</p>
@@ -2765,10 +2766,10 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;min-height:100
 .no-m{background:#fff;border:1px solid #E2E8F0;border-radius:18px;padding:20px;text-align:center;font-size:15px;color:#64748B;margin-bottom:16px;line-height:1.5}
 .btn-p{display:flex;align-items:center;justify-content:center;height:56px;border-radius:18px;background:#0F172A;color:#fff;font-size:17px;font-weight:650;text-decoration:none;border:none;cursor:pointer;width:100%;margin-bottom:10px}
 .btn-s{display:flex;align-items:center;justify-content:center;height:48px;border-radius:16px;background:transparent;color:#0F172A;font-size:16px;font-weight:600;border:1.5px solid #CBD5E1;cursor:pointer;width:100%;margin-bottom:16px}
-.trust{text-align:center;line-height:1.5;padding:0 8px}
+.trust{text-align:center;font-size:13px;line-height:1.45;padding:0 8px}
 .trust svg{display:inline-block;vertical-align:-2px;margin-right:6px}
 .trust-t{font-size:13px;color:#475569}
-.foot{text-align:center;padding:22px 20px calc(env(safe-area-inset-bottom) + 28px)}
+.foot{text-align:center;padding:22px 20px calc(env(safe-area-inset-bottom) + 96px)}
 .foot span{font-size:13px;color:#94A3B8}
 .foot b{font-weight:700;color:#fff}
 .foot a{color:#34D399;font-weight:600;text-decoration:none}
