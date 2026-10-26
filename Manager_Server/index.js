@@ -2713,7 +2713,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0F172A">
 <meta property="og:title" content="${displayName} · ${amtEsc}">
@@ -2721,13 +2721,14 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 <title>Payment request from ${displayName}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:#F8FAFC}
-body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+html{background:linear-gradient(#0F172A 0 50%,#F8FAFC 50% 100%)}
+body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8FAFC;min-height:100vh;display:flex;flex-direction:column;align-items:center}
 .wrap{max-width:480px;width:100%;flex:1;display:flex;flex-direction:column;min-height:100vh}
-.top{padding:28px 20px 56px;background:#0F172A}
-.urow{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:20px}
+.top{padding:calc(env(safe-area-inset-top) + 28px) 20px 56px;background:#0F172A}
+.urow{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px}
 .av{width:64px;height:64px;border-radius:18px;background:#34D399;color:#064E3B;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .av img{width:64px;height:64px;border-radius:18px;background:#fff;object-fit:contain;padding:6px}
+.unblock{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.25}
 .uname{font-size:17px;font-weight:700;color:#fff;text-align:center}
 .usub{font-size:13px;color:#94A3B8;text-align:center}
 .iinfo{text-align:center}
@@ -2780,8 +2781,10 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;min-height:100
       <div class="av">${logoSrc
         ? `<img src="${logoSrc}" alt="${displayName} logo" onerror="this.parentNode.innerHTML='${initial}'">`
         : esc(initial)}</div>
-      <div class="uname">${displayName}</div>
-      <div class="usub">requests a payment</div>
+      <div class="unblock">
+        <div class="uname">${displayName}</div>
+        <div class="usub">requests a payment</div>
+      </div>
     </div>
     <div class="iinfo">
       ${greetHtml}
