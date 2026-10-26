@@ -91,6 +91,17 @@ const methodLabel = (method) => {
 
 const hasAnyPaymentMethod = (pm) => pm && Object.values(pm).some(Boolean);
 
+const getMethodNames = (pm) => {
+  if (!pm) return "";
+  const names = [];
+  if (pm.paypalMe) names.push("PayPal");
+  if (pm.venmo)    names.push("Venmo");
+  if (pm.cashApp)  names.push("Cash App");
+  if (pm.zelle)    names.push("Zelle");
+  if (pm.bank)     names.push("Bank");
+  return names.join(", ");
+};
+
 const PAY_BASE = "https://pay.maggoapp.com";
 
 // ─── Swipe action panel ───────────────────────────────────────────────────────
@@ -160,8 +171,6 @@ export default function OwedSection({
   const [includePayLink, setIncludePayLink] = useState(true);
   const [payLinkUrl, setPayLinkUrl] = useState(null);
   const [payLinkLoading, setPayLinkLoading] = useState(false);
-  const [payMethodsSheetVisible, setPayMethodsSheetVisible] = useState(false);
-  const pendingSendChannelRef = useRef(null);
 
   // Claim sheet (§3)
   const [claimSheetVisible, setClaimSheetVisible] = useState(false);
@@ -427,18 +436,6 @@ export default function OwedSection({
   const doSend = async (channel) => {
     const effectiveUrl = includePayLink ? payLinkUrl : null;
     track("pay_link_included", { included: !!effectiveUrl });
-
-    // If switch is ON, URL loaded, but no payment methods set, and not prompted yet — show setup nudge
-    if (includePayLink && payLinkUrl && !hasAnyPaymentMethod(paymentMethods)) {
-      const prompted = await AsyncStorage.getItem("maggo_paymethods_prompted").catch(() => null);
-      if (!prompted) {
-        await AsyncStorage.setItem("maggo_paymethods_prompted", "1").catch(() => {});
-        pendingSendChannelRef.current = channel;
-        setPayMethodsSheetVisible(true);
-        return;
-      }
-    }
-
     await executeSend(channel, remindInvoice, remindPhone, effectiveUrl);
   };
 
@@ -728,20 +725,69 @@ export default function OwedSection({
         </View>
 
         {/* Include pay link row */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingHorizontal: 2 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Include pay link</Text>
-            <Text style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
-              {payLinkLoading ? "Getting link…" : "Clients pay in one tap. You get notified."}
-            </Text>
-          </View>
-          <Switch
-            value={includePayLink}
-            onValueChange={saveIncludePayLink}
-            trackColor={{ false: "#E2E8F0", true: "#34d399" }}
-            thumbColor="#fff"
-          />
-        </View>
+        {(() => {
+          const noMethods = includePayLink && !hasAnyPaymentMethod(paymentMethods);
+          const subtitle = payLinkLoading
+            ? "Getting link…"
+            : noMethods
+            ? "Your link has no payment options yet"
+            : hasAnyPaymentMethod(paymentMethods)
+            ? `Clients see: ${getMethodNames(paymentMethods)}`
+            : "Clients pay in one tap. You get notified.";
+          return (
+            <View
+              style={[
+                { marginBottom: 16 },
+                noMethods && {
+                  backgroundColor: "#FFFBEB",
+                  borderWidth: 1,
+                  borderColor: "#FCD34D",
+                  borderRadius: 16,
+                  padding: 12,
+                },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Include pay link</Text>
+                  <Text style={{ fontSize: 12, color: noMethods ? "#92400E" : "#64748B", marginTop: 2 }}>
+                    {subtitle}
+                  </Text>
+                </View>
+                <Switch
+                  value={includePayLink}
+                  onValueChange={saveIncludePayLink}
+                  trackColor={{ false: "#E2E8F0", true: "#34d399" }}
+                  thumbColor="#fff"
+                />
+              </View>
+              {noMethods && (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    minHeight: 48,
+                    borderTopWidth: 1,
+                    borderTopColor: "#FDE68A",
+                    marginTop: 8,
+                    marginHorizontal: -12,
+                    paddingHorizontal: 12,
+                  }}
+                  onPress={() => {
+                    track("paymethods_prompt_tapped", { from: "remind" });
+                    setRemindSheetVisible(false);
+                    navigation.navigate("PaymentMethods");
+                  }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#92400E", flex: 1 }}>
+                    Add PayPal, Venmo or bank
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color="#92400E" />
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })()}
 
         <TouchableOpacity
           style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#ECFDF5", borderRadius: 14, padding: 16, marginBottom: 10 }}
@@ -757,37 +803,6 @@ export default function OwedSection({
         >
           <Ionicons name="chatbubble-outline" size={22} color="#3B82F6" />
           <Text style={{ fontSize: 15, fontWeight: "600", color: "#0F172A" }}>Send via SMS</Text>
-        </TouchableOpacity>
-      </BottomSheet>
-
-      {/* Payment methods prompt sheet */}
-      <BottomSheet visible={payMethodsSheetVisible} onClose={() => setPayMethodsSheetVisible(false)}>
-        <Text style={{ fontSize: 17, fontWeight: "700", color: "#0F172A", marginBottom: 6 }}>Add how clients pay you</Text>
-        <Text style={{ fontSize: 14, color: "#64748B", lineHeight: 22, marginBottom: 24 }}>
-          So your pay link shows PayPal, Venmo or bank details. Takes 30 seconds.
-        </Text>
-        <TouchableOpacity
-          style={{ backgroundColor: "#0F172A", borderRadius: 14, padding: 16, alignItems: "center", marginBottom: 10 }}
-          onPress={() => {
-            setPayMethodsSheetVisible(false);
-            setRemindSheetVisible(false);
-            navigation.navigate("PaymentMethods", { fromReminder: true });
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Add now</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={{ padding: 16, alignItems: "center" }}
-          onPress={async () => {
-            setPayMethodsSheetVisible(false);
-            const ch = pendingSendChannelRef.current;
-            if (!ch) return;
-            pendingSendChannelRef.current = null;
-            // Send without URL (methods not set up)
-            await executeSend(ch, remindInvoice, remindPhone, null);
-          }}
-        >
-          <Text style={{ color: "#64748B", fontSize: 15 }}>Send without</Text>
         </TouchableOpacity>
       </BottomSheet>
 

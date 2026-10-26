@@ -184,23 +184,6 @@ export default function FirstRun({ visible, userName, onDone }) {
     const effectiveUrl = (!skipPayLink && includePayLink) ? payLinkUrl : null;
     track("pay_link_included", { included: !!effectiveUrl });
 
-    // First-time check: switch ON, URL ready, no payment methods, not prompted yet
-    if (!skipPayLink && includePayLink && payLinkUrl && !hasAnyPaymentMethod(userDetails?.paymentMethods)) {
-      const prompted = await AsyncStorage.getItem("maggo_paymethods_prompted").catch(() => null);
-      if (!prompted) {
-        await AsyncStorage.setItem("maggo_paymethods_prompted", "1").catch(() => {});
-        Alert.alert(
-          "Add how clients pay you",
-          "So your pay link shows PayPal, Venmo or bank details. Takes 30 seconds.",
-          [
-            { text: "Add now", onPress: () => { onDone("owed_added"); navigation.navigate("PaymentMethods", { fromReminder: true }); } },
-            { text: "Send without", onPress: () => handleWhatsApp(true) },
-          ]
-        );
-        return;
-      }
-    }
-
     let baseMsg = buildMsg(
       { client, amount: Number(amount), description, dueDate: invoice?.dueDate },
       userName, currency, locale
