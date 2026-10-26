@@ -154,6 +154,8 @@ export default function OwedSection({
   paymentMethods,
   pendingClaimId,
   onClaimHandled,
+  userId,
+  firstRunVisible,
 }) {
   const region = regionProp || locale.split("-")[1] || "US";
   const { width: screenWidth } = useWindowDimensions();
@@ -180,6 +182,10 @@ export default function OwedSection({
   const [pendingDeleteIds, setPendingDeleteIds] = useState({});
   const openSwipeableRef = useRef(null);
 
+  // Pay-link nudge card (board 8)
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  const nudgeShownRef = useRef(false);
+
   // Load persisted pay link preference
   useEffect(() => {
     AsyncStorage.getItem("maggo_include_pay_link").then((v) => {
@@ -187,9 +193,22 @@ export default function OwedSection({
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!userId) return;
+    AsyncStorage.getItem(`maggo_paylink_nudge_dismissed_${userId}`)
+      .then((v) => { if (v === "1") setNudgeDismissed(true); })
+      .catch(() => {});
+  }, [userId]);
+
   const saveIncludePayLink = (val) => {
     setIncludePayLink(val);
     AsyncStorage.setItem("maggo_include_pay_link", String(val)).catch(() => {});
+  };
+
+  const dismissNudge = () => {
+    setNudgeDismissed(true);
+    if (userId) AsyncStorage.setItem(`maggo_paylink_nudge_dismissed_${userId}`, "1").catch(() => {});
+    track("paylink_nudge_dismissed");
   };
 
   // Open claim sheet from notification (§4)
@@ -467,6 +486,21 @@ export default function OwedSection({
   ].filter((seg) => seg.amount > 0);
   const showCompositionBar = barSegments.length > 1;
 
+  // Nudge card visibility
+  const showNudge =
+    visibleItems.length > 0 &&
+    !hasAnyPaymentMethod(paymentMethods) &&
+    !nudgeDismissed &&
+    !firstRunVisible;
+
+  // Track nudge shown once per session
+  useEffect(() => {
+    if (showNudge && !nudgeShownRef.current) {
+      nudgeShownRef.current = true;
+      track("paylink_nudge_shown");
+    }
+  }, [showNudge]);
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -494,47 +528,117 @@ export default function OwedSection({
           </Text>
         </View>
       ) : visibleItems.length > 0 ? (
-        /* Card */
-        <View style={{ backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
-          {/* Summary row */}
-          <View style={{ padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View>
-              <Text style={{ fontSize: 26, fontWeight: "800", color: "#0F172A", letterSpacing: -0.8 }}>
-                {formatCurrency(displayTotal, currency, locale)}
-              </Text>
-              <Text style={{ fontSize: 13, color: "#64748B", marginTop: 2 }}>
-                {`from ${visibleItems.length} client${visibleItems.length !== 1 ? "s" : ""}`}
-              </Text>
+        <>
+          {/* Summary card */}
+          <View style={{
+            backgroundColor: "#fff",
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            borderBottomLeftRadius: showNudge ? 16 : 0,
+            borderBottomRightRadius: showNudge ? 16 : 0,
+            overflow: "hidden",
+            shadowColor: "#000",
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 2,
+            marginBottom: showNudge ? 12 : 0,
+          }}>
+            <View style={{ padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View>
+                <Text style={{ fontSize: 26, fontWeight: "800", color: "#0F172A", letterSpacing: -0.8 }}>
+                  {formatCurrency(displayTotal, currency, locale)}
+                </Text>
+                <Text style={{ fontSize: 13, color: "#64748B", marginTop: 2 }}>
+                  {`from ${visibleItems.length} client${visibleItems.length !== 1 ? "s" : ""}`}
+                </Text>
+              </View>
+              {displayOverdue > 0 && (
+                <View style={{ backgroundColor: "#FEF2F2", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#DC2626" }}>{displayOverdue} late</Text>
+                </View>
+              )}
             </View>
-            {displayOverdue > 0 && (
-              <View style={{ backgroundColor: "#FEF2F2", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#DC2626" }}>{displayOverdue} late</Text>
+
+            {showCompositionBar && (
+              <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+                <View style={{ flexDirection: "row", gap: 2, height: 6, borderRadius: 3, backgroundColor: "#F1F5F9", overflow: "hidden" }}>
+                  {barSegments.map((seg) => (
+                    <View key={seg.key} style={{ flex: seg.amount, height: 6, backgroundColor: seg.color }} />
+                  ))}
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 8 }}>
+                  {barSegments.map((seg) => (
+                    <View key={seg.key} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: seg.color }} />
+                      <Text style={{ fontSize: 12, color: "#475569" }}>
+                        <Text style={{ fontWeight: "700", color: "#0F172A" }}>{formatCurrency(seg.amount, currency, locale)}</Text>
+                        {" " + seg.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
               </View>
             )}
           </View>
 
-          {/* Composition bar */}
-          {showCompositionBar && (
-            <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
-              <View style={{ flexDirection: "row", gap: 2, height: 6, borderRadius: 3, backgroundColor: "#F1F5F9", overflow: "hidden" }}>
-                {barSegments.map((seg) => (
-                  <View key={seg.key} style={{ flex: seg.amount, height: 6, backgroundColor: seg.color }} />
-                ))}
-              </View>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 8 }}>
-                {barSegments.map((seg) => (
-                  <View key={seg.key} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: seg.color }} />
-                    <Text style={{ fontSize: 12, color: "#475569" }}>
-                      <Text style={{ fontWeight: "700", color: "#0F172A" }}>{formatCurrency(seg.amount, currency, locale)}</Text>
-                      {" " + seg.label}
-                    </Text>
-                  </View>
-                ))}
+          {/* Pay-link nudge card */}
+          {showNudge && (
+            <View style={{
+              backgroundColor: "#FFFFFF",
+              borderWidth: 1,
+              borderColor: "#A7F3D0",
+              borderRadius: 20,
+              padding: 16,
+              marginBottom: 12,
+            }}>
+              <TouchableOpacity
+                onPress={dismissNudge}
+                hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                style={{ position: "absolute", top: 0, right: 0, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+              >
+                <Ionicons name="close" size={16} color="#047857" />
+              </TouchableOpacity>
+
+              <View style={{ flexDirection: "row", gap: 14, alignItems: "flex-start" }}>
+                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: "#ECFDF5", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Ionicons name="link-outline" size={20} color="#047857" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: "#0F172A", marginBottom: 6 }}>
+                    Let clients pay from the reminder
+                  </Text>
+                  <Text style={{ fontSize: 14, color: "#475569", lineHeight: 20, marginBottom: 12 }}>
+                    Add PayPal, Venmo or bank once. Every reminder carries a pay link and you're notified when they pay.
+                  </Text>
+                  <TouchableOpacity
+                    style={{ height: 48, borderRadius: 14, backgroundColor: "#0F172A", alignItems: "center", justifyContent: "center" }}
+                    onPress={() => {
+                      track("paylink_nudge_tapped");
+                      navigation.navigate("PaymentMethods");
+                    }}
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: "#FFFFFF" }}>Add how clients pay you</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           )}
 
+          {/* Invoice list card */}
+          <View style={{
+            backgroundColor: "#fff",
+            borderTopLeftRadius: showNudge ? 16 : 0,
+            borderTopRightRadius: showNudge ? 16 : 0,
+            borderBottomLeftRadius: 16,
+            borderBottomRightRadius: 16,
+            overflow: "hidden",
+            shadowColor: "#000",
+            shadowOpacity: showNudge ? 0.06 : 0,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: showNudge ? 2 : 0,
+          }}>
           {/* Divider */}
           <View style={{ height: 1, backgroundColor: "#F1F5F9" }} />
 
@@ -689,7 +793,8 @@ export default function OwedSection({
               </ReanimatedSwipeable>
             );
           })}
-        </View>
+          </View>
+        </>
       ) : null}
 
       {/* Remind sheet */}

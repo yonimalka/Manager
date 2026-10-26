@@ -944,6 +944,8 @@ const HomeScreen = () => {
               paymentMethods={paymentMethods}
               pendingClaimId={pendingClaimId}
               onClaimHandled={() => setPendingClaimId(null)}
+              userId={userId}
+              firstRunVisible={welcomeVisible}
             />
           </View>
 
