@@ -2509,6 +2509,7 @@ function buildPayPage({ invoice, user, token }) {
   const displayName = esc(user.businessName || user.name || "");
   const initial     = ((user.businessName || user.name || "M").trim()[0] || "M").toUpperCase();
   const firstName   = esc(((user.businessName || user.name || "Us").trim().split(/\s+/)[0]));
+  const logoSrc     = user.logo ? esc(user.logo) : "";
   const clientName  = esc(invoice.client || "");
   const descText    = esc(invoice.description || "");
 
@@ -2594,7 +2595,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
   <h1 class="ty-h">${esc(titleText)}</h1>
   <p class="ty-b">${bodyMsg}</p>
   <div class="rc-card">
-    <div class="rc-row"><span class="rc-lbl">Paid to</span><span class="rc-val">${displayName}</span></div>
+    <div class="rc-row"><span class="rc-lbl">Paid to</span><span class="rc-val" style="display:flex;align-items:center;gap:8px">${logoSrc ? `<img src="${logoSrc}" alt="${displayName} logo" width="24" height="24" style="border-radius:6px;object-fit:contain;background:#fff;border:1px solid #E2E8F0;padding:2px" onerror="this.style.display='none'">` : ""}${displayName}</span></div>
     <div class="rc-row"><span class="rc-lbl">For</span><span class="rc-val">${descText || "&mdash;"}</span></div>
     ${methodRow}
     <div class="rc-row"><span class="rc-lbl">Amount</span><span class="rc-val rc-amt">${amtEsc}</span></div>
@@ -2695,14 +2696,12 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
   // CTA buttons
   let ctaHtml;
   if (activeMethods.length === 0) {
-    ctaHtml = `<button class="btn-p" onclick="submitClaim('other')">I’ve paid, let ${firstName} know</button>`;
+    ctaHtml = `<button id="cta-p" class="btn-p" data-type="claim" data-href="" onclick="ctaClick(this)">I’ve paid, let ${firstName} know</button>`;
   } else {
     const first  = activeMethods[0];
     const goUrl0 = first.type === "link" ? `/p/${token}/go/${first.goSlug}` : "";
     const lbl0   = esc(first.ctaLabel);
-    ctaHtml = first.type === "link"
-      ? `<a id="cta-link" href="${esc(goUrl0)}" class="btn-p">${lbl0}</a>\n      <button id="cta-claim" class="btn-p" hidden onclick="submitClaim()">${lbl0}</button>`
-      : `<a id="cta-link" href="#" class="btn-p" hidden></a>\n      <button id="cta-claim" class="btn-p" onclick="submitClaim()">${lbl0}</button>`;
+    ctaHtml = `<button id="cta-p" class="btn-p" data-type="${first.type}" data-href="${esc(goUrl0)}" onclick="ctaClick(this)">${lbl0}</button>`;
     ctaHtml += `\n      <button class="btn-s" onclick="submitClaim()">Already paid? Let ${firstName} know</button>`;
   }
 
@@ -2716,31 +2715,33 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#0F172A">
 <meta property="og:title" content="${displayName} · ${amtEsc}">
 <meta property="og:description" content="${ogDesc}">
 <title>Payment request from ${displayName}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#0F172A;min-height:100vh}
-.wrap{max-width:480px;margin:0 auto}
-.top{padding:28px 20px 44px;background:#0F172A}
-.urow{display:flex;align-items:center;gap:10px;margin-bottom:20px}
-.av{width:40px;height:40px;border-radius:50%;background:#34D399;color:#064E3B;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.uname{font-size:16px;font-weight:700;color:#fff}
-.usub{font-size:13px;color:#94A3B8}
+html,body{background:#F8FAFC}
+body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+.wrap{max-width:480px;width:100%;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.top{padding:28px 20px 56px;background:#0F172A}
+.urow{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:20px}
+.av{width:64px;height:64px;border-radius:18px;background:#34D399;color:#064E3B;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.av img{width:64px;height:64px;border-radius:18px;background:#fff;object-fit:contain;padding:6px}
+.uname{font-size:17px;font-weight:700;color:#fff;text-align:center}
+.usub{font-size:13px;color:#94A3B8;text-align:center}
 .iinfo{text-align:center}
 .greet{font-size:15px;color:#CBD5E1;margin-bottom:10px;line-height:1.4}
 .amt{font-size:52px;font-weight:800;letter-spacing:-.03em;color:#fff;font-variant-numeric:tabular-nums;margin-bottom:12px}
 .chip{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;font-size:13px;font-weight:600}
 .chip-ok{color:#A7F3D0;background:rgba(52,211,153,.14)}
 .chip-late{color:#FECACA;background:rgba(248,113,113,.16)}
-.sheet{background:#F8FAFC;border-radius:28px 28px 0 0;padding:20px 20px 0;min-height:60vh}
+.sheet{background:#F8FAFC;border-radius:28px 28px 0 0;padding:20px 20px 40px;margin-top:-28px;flex:1}
 .clbl{font-size:15px;font-weight:700;color:#0F172A;margin-bottom:14px}
-.mlist{background:#fff;border:1px solid #E2E8F0;border-radius:18px;overflow:hidden;margin-bottom:16px}
-.mrow{border-bottom:1px solid #E2E8F0;cursor:pointer;transition:background .12s}
-.mrow:last-child{border-bottom:none}
-.msel{background:#F0FDF4;box-shadow:inset 0 0 0 2px #0F172A}
-.mrow-main{display:flex;align-items:center;min-height:62px;padding:12px 14px;gap:12px}
+.mlist{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.mrow{background:#fff;border:1.5px solid #E2E8F0;border-radius:16px;min-height:64px;cursor:pointer;transition:background .12s,border-color .12s}
+.msel{background:#F0FDF4;border:2px solid #0F172A}
+.mrow-main{display:flex;align-items:center;min-height:64px;padding:12px 14px;gap:12px}
 .mtile{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
 .tile-pp{background:#1E3A8A}
 .tile-vm{background:#0EA5E9}
@@ -2776,11 +2777,11 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#0F
   <div id="pay-cfg" data-token="${token}" hidden></div>
   <div class="top">
     <div class="urow">
-      <div class="av">${esc(initial)}</div>
-      <div>
-        <div class="uname">${displayName}</div>
-        <div class="usub">requests a payment</div>
-      </div>
+      <div class="av">${logoSrc
+        ? `<img src="${logoSrc}" alt="${displayName} logo" onerror="this.parentNode.innerHTML='${initial}'">`
+        : esc(initial)}</div>
+      <div class="uname">${displayName}</div>
+      <div class="usub">requests a payment</div>
     </div>
     <div class="iinfo">
       ${greetHtml}
@@ -2804,8 +2805,6 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#0F
   var cfg=document.getElementById('pay-cfg');
   var token=cfg?cfg.dataset.token:'';
   var rows=[].slice.call(document.querySelectorAll('.mrow'));
-  var ctaLink=document.getElementById('cta-link');
-  var ctaClaim=document.getElementById('cta-claim');
   function pick(key){
     rows.forEach(function(r){
       var on=r.dataset.method===key;
@@ -2816,10 +2815,10 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#0F
       if(radio)radio.checked=on;
     });
     var sr=document.querySelector('.mrow.msel');
-    if(!sr||!ctaLink)return;
+    if(!sr)return;
     var type=sr.dataset.pt,label=sr.dataset.pl,href=sr.dataset.ph;
-    if(type==='link'){ctaLink.hidden=false;ctaLink.href=href;ctaLink.textContent=label;if(ctaClaim)ctaClaim.hidden=true;}
-    else{ctaLink.hidden=true;if(ctaClaim){ctaClaim.hidden=false;ctaClaim.textContent=label;}}
+    var cp=document.getElementById('cta-p');
+    if(cp){cp.textContent=label;cp.dataset.type=type;cp.dataset.href=href||'';}
   }
   rows.forEach(function(row){
     row.addEventListener('click',function(e){
@@ -2828,6 +2827,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#0F
       pick(row.dataset.method);
     });
   });
+  window.ctaClick=function(btn){if(btn.dataset.type==='link'){location.href=btn.dataset.href;}else{submitClaim();}};
   window.doCopy=function(btn){
     var text=btn.dataset.copy,orig=btn.textContent;
     function ok(){btn.textContent='✓ Copied';btn.classList.add('ok');setTimeout(function(){btn.textContent=orig;btn.classList.remove('ok');},2000);}
