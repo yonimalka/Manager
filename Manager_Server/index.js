@@ -2507,6 +2507,7 @@ function buildPayPage({ invoice, user, token }) {
   const pm      = user.paymentMethods || {};
 
   const displayName = esc(user.businessName || user.name || "");
+  const initial     = ((user.businessName || user.name || "M").trim()[0] || "M").toUpperCase();
   const firstName   = esc(((user.businessName || user.name || "Us").trim().split(/\s+/)[0]));
   const clientName  = esc(invoice.client || "");
   const descText    = esc(invoice.description || "");
@@ -2517,132 +2518,328 @@ function buildPayPage({ invoice, user, token }) {
       style: "currency", currency: invoice.currency || "USD", minimumFractionDigits: 2,
     }).format(invoice.amount);
   } catch (_) { amtStr = `${invoice.currency || "USD"} ${invoice.amount}`; }
+  const amtEsc = esc(amtStr);
 
-  const now      = new Date();
-  const due      = new Date(invoice.dueDate);
-  const daysLate = Math.floor((now - due) / 86400000);
-  const isLate   = daysLate > 0;
-  const dateStr  = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const dueChip  = isLate
-    ? `<span class="chip red">Due ${esc(dateStr)} · ${daysLate} day${daysLate !== 1 ? "s" : ""} late</span>`
-    : `<span class="chip green">Due ${esc(dateStr)}</span>`;
+  // Due chip (active page only)
+  let dueChipHtml = "";
+  if (invoice.dueDate) {
+    const due = new Date(invoice.dueDate);
+    if (!isNaN(due.getTime())) {
+      const now      = new Date();
+      const daysLate = Math.floor((now - due) / 86400000);
+      const dateStr  = due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      dueChipHtml = daysLate > 0
+        ? `<span class="chip chip-late">Due ${esc(dateStr)} &middot; ${daysLate} day${daysLate !== 1 ? "s" : ""} late</span>`
+        : `<span class="chip chip-ok">Due ${esc(dateStr)}</span>`;
+    }
+  }
 
-  const initials = ((user.businessName || user.name || "M").trim().slice(0, 2)).toUpperCase();
-  const logoHtml = user.logo
-    ? `<img class="logo" src="${esc(user.logo)}" alt="">`
-    : `<div class="logo init">${esc(initials)}</div>`;
+  // ── Receipt state (board 11) ──────────────────────────────────────────────
+  if (isPaid || claimed) {
+    const M_LABELS = { paypal: "PayPal", venmo: "Venmo", cashapp: "Cash App", zelle: "Zelle", bank: "Bank transfer" };
+    const methodLabel = invoice.claimedMethod ? (M_LABELS[invoice.claimedMethod] || null) : null;
 
-  // ── Payment method rows ───────────────────────────────────────────────────
-  const methods = [];
-  if (pm.paypalMe && pm.paypalMe.trim())
-    methods.push(`<a class="meth-btn paypal" href="/p/${token}/go/paypal">Pay with PayPal</a>`);
-  if (pm.venmo && pm.venmo.trim())
-    methods.push(`<a class="meth-btn venmo" href="/p/${token}/go/venmo">Pay with Venmo</a>`);
-  if (pm.cashApp && pm.cashApp.trim())
-    methods.push(`<a class="meth-btn cash" href="/p/${token}/go/cashapp">Pay with Cash App</a>`);
-  if (pm.zelle && pm.zelle.trim())
-    methods.push(`<div class="copy-row"><span class="clbl">Zelle</span><span class="cval">${esc(pm.zelle)}</span><button class="copy-btn" data-copy="${esc(pm.zelle)}" onclick="doCopy(this)">Copy</button></div>`);
-  if (pm.bank && pm.bank.trim())
-    methods.push(`<div class="copy-row"><span class="clbl">Bank</span><span class="cval">${esc(pm.bank)}</span><button class="copy-btn" data-copy="${esc(pm.bank)}" onclick="doCopy(this)">Copy</button></div>`);
+    let titleText, bodyMsg;
+    if (isPaid) {
+      const stamp = invoice.paidAt
+        ? new Date(invoice.paidAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+        : (invoice.claimedAt
+          ? new Date(invoice.claimedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+          : "");
+      titleText = "Paid";
+      bodyMsg   = stamp ? `This payment was confirmed on ${esc(stamp)}.` : "This payment has been confirmed.";
+    } else {
+      titleText = clientName ? `Thanks, ${clientName}` : "Thanks";
+      bodyMsg   = `${firstName} has been notified that you paid. You can close this page.`;
+    }
 
-  const methodsSection = !isPaid
-    ? (methods.length > 0
-        ? `<div class="methods"><p class="sec-lbl">Pay ${firstName} with:</p>${methods.join("")}</div>`
-        : `<div class="no-methods"><p>Ask ${firstName} how to pay</p></div>`)
+    const methodRow = methodLabel
+      ? `<div class="rc-row"><span class="rc-lbl">Method</span><span class="rc-val">${esc(methodLabel)}</span></div>` : "";
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Payment request from ${displayName}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8FAFC;color:#0F172A;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:40px 20px 48px}
+.chk-w{display:flex;justify-content:center;margin-bottom:20px}
+.chk-c{width:72px;height:72px;border-radius:50%;background:#D1FAE5;display:flex;align-items:center;justify-content:center}
+.ty-h{font-size:26px;font-weight:750;color:#0F172A;text-align:center;margin-bottom:8px}
+.ty-b{font-size:16px;color:#475569;text-align:center;line-height:1.5;margin-bottom:28px}
+.rc-card{background:#fff;border-radius:20px;border:1px solid #E2E8F0;padding:0 16px;margin-bottom:20px}
+.rc-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #F1F5F9;gap:16px}
+.rc-row:last-child{border-bottom:none}
+.rc-lbl{font-size:14px;color:#64748B;flex-shrink:0}
+.rc-val{font-size:14px;font-weight:600;color:#0F172A;text-align:right}
+.rc-amt{font-size:20px;font-weight:800}
+.inst{background:#0F172A;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:flex-start}
+.inst-tile{width:44px;height:44px;border-radius:12px;background:#1E293B;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inst-m{font-size:20px;font-weight:800;color:#34D399}
+.inst-bd{flex:1}
+.inst-tt{font-size:16px;font-weight:700;color:#fff;margin-bottom:4px}
+.inst-sub{font-size:14px;color:#CBD5E1;line-height:1.4;margin-bottom:14px}
+.inst-btn{display:flex;align-items:center;justify-content:center;height:48px;border-radius:14px;background:#34D399;color:#064E3B;font-size:15px;font-weight:700;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="chk-w"><div class="chk-c">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+  </div></div>
+  <h1 class="ty-h">${esc(titleText)}</h1>
+  <p class="ty-b">${bodyMsg}</p>
+  <div class="rc-card">
+    <div class="rc-row"><span class="rc-lbl">Paid to</span><span class="rc-val">${displayName}</span></div>
+    <div class="rc-row"><span class="rc-lbl">For</span><span class="rc-val">${descText || "&mdash;"}</span></div>
+    ${methodRow}
+    <div class="rc-row"><span class="rc-lbl">Amount</span><span class="rc-val rc-amt">${amtEsc}</span></div>
+  </div>
+  <div class="inst">
+    <div class="inst-tile"><span class="inst-m">M</span></div>
+    <div class="inst-bd">
+      <p class="inst-tt">Do you send invoices too?</p>
+      <p class="inst-sub">Maggo reminds clients and gets you paid like this. Free on iPhone.</p>
+      <a class="inst-btn" href="/p/${token}/app">Get Maggo, free</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
+  }
+
+  // ── Active pay page (boards 9 & 10) ──────────────────────────────────────
+  const greetHtml = (clientName || descText)
+    ? `<p class="greet">${clientName && descText
+        ? `Hi ${clientName}, this is for <b>${descText}</b>`
+        : clientName ? `Hi ${clientName}` : `This is for <b>${descText}</b>`
+      }</p>`
     : "";
 
-  // ── Method picker (claim form) ────────────────────────────────────────────
-  const PM_KEY    = { paypal: "paypalMe", venmo: "venmo", cashapp: "cashApp", zelle: "zelle", bank: "bank" };
-  const M_LABELS  = { paypal: "PayPal", venmo: "Venmo", cashapp: "Cash App", zelle: "Zelle", bank: "Bank", other: "Other" };
-  const CLAIM_OPTS = ["paypal", "venmo", "cashapp", "zelle", "bank", "other"];
+  const ogDesc = descText ? `${amtEsc} for ${descText}` : amtEsc;
 
-  const radioOptions = CLAIM_OPTS
-    .filter(m => m === "other" || (pm[PM_KEY[m]] && pm[PM_KEY[m]].trim()))
-    .map(m => `<label class="radio"><input type="radio" name="method" value="${m}" required> ${M_LABELS[m]}</label>`)
-    .join("") || `<label class="radio"><input type="radio" name="method" value="other" required> Other</label>`;
+  // Method definitions — spec order
+  const MDEF = [
+    { key: "paypalMe", slug: "paypal",  label: "PayPal",        tileClass: "tile-pp", letter: "P",
+      type: "link",  goSlug: "paypal",  ctaLabel: `Pay ${amtEsc} with PayPal ↗`,
+      sub: `Opens PayPal with ${amtEsc} filled in` },
+    { key: "venmo",    slug: "venmo",   label: "Venmo",         tileClass: "tile-vm", letter: "V",
+      type: "link",  goSlug: "venmo",   ctaLabel: `Pay ${amtEsc} with Venmo ↗`,  sub: "" },
+    { key: "cashApp",  slug: "cashapp", label: "Cash App",      tileClass: "tile-ca", letter: "$",
+      type: "link",  goSlug: "cashapp", ctaLabel: `Pay ${amtEsc} with Cash App ↗`, sub: "" },
+    { key: "zelle",    slug: "zelle",   label: "Zelle",         tileClass: "tile-zl", letter: "Z",
+      type: "claim", ctaLabel: "I’ve sent the Zelle",     sub: "Copy details, pay in your bank app" },
+    { key: "bank",     slug: "bank",    label: "Bank transfer", tileClass: "tile-bk", letter: null,
+      type: "claim", ctaLabel: "I’ve sent the transfer",  sub: "Account details to copy" },
+  ];
 
-  const claimSection = isPaid
-    ? ""
-    : claimed
-    ? `<div class="claimed">Thanks, ${firstName} has been notified.</div>`
-    : `<div class="claim-wrap">
-        <button class="claim-btn" onclick="showPicker(this)">I've paid, let ${firstName} know</button>
-        <div id="picker" hidden>
-          <p class="picker-lbl">How did you pay?</p>
-          <form method="POST" action="/p/${token}/claim">
-            <div class="radio-grid">${radioOptions}</div>
-            <button type="submit" class="confirm-btn">Confirm</button>
-          </form>
+  const activeMethods = MDEF.filter(m => pm[m.key] && String(pm[m.key]).trim());
+  const refText = esc(invoice.description || "Payment");
+
+  let methodRowsHtml = "";
+  activeMethods.forEach(function(m, i) {
+    const isFirst = i === 0;
+    const goUrl   = m.type === "link" ? `/p/${token}/go/${m.goSlug}` : "";
+    const ctaAttr = esc(m.ctaLabel);
+
+    // Subline
+    let sub = m.sub;
+    if (m.slug === "venmo"   && pm.venmo)   sub = `@${esc(pm.venmo.trim().replace(/^@/, ""))}`;
+    if (m.slug === "cashapp" && pm.cashApp) sub = esc(pm.cashApp.trim());
+
+    // Tile inner HTML
+    const tileInner = m.letter ? esc(m.letter)
+      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`;
+
+    // Expandable copy rows for Zelle and Bank
+    let expandHtml = "";
+    if (m.slug === "zelle" && pm.zelle) {
+      const ze = esc(pm.zelle.trim());
+      expandHtml = `
+      <div class="m-exp"${isFirst ? "" : " hidden"}>
+        <div class="ccard">
+          <div class="crow"><span class="clb">Amount</span><span class="cvl">${amtEsc}</span><button class="cbtn" data-copy="${amtEsc}" onclick="doCopy(this)">Copy</button></div>
+          <div class="crow"><span class="clb">Zelle to</span><span class="cvl">${ze}</span><button class="cbtn" data-copy="${ze}" onclick="doCopy(this)">Copy</button></div>
+          <div class="crow"><span class="clb">Reference</span><span class="cvl">${refText}</span><button class="cbtn" data-copy="${refText}" onclick="doCopy(this)">Copy</button></div>
         </div>
-       </div>`;
+      </div>`;
+    } else if (m.slug === "bank" && pm.bank) {
+      const bk = esc(pm.bank.trim());
+      expandHtml = `
+      <div class="m-exp"${isFirst ? "" : " hidden"}>
+        <div class="ccard">
+          <div class="crow"><span class="clb">Amount</span><span class="cvl">${amtEsc}</span><button class="cbtn" data-copy="${amtEsc}" onclick="doCopy(this)">Copy</button></div>
+          <div class="crow"><span class="clb">Account</span><span class="cvl bkv">${bk}</span><button class="cbtn" data-copy="${bk}" onclick="doCopy(this)">Copy</button></div>
+          <div class="crow"><span class="clb">Reference</span><span class="cvl">${refText}</span><button class="cbtn" data-copy="${refText}" onclick="doCopy(this)">Copy</button></div>
+        </div>
+      </div>`;
+    }
 
-  const cardContent = isPaid
-    ? `<div class="paid-done">&#10003; Paid. Thank you!</div>`
-    : `<p class="hi">Hi ${clientName}, this is for</p>
-       <p class="desc-txt">${descText || "your job"}</p>
-       <p class="amt">${esc(amtStr)}</p>
-       ${dueChip}`;
+    methodRowsHtml += `
+    <div class="mrow${isFirst ? " msel" : ""}" data-method="${m.slug}" data-pt="${m.type}" data-pl="${ctaAttr}" data-ph="${esc(goUrl)}">
+      <div class="mrow-main">
+        <div class="mtile ${m.tileClass}">${tileInner}</div>
+        <div class="minfo">
+          <div class="mname">${esc(m.label)}</div>
+          <div class="msub">${sub}</div>
+        </div>
+        <input type="radio" name="method" value="${m.slug}" class="mradio"${isFirst ? " checked" : ""}>
+      </div>${expandHtml}
+    </div>`;
+  });
+
+  // CTA buttons
+  let ctaHtml;
+  if (activeMethods.length === 0) {
+    ctaHtml = `<button class="btn-p" onclick="submitClaim('other')">I’ve paid, let ${firstName} know</button>`;
+  } else {
+    const first  = activeMethods[0];
+    const goUrl0 = first.type === "link" ? `/p/${token}/go/${first.goSlug}` : "";
+    const lbl0   = esc(first.ctaLabel);
+    ctaHtml = first.type === "link"
+      ? `<a id="cta-link" href="${esc(goUrl0)}" class="btn-p">${lbl0}</a>\n      <button id="cta-claim" class="btn-p" hidden onclick="submitClaim()">${lbl0}</button>`
+      : `<a id="cta-link" href="#" class="btn-p" hidden></a>\n      <button id="cta-claim" class="btn-p" onclick="submitClaim()">${lbl0}</button>`;
+    ctaHtml += `\n      <button class="btn-s" onclick="submitClaim()">Already paid? Let ${firstName} know</button>`;
+  }
+
+  const methodsSection = activeMethods.length > 0
+    ? `<div class="mlist">${methodRowsHtml}\n    </div>`
+    : `<div class="no-m"><p>Ask ${firstName} how to pay. Once you’ve paid, let them know below.</p></div>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Payment request — ${displayName}</title>
+<meta property="og:title" content="${displayName} · ${amtEsc}">
+<meta property="og:description" content="${ogDesc}">
+<title>Payment request from ${displayName}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#F8FAFC;color:#0F172A;min-height:100vh;padding:0 0 48px}
-.wrap{max-width:480px;margin:0 auto;padding:16px}
-.hdr{display:flex;align-items:center;gap:12px;padding:16px 0 20px}
-.logo{width:52px;height:52px;border-radius:14px;object-fit:cover;flex-shrink:0}
-.init{background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700}
-.biz{font-size:17px;font-weight:700;color:#0F172A;margin-bottom:2px}
-.sub{font-size:13px;color:#64748B}
-.card{background:#fff;border-radius:20px;border:1px solid #E2E8F0;padding:20px 20px 24px;margin-bottom:14px}
-.hi{font-size:15px;color:#64748B;margin-bottom:8px}
-.desc-txt{font-size:20px;font-weight:600;color:#0F172A;margin-bottom:14px;line-height:1.3}
-.amt{font-size:40px;font-weight:700;color:#0F172A;letter-spacing:-1px;margin-bottom:14px}
-.chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
-.red{background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA}
-.green{background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0}
-.paid-done{text-align:center;padding:24px 0;font-size:22px;font-weight:700;color:#15803D}
-.methods{margin-bottom:14px}
-.sec-lbl{font-size:15px;font-weight:600;color:#0F172A;margin-bottom:12px}
-.meth-btn{display:block;padding:16px;border-radius:14px;text-align:center;font-size:16px;font-weight:600;text-decoration:none;margin-bottom:10px;color:#fff}
-.paypal{background:#003087}
-.venmo{background:#3D95CE}
-.cash{background:#00D64F;color:#000}
-.copy-row{display:flex;align-items:center;gap:10px;background:#F8FAFC;border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid #E2E8F0}
-.clbl{font-size:13px;font-weight:700;color:#0F172A;min-width:40px}
-.cval{flex:1;font-size:14px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.copy-btn{background:#0F172A;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
-.no-methods{text-align:center;color:#64748B;padding:8px 0 14px;font-size:15px}
-.claim-wrap{margin-bottom:14px}
-.claim-btn{width:100%;padding:18px;border-radius:16px;background:#0F172A;color:#fff;font-size:16px;font-weight:700;border:none;cursor:pointer}
-.picker-lbl{font-size:15px;font-weight:600;color:#0F172A;margin:16px 0 12px}
-.radio-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.radio{display:flex;align-items:center;gap:8px;background:#F8FAFC;border-radius:12px;padding:12px 14px;font-size:15px;cursor:pointer;border:1px solid #E2E8F0}
-.confirm-btn{width:100%;padding:16px;border-radius:14px;background:#059669;color:#fff;font-size:16px;font-weight:700;border:none;cursor:pointer}
-.claimed{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:16px;padding:20px;text-align:center;font-size:16px;font-weight:600;color:#15803D;margin-bottom:14px}
-.footer{text-align:center;padding:24px 0 0}
-.footer a{font-size:13px;color:#94A3B8;text-decoration:none}
+body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#0F172A;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto}
+.top{padding:28px 20px 44px;background:#0F172A}
+.urow{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.av{width:40px;height:40px;border-radius:50%;background:#34D399;color:#064E3B;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.uname{font-size:16px;font-weight:700;color:#fff}
+.usub{font-size:13px;color:#94A3B8}
+.iinfo{text-align:center}
+.greet{font-size:15px;color:#CBD5E1;margin-bottom:10px;line-height:1.4}
+.amt{font-size:52px;font-weight:800;letter-spacing:-.03em;color:#fff;font-variant-numeric:tabular-nums;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;font-size:13px;font-weight:600}
+.chip-ok{color:#A7F3D0;background:rgba(52,211,153,.14)}
+.chip-late{color:#FECACA;background:rgba(248,113,113,.16)}
+.sheet{background:#F8FAFC;border-radius:28px 28px 0 0;padding:20px 20px 0;min-height:60vh}
+.clbl{font-size:15px;font-weight:700;color:#0F172A;margin-bottom:14px}
+.mlist{background:#fff;border:1px solid #E2E8F0;border-radius:18px;overflow:hidden;margin-bottom:16px}
+.mrow{border-bottom:1px solid #E2E8F0;cursor:pointer;transition:background .12s}
+.mrow:last-child{border-bottom:none}
+.msel{background:#F0FDF4;box-shadow:inset 0 0 0 2px #0F172A}
+.mrow-main{display:flex;align-items:center;min-height:62px;padding:12px 14px;gap:12px}
+.mtile{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.tile-pp{background:#1E3A8A}
+.tile-vm{background:#0EA5E9}
+.tile-ca{background:#16A34A}
+.tile-zl{background:#6D28D9}
+.tile-bk{background:#F8FAFC;border:1px solid #E2E8F0}
+.minfo{flex:1;min-width:0}
+.mname{font-size:16px;font-weight:650;color:#0F172A}
+.msub{font-size:13px;color:#475569;margin-top:2px}
+.mradio{width:20px;height:20px;accent-color:#0F172A;flex-shrink:0;cursor:pointer}
+.m-exp{padding:0 14px 14px}
+.ccard{background:#fff;border:1px solid #D1FAE5;border-radius:14px;overflow:hidden}
+.crow{display:flex;align-items:center;padding:10px 14px;gap:10px;border-bottom:1px solid #D1FAE5}
+.crow:last-child{border-bottom:none}
+.clb{font-size:12px;color:#64748B;width:76px;flex-shrink:0}
+.cvl{flex:1;font-size:16px;font-weight:650;color:#0F172A;overflow-wrap:break-word;word-break:break-all}
+.bkv{white-space:pre-wrap;font-size:14px}
+.cbtn{min-height:36px;padding:0 14px;border-radius:10px;background:#F1F5F9;color:#0F172A;font-size:14px;font-weight:600;border:none;cursor:pointer;flex-shrink:0;transition:background .15s,color .15s}
+.cbtn.ok{background:#047857;color:#fff}
+.no-m{background:#fff;border:1px solid #E2E8F0;border-radius:18px;padding:20px;text-align:center;font-size:15px;color:#64748B;margin-bottom:16px;line-height:1.5}
+.btn-p{display:flex;align-items:center;justify-content:center;height:56px;border-radius:18px;background:#0F172A;color:#fff;font-size:17px;font-weight:650;text-decoration:none;border:none;cursor:pointer;width:100%;margin-bottom:10px}
+.btn-s{display:flex;align-items:center;justify-content:center;height:48px;border-radius:16px;background:transparent;color:#0F172A;font-size:16px;font-weight:600;border:1.5px solid #CBD5E1;cursor:pointer;width:100%;margin-bottom:16px}
+.trust{display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:28px}
+.trust-t{font-size:13px;color:#475569}
+.foot{text-align:center;padding-bottom:20px}
+.foot span{font-size:13px;color:#94A3B8}
+.foot b{font-weight:700;color:#0F172A}
+.foot a{color:#047857;font-weight:600;text-decoration:none}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="hdr">
-    ${logoHtml}
-    <div><div class="biz">${displayName}</div><div class="sub">Payment request</div></div>
+  <div id="pay-cfg" data-token="${token}" hidden></div>
+  <div class="top">
+    <div class="urow">
+      <div class="av">${esc(initial)}</div>
+      <div>
+        <div class="uname">${displayName}</div>
+        <div class="usub">requests a payment</div>
+      </div>
+    </div>
+    <div class="iinfo">
+      ${greetHtml}
+      <div class="amt">${amtEsc}</div>
+      ${dueChipHtml}
+    </div>
   </div>
-  <div class="card">${cardContent}</div>
-  ${methodsSection}
-  ${claimSection}
-  <div class="footer"><a href="/p/${token}/app">Sent with Maggo &middot; free money app for contractors</a></div>
+  <div class="sheet">
+    <p class="clbl">Choose how to pay</p>
+    ${methodsSection}
+    ${ctaHtml}
+    <div class="trust">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span class="trust-t">You pay ${firstName} directly. Maggo never holds your money.</span>
+    </div>
+    <div class="foot"><span>Sent with <b>Maggo</b> &middot; <a href="/p/${token}/app">Get paid like this, free</a></span></div>
+  </div>
 </div>
 <script>
-function showPicker(b){document.getElementById('picker').removeAttribute('hidden');b.style.display='none';}
-function doCopy(b){if(navigator.clipboard)navigator.clipboard.writeText(b.dataset.copy).then(function(){b.textContent='Copied!'});else b.textContent='Copied!';}
+(function(){
+  var cfg=document.getElementById('pay-cfg');
+  var token=cfg?cfg.dataset.token:'';
+  var rows=[].slice.call(document.querySelectorAll('.mrow'));
+  var ctaLink=document.getElementById('cta-link');
+  var ctaClaim=document.getElementById('cta-claim');
+  function pick(key){
+    rows.forEach(function(r){
+      var on=r.dataset.method===key;
+      r.className='mrow'+(on?' msel':'');
+      var exp=r.querySelector('.m-exp');
+      if(exp)exp.hidden=!on;
+      var radio=r.querySelector('.mradio');
+      if(radio)radio.checked=on;
+    });
+    var sr=document.querySelector('.mrow.msel');
+    if(!sr||!ctaLink)return;
+    var type=sr.dataset.pt,label=sr.dataset.pl,href=sr.dataset.ph;
+    if(type==='link'){ctaLink.hidden=false;ctaLink.href=href;ctaLink.textContent=label;if(ctaClaim)ctaClaim.hidden=true;}
+    else{ctaLink.hidden=true;if(ctaClaim){ctaClaim.hidden=false;ctaClaim.textContent=label;}}
+  }
+  rows.forEach(function(row){
+    row.addEventListener('click',function(e){
+      var t=e.target;
+      while(t&&t!==row){if((t.className||'').indexOf('cbtn')>=0)return;t=t.parentNode;}
+      pick(row.dataset.method);
+    });
+  });
+  window.doCopy=function(btn){
+    var text=btn.dataset.copy,orig=btn.textContent;
+    function ok(){btn.textContent='✓ Copied';btn.classList.add('ok');setTimeout(function(){btn.textContent=orig;btn.classList.remove('ok');},2000);}
+    function fb(){var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);ok();}
+    navigator.clipboard?navigator.clipboard.writeText(text).then(ok,fb):fb();
+  };
+  window.submitClaim=function(mo){
+    var sr=document.querySelector('.mrow.msel');
+    var m=mo||(sr?sr.dataset.method:'other');
+    fetch('/p/'+token+'/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:m})}).then(function(){location.reload();},function(){location.reload();});
+  };
+})();
 </script>
 </body>
 </html>`;
