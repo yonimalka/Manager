@@ -2721,10 +2721,11 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 <title>Payment request from ${displayName}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html{background:linear-gradient(#0F172A 0 50%,#F8FAFC 50% 100%)}
-body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#0F172A;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+html{background:#F8FAFC}
+body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:transparent;min-height:100vh;min-height:100lvh;display:flex;flex-direction:column;align-items:center}
 .wrap{max-width:480px;width:100%;flex:1;display:flex;flex-direction:column;min-height:100vh}
-.top{padding:calc(env(safe-area-inset-top) + 28px) 20px 56px;background:#0F172A}
+.top{position:relative;padding:calc(env(safe-area-inset-top) + 28px) 20px 56px;background:#0F172A}
+.top::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:100vh;background:#0F172A}
 .urow{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px}
 .av{width:64px;height:64px;border-radius:18px;background:#34D399;color:#064E3B;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .av img{width:64px;height:64px;border-radius:18px;background:#fff;object-fit:contain;padding:6px}
