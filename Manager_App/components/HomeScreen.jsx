@@ -1013,7 +1013,7 @@ const HomeScreen = () => {
                     position: "absolute",
                     left: 0,
                     right: 0,
-                    bottom: Platform.OS === "ios" ? kbHeight : 0,
+                    bottom: 0,
                     alignItems: "center",
                   }}
                 >
@@ -1022,7 +1022,7 @@ const HomeScreen = () => {
                       backgroundColor: "#FFFFFF",
                       borderTopLeftRadius: 28,
                       borderTopRightRadius: 28,
-                      maxHeight: windowHeight - topInset - 24 - (Platform.OS === "ios" ? kbHeight : 0),
+                      maxHeight: windowHeight - topInset - 24,
                       overflow: "hidden",
                       width: "100%",
                       maxWidth: 560,
@@ -1270,7 +1270,7 @@ const HomeScreen = () => {
                       </ScrollView>
 
                       {/* Sticky footer — save button always visible above keyboard */}
-                      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: kbHeight > 0 ? 12 : bottomInset + 12, backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#F1F5F9" }}>
+                      <View style={{ paddingHorizontal: 22, paddingTop: 10, paddingBottom: Platform.OS === "ios" ? kbHeight + 12 : bottomInset + 12, backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#F1F5F9" }}>
                         <TouchableOpacity
                           onPress={handleLogIncomeSubmit}
                           disabled={logIncomeSaving || !logIncomeAmount}
@@ -1304,7 +1304,7 @@ const HomeScreen = () => {
                 </View>
                 {Platform.OS === "ios" && (
                   <InputAccessoryView nativeID={LOG_INCOME_ACCESSORY_ID}>
-                    <View style={{ flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 20, paddingHorizontal: 18, height: 44, backgroundColor: "#F8FAFC", borderTopWidth: 1, borderTopColor: "#E2E8F0" }}>
+                    <View style={{ flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 20, paddingHorizontal: 18, height: 44, backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#E2E8F0" }}>
                       <Pressable
                         hitSlop={8}
                         onPress={() => {
