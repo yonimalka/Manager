@@ -438,8 +438,10 @@ app.get("/getUserDetails", authMiddleware, async (req, res) => {
       email: user.email,
       logo: user.logo,
       currency: user.currency,
+      locale: user.locale,
       userType: user.userType,
       createdAt: user.createdAt,
+      paymentMethods: user.paymentMethods || {},
       analytics: {
         projectsCount,
         incomesLoggedCount,
@@ -2450,23 +2452,31 @@ app.get("/invoices/:id/link", authMiddleware, async (req, res) => {
   }
 });
 
-// PATCH /users/payment-methods — save/update the owner's payment method handles
+// PATCH /users/payment-methods — merge per-field; empty/null → $unset, non-empty → $set
 app.patch("/users/payment-methods", authMiddleware, async (req, res) => {
   const VALID_KEYS = ["paypalMe", "venmo", "cashApp", "zelle", "bank"];
-  const update = {};
+  const setOps   = {};
+  const unsetOps = {};
   for (const key of VALID_KEYS) {
-    if (typeof req.body[key] === "string") {
-      update[`paymentMethods.${key}`] = req.body[key].trim().slice(0, 120);
+    if (!(key in req.body)) continue;
+    const val = req.body[key];
+    if (typeof val === "string" && val.trim()) {
+      setOps[`paymentMethods.${key}`] = val.trim().slice(0, 120);
+    } else {
+      unsetOps[`paymentMethods.${key}`] = "";
     }
   }
-  if (!Object.keys(update).length) return res.status(400).json({ error: "Nothing to update" });
+  const mongoOp = {};
+  if (Object.keys(setOps).length)   mongoOp.$set   = setOps;
+  if (Object.keys(unsetOps).length) mongoOp.$unset = unsetOps;
+  if (!Object.keys(mongoOp).length) return res.status(400).json({ error: "Nothing to update" });
   try {
     const user = await UserModel.findByIdAndUpdate(
       req.userId,
-      { $set: update },
+      mongoOp,
       { new: true, select: "-password" }
     );
-    res.json({ paymentMethods: user.paymentMethods });
+    res.json({ paymentMethods: user.paymentMethods || {} });
   } catch (err) {
     console.error("[PAY] payment-methods error:", err.message);
     res.status(500).json({ error: err.message });
