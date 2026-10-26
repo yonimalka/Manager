@@ -10,6 +10,7 @@ import {
   ActionSheetIOS,
   useWindowDimensions,
   Switch,
+  Pressable,
   DeviceEventEmitter,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -842,65 +843,59 @@ export default function OwedSection({
         {/* Include pay link row */}
         {(() => {
           const noMethods = includePayLink && !hasAnyPaymentMethod(localPm);
+          if (noMethods) {
+            const subtitle = payLinkLoading ? "Getting link…" : "Your link has no payment options yet";
+            return (
+              <View style={{ marginBottom: 16, backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FCD34D", borderRadius: 16, padding: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 60, paddingVertical: 12 }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "600", color: "#065F46" }}>Include pay link</Text>
+                    <Text style={{ fontSize: 13, color: "#92400E", marginTop: 2 }}>{subtitle}</Text>
+                  </View>
+                  <View style={{ flexShrink: 0 }}>
+                    <Switch
+                      value={includePayLink}
+                      onValueChange={saveIncludePayLink}
+                      trackColor={{ false: "#CBD5E1", true: "#15803D" }}
+                      ios_backgroundColor="#CBD5E1"
+                      thumbColor="#FFFFFF"
+                    />
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={{ flexDirection: "row", alignItems: "center", minHeight: 48, borderTopWidth: 1, borderTopColor: "#FDE68A", marginTop: 8, marginHorizontal: -12, paddingHorizontal: 12 }}
+                  onPress={() => { track("paymethods_prompt_tapped", { from: "remind" }); setRemindSheetVisible(false); navigation.navigate("PaymentMethods"); }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#92400E", flex: 1 }}>Add PayPal, Venmo or bank</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#92400E" />
+                </TouchableOpacity>
+              </View>
+            );
+          }
           const subtitle = payLinkLoading
             ? "Getting link…"
-            : noMethods
-            ? "Your link has no payment options yet"
-            : hasAnyPaymentMethod(localPm)
+            : includePayLink && hasAnyPaymentMethod(localPm)
             ? `Clients see: ${getMethodNames(localPm)}`
-            : "Clients pay in one tap. You get notified.";
+            : "Message is sent without the link";
           return (
-            <View
-              style={[
-                { marginBottom: 16 },
-                noMethods && {
-                  backgroundColor: "#FFFBEB",
-                  borderWidth: 1,
-                  borderColor: "#FCD34D",
-                  borderRadius: 16,
-                  padding: 12,
-                },
-              ]}
+            <Pressable
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 60, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16, marginBottom: 16, backgroundColor: includePayLink ? "#ECFDF5" : "#F8FAFC", borderWidth: 1, borderColor: includePayLink ? "transparent" : "#E2E8F0" }}
+              onPress={() => saveIncludePayLink(!includePayLink)}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Include pay link</Text>
-                  <Text style={{ fontSize: 12, color: noMethods ? "#92400E" : "#64748B", marginTop: 2 }}>
-                    {subtitle}
-                  </Text>
-                </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: includePayLink ? "#065F46" : "#0F172A" }}>Include pay link</Text>
+                <Text style={{ fontSize: 13, color: includePayLink ? "#047857" : "#64748B", marginTop: 2 }}>{subtitle}</Text>
+              </View>
+              <View style={{ flexShrink: 0 }}>
                 <Switch
                   value={includePayLink}
                   onValueChange={saveIncludePayLink}
-                  trackColor={{ false: "#E2E8F0", true: "#34d399" }}
-                  thumbColor="#fff"
+                  trackColor={{ false: "#CBD5E1", true: "#15803D" }}
+                  ios_backgroundColor="#CBD5E1"
+                  thumbColor="#FFFFFF"
                 />
               </View>
-              {noMethods && (
-                <TouchableOpacity
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    minHeight: 48,
-                    borderTopWidth: 1,
-                    borderTopColor: "#FDE68A",
-                    marginTop: 8,
-                    marginHorizontal: -12,
-                    paddingHorizontal: 12,
-                  }}
-                  onPress={() => {
-                    track("paymethods_prompt_tapped", { from: "remind" });
-                    setRemindSheetVisible(false);
-                    navigation.navigate("PaymentMethods");
-                  }}
-                >
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#92400E", flex: 1 }}>
-                    Add PayPal, Venmo or bank
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color="#92400E" />
-                </TouchableOpacity>
-              )}
-            </View>
+            </Pressable>
           );
         })()}
 

@@ -15,6 +15,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -454,66 +455,64 @@ export default function FirstRun({ visible, userName, onDone }) {
 
         {/* Include pay link row */}
         {(() => {
+          const togglePayLink = (v) => {
+            setIncludePayLink(v);
+            AsyncStorage.setItem("maggo_include_pay_link", String(v)).catch(() => {});
+          };
           const noMethods = includePayLink && !hasAnyPaymentMethod(pmLocal);
-          const subtitle = payLinkLoading
-            ? "Getting link…"
-            : noMethods
-            ? "Your link has no payment options yet"
-            : "Clients pay in one tap. You get notified.";
-          return (
-            <View
-              style={[
-                { marginBottom: 4 },
-                noMethods && {
-                  backgroundColor: "#FFFBEB",
-                  borderWidth: 1,
-                  borderColor: "#FCD34D",
-                  borderRadius: 16,
-                  padding: 12,
-                },
-              ]}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Include pay link</Text>
-                  <Text style={{ fontSize: 12, color: noMethods ? "#92400E" : "#64748B", marginTop: 2 }}>
-                    {subtitle}
-                  </Text>
+          if (noMethods) {
+            const subtitle = payLinkLoading ? "Getting link…" : "Your link has no payment options yet";
+            return (
+              <View style={{ marginBottom: 4, backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FCD34D", borderRadius: 16, padding: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 60, paddingVertical: 12 }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "600", color: "#065F46" }}>Include pay link</Text>
+                    <Text style={{ fontSize: 13, color: "#92400E", marginTop: 2 }}>{subtitle}</Text>
+                  </View>
+                  <View style={{ flexShrink: 0 }}>
+                    <Switch
+                      value={includePayLink}
+                      onValueChange={togglePayLink}
+                      trackColor={{ false: "#CBD5E1", true: "#15803D" }}
+                      ios_backgroundColor="#CBD5E1"
+                      thumbColor="#FFFFFF"
+                    />
+                  </View>
                 </View>
-                <Switch
-                  value={includePayLink}
-                  onValueChange={(v) => {
-                    setIncludePayLink(v);
-                    AsyncStorage.setItem("maggo_include_pay_link", String(v)).catch(() => {});
-                  }}
-                  trackColor={{ false: "#E2E8F0", true: "#34d399" }}
-                  thumbColor="#fff"
-                />
-              </View>
-              {noMethods && (
                 <TouchableOpacity
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    minHeight: 48,
-                    borderTopWidth: 1,
-                    borderTopColor: "#FDE68A",
-                    marginTop: 8,
-                    marginHorizontal: -12,
-                    paddingHorizontal: 12,
-                  }}
-                  onPress={() => {
-                    track("paymethods_prompt_tapped", { from: "firstrun" });
-                    navigation.navigate("PaymentMethods");
-                  }}
+                  style={{ flexDirection: "row", alignItems: "center", minHeight: 48, borderTopWidth: 1, borderTopColor: "#FDE68A", marginTop: 8, marginHorizontal: -12, paddingHorizontal: 12 }}
+                  onPress={() => { track("paymethods_prompt_tapped", { from: "firstrun" }); navigation.navigate("PaymentMethods"); }}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#92400E", flex: 1 }}>
-                    Add PayPal, Venmo or bank
-                  </Text>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#92400E", flex: 1 }}>Add PayPal, Venmo or bank</Text>
                   <Ionicons name="chevron-forward" size={16} color="#92400E" />
                 </TouchableOpacity>
-              )}
-            </View>
+              </View>
+            );
+          }
+          const subtitle = payLinkLoading
+            ? "Getting link…"
+            : includePayLink
+            ? "Clients pay in one tap. You get notified."
+            : "Message is sent without the link";
+          return (
+            <Pressable
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 60, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16, marginBottom: 4, backgroundColor: includePayLink ? "#ECFDF5" : "#F8FAFC", borderWidth: 1, borderColor: includePayLink ? "transparent" : "#E2E8F0" }}
+              onPress={() => togglePayLink(!includePayLink)}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: includePayLink ? "#065F46" : "#0F172A" }}>Include pay link</Text>
+                <Text style={{ fontSize: 13, color: includePayLink ? "#047857" : "#64748B", marginTop: 2 }}>{subtitle}</Text>
+              </View>
+              <View style={{ flexShrink: 0 }}>
+                <Switch
+                  value={includePayLink}
+                  onValueChange={togglePayLink}
+                  trackColor={{ false: "#CBD5E1", true: "#15803D" }}
+                  ios_backgroundColor="#CBD5E1"
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+            </Pressable>
           );
         })()}
 
