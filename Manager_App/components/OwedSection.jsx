@@ -142,6 +142,9 @@ function RightAction({ prog, onDelete, onFullSwipe, screenWidth }) {
   );
 }
 
+// Module-level: survives remounts, resets only on full JS reload
+let nudgeShownTracked = false;
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function OwedSection({
@@ -185,7 +188,7 @@ export default function OwedSection({
 
   // Pay-link nudge card (board 8)
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
-  const nudgeShownRef = useRef(false);
+
   const [localPm, setLocalPm] = useState(paymentMethods ?? {});
 
   // Load persisted pay link preference
@@ -504,10 +507,10 @@ export default function OwedSection({
     !nudgeDismissed &&
     !firstRunVisible;
 
-  // Track nudge shown once per session
+  // Track nudge shown once per app session (module-level var survives remounts)
   useEffect(() => {
-    if (showNudge && !nudgeShownRef.current) {
-      nudgeShownRef.current = true;
+    if (showNudge && !nudgeShownTracked) {
+      nudgeShownTracked = true;
       track("paylink_nudge_shown");
     }
   }, [showNudge]);
