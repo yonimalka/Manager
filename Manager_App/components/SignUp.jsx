@@ -268,6 +268,8 @@ export default function SignUp() {
                       ]}
                       keyboardType="email-address"
                       autoCapitalize="none"
+                      autoCorrect={false}
+                      textContentType="emailAddress"
                       value={formData.email}
                       placeholder="john@example.com"
                       placeholderTextColor="#9CA3AF"

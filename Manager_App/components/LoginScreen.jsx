@@ -235,6 +235,7 @@ const LoginScreen = () => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  textContentType="emailAddress"
                   editable={!isLoading}
                 />
                 {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}

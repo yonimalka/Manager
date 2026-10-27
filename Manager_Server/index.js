@@ -237,12 +237,14 @@ const upload = multer({ storage });
 
 app.get("/ping", (req, res) => res.send("pong"));
 
+const normEmail = (e) => (e || "").trim().toLowerCase();
+
 app.post("/NewUser", async (req, res) => {
   try {
   const {name, businessName, businessId, address, logo, email, password} = req.body;
-  const emailNorm = email?.trim().toLowerCase();
+  const emailNorm = normEmail(email);
 
-  const validateUser = await UserModel.findOne({ email: emailNorm });
+  const validateUser = await UserModel.findOne({ email: emailNorm }).collation({ locale: "en", strength: 2 });
   if (validateUser) {
     return res.status(409).json({ code: "EMAIL_EXISTS", message: "user already exist" });
   }
@@ -273,9 +275,9 @@ app.post("/NewUser", async (req, res) => {
 
 app.post("/SignInDetails", async (req, res) => {
   const { email, password } = req.body;
-  
+
   try {
-    const user = await UserModel.findOne({ email });
+    const user = await UserModel.findOne({ email: normEmail(email) }).collation({ locale: "en", strength: 2 });
     if (!user) {
       console.log("no user found");
       return res.status(401).json({ message: "Invalid email or password" });
@@ -299,11 +301,12 @@ app.post("/SignInDetails", async (req, res) => {
 
 app.post("/GoogleSignIn", async (req, res)=>{
   const { googleId, email, name, avatar } = req.body;
-  
+
   try {
-      let user = await UserModel.findOne({
-      $or: [{ googleId }, { email }]
-    });
+    const emailNorm = normEmail(email);
+    let user = await UserModel.findOne({
+      $or: [{ googleId }, { email: emailNorm }]
+    }).collation({ locale: "en", strength: 2 });
 
     const isNewUser = !user;
 
@@ -311,7 +314,7 @@ app.post("/GoogleSignIn", async (req, res)=>{
 
       user = new UserModel({
         googleId,
-        email,
+        email: emailNorm,
         name,
         logo: avatar,
       });
@@ -366,11 +369,11 @@ app.post("/AppleSignIn", async (req, res) => {
     const appleData = await verifyAppleToken(identityToken);
 
     const appleId = appleData.sub;
-    const email = appleData.email;
+    const emailNorm = normEmail(appleData.email);
 
     let user = await UserModel.findOne({
-      $or: [{ appleId }, { email }]
-    });
+      $or: [{ appleId }, { email: emailNorm }]
+    }).collation({ locale: "en", strength: 2 });
 
     const isNewUser = !user;
 
@@ -378,7 +381,7 @@ app.post("/AppleSignIn", async (req, res) => {
 
       user = new UserModel({
         appleId,
-        email,
+        email: emailNorm,
         name: [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ") || "Apple User",
       });
 
