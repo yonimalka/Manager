@@ -240,10 +240,11 @@ app.get("/ping", (req, res) => res.send("pong"));
 app.post("/NewUser", async (req, res) => {
   try {
   const {name, businessName, businessId, address, logo, email, password} = req.body;
-  
-  const validateUser = await UserModel.findOne({ email });
+  const emailNorm = email?.trim().toLowerCase();
+
+  const validateUser = await UserModel.findOne({ email: emailNorm });
   if (validateUser) {
-    return res.status(401).json({ message: "user already exist" });
+    return res.status(409).json({ code: "EMAIL_EXISTS", message: "user already exist" });
   }
   const hashedPassword = await bcrypt.hash(password, 10);
   const user = new UserModel({
@@ -251,7 +252,7 @@ app.post("/NewUser", async (req, res) => {
     businessName,
     businessId,
     address,
-    email,
+    email: emailNorm,
     password: hashedPassword,
     totalExpenses: 0,
     totalIncomes: 0,
