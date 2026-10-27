@@ -55,6 +55,7 @@ const LoginScreen = () => {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const animMaxHeight = useRef(new Animated.Value(0)).current;
+  const submitting = useRef(false);
 
   useEffect(() => {
     track("auth_screen_viewed", { screen: "login" });
@@ -101,6 +102,7 @@ const LoginScreen = () => {
   };
 
   const handleSignIn = async () => {
+    if (submitting.current) return;
     setEmailError("");
     setPasswordError("");
     setValidation(null);
@@ -128,6 +130,7 @@ const LoginScreen = () => {
       return;
     }
 
+    submitting.current = true;
     setIsLoading(true);
 
     try {
@@ -154,6 +157,7 @@ const LoginScreen = () => {
         track("login_failed", { method: "email", reason: "network" });
       }
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };

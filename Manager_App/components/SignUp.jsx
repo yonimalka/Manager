@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   StyleSheet,
   Animated,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -62,6 +63,8 @@ export default function SignUp() {
   const [errors, setErrors] = useState({});
   const [emailExistsError, setEmailExistsError] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -86,8 +89,11 @@ export default function SignUp() {
   };
 
   const handleSignUp = async () => {
+    if (submitting.current) return;
     if (!validateStep2()) return;
     setSubmitError(null);
+    submitting.current = true;
+    setLoading(true);
 
     try {
       if (!auth.currentUser) {
@@ -145,6 +151,9 @@ export default function SignUp() {
         setSubmitError("Something went wrong. Please try again.");
         track("signup_failed", { method: "email", step: "server", reason: "server", ...(message && { message }) });
       }
+    } finally {
+      submitting.current = false;
+      setLoading(false);
     }
   };
 
@@ -427,6 +436,7 @@ export default function SignUp() {
                       onPress={handleSignUp}
                       activeOpacity={0.8}
                       style={styles.primaryBtnWrapper}
+                      disabled={loading}
                     >
                       <LinearGradient
                         colors={["#3B82F6", "#2563EB"]}
@@ -434,8 +444,11 @@ export default function SignUp() {
                         end={{ x: 1, y: 0 }}
                         style={styles.primarySolid}
                       >
-                        <Text style={styles.primaryText}>Create Account</Text>
-                        {/* <Icon name="checkmark" size={20} color="#fff" /> */}
+                        {loading ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <Text style={styles.primaryText}>Create Account</Text>
+                        )}
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
