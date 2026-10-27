@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   StyleSheet,
   Animated,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -60,6 +61,8 @@ export default function SignUp() {
   });
 
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -84,14 +87,16 @@ export default function SignUp() {
   };
 
   const handleSignUp = async () => {
+    if (submitting.current) return;
     if (!validateStep2()) return;
+    submitting.current = true;
+    setLoading(true);
 
     try {
       if (!auth.currentUser) {
         await signInFirebase();
       } else {
         console.log("false");
-        
       }
 
       const uid = auth.currentUser.uid;
@@ -131,8 +136,12 @@ export default function SignUp() {
       console.log(err);
       const step = err?.response ? "server" : "provider";
       const reason = err?.response?.status ? String(err.response.status) : "server_error";
-      track("signup_failed", { method: "email", step, reason });
+      const message = err?.response?.data?.message;
+      track("signup_failed", { method: "email", step, reason, ...(message && { message }) });
       Alert.alert("Error", "Registration failed. Please try again.");
+    } finally {
+      submitting.current = false;
+      setLoading(false);
     }
   };
 
@@ -388,6 +397,7 @@ export default function SignUp() {
                       onPress={handleSignUp}
                       activeOpacity={0.8}
                       style={styles.primaryBtnWrapper}
+                      disabled={loading}
                     >
                       <LinearGradient
                         colors={["#3B82F6", "#2563EB"]}
@@ -395,8 +405,11 @@ export default function SignUp() {
                         end={{ x: 1, y: 0 }}
                         style={styles.primarySolid}
                       >
-                        <Text style={styles.primaryText}>Create Account</Text>
-                        {/* <Icon name="checkmark" size={20} color="#fff" /> */}
+                        {loading ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <Text style={styles.primaryText}>Create Account</Text>
+                        )}
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
