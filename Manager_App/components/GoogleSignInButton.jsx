@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Pressable, Text, Image, StyleSheet, Alert, I18nManager } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, Text, Image, StyleSheet, Alert, I18nManager, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from 'expo-web-browser';
@@ -15,6 +15,8 @@ export default function GoogleSignInButton() {
 
  const navigation = useNavigation();
   const isRTL = I18nManager.isRTL;
+  const inflight = useRef(false);
+  const [loading, setLoading] = useState(false);
   // Create the Google Sign-In request
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: '717125560385-pg4scnvjueo0d674ha1epbal1v8f2ihv.apps.googleusercontent.com',
@@ -26,11 +28,20 @@ export default function GoogleSignInButton() {
   useEffect(() => {
   const getUserInfo = async () => {
     if (!response) return;
-    if (response.type === "success") {
-      const accessToken = response.authentication.accessToken;
-      await handleGoogleLogin(accessToken);
-    } else {
-      track("signup_failed", { method: "google", step: "provider", reason: response.type });
+    try {
+      if (response.type === "success") {
+        const accessToken = response.authentication?.accessToken;
+        if (!accessToken) {
+          track("signup_failed", { method: "google", step: "provider", reason: "no_token" });
+        } else {
+          await handleGoogleLogin(accessToken);
+        }
+      } else {
+        track("signup_failed", { method: "google", step: "provider", reason: response.type });
+      }
+    } finally {
+      inflight.current = false;
+      setLoading(false);
     }
   };
 
@@ -89,18 +100,30 @@ export default function GoogleSignInButton() {
 
   return (
     <Pressable
-      style={[styles.button, !request && { opacity: 0.5 }]}
-      disabled={!request}
-      onPress={() => {
+      style={[styles.button, (!request || loading) && { opacity: 0.5 }]}
+      disabled={!request || loading}
+      onPress={async () => {
+        if (inflight.current) return;
+        inflight.current = true;
+        setLoading(true);
         track("signup_method_selected", { method: "google" });
-        promptAsync();
+        try {
+          await promptAsync();
+        } catch {
+          // promptAsync rejected before producing a response (e.g. OS browser error)
+          inflight.current = false;
+          setLoading(false);
+        }
       }}
     >
-      <Image
-        source={require("../assets/google.png")}
-        style={styles.icon}
-      />
-      <Text style={styles.text}>Continue with Google</Text>
+      {loading ? (
+        <ActivityIndicator color="#1E293B" size="small" />
+      ) : (
+        <>
+          <Image source={require("../assets/google.png")} style={styles.icon} />
+          <Text style={styles.text}>Continue with Google</Text>
+        </>
+      )}
     </Pressable>
   );
 }

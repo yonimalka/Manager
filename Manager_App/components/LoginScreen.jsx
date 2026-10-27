@@ -15,7 +15,7 @@ import {
 import { SERVER_URL } from "@env";
 import axios from "axios";
 import { TextInput } from "react-native-gesture-handler";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import GoogleSignInButton from "./GoogleSignInButton";
 import AppleSignInButton from "./AppleSignInButton";
@@ -42,6 +42,7 @@ const EyeIcon = ({ visible }) => (
 
 const LoginScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,10 +55,20 @@ const LoginScreen = () => {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const animMaxHeight = useRef(new Animated.Value(0)).current;
+  const submitting = useRef(false);
 
   useEffect(() => {
     track("auth_screen_viewed", { screen: "login" });
   }, []);
+
+  useEffect(() => {
+    const prefillEmail = route.params?.email;
+    if (!prefillEmail) return;
+    setEmail(prefillEmail);
+    // Expand the email form immediately so the user can sign in
+    setShowEmailForm(true);
+    animMaxHeight.setValue(600);
+  }, [route.params?.email]);
 
   const toggleEmailForm = () => {
     if (!showEmailForm) {
@@ -91,6 +102,7 @@ const LoginScreen = () => {
   };
 
   const handleSignIn = async () => {
+    if (submitting.current) return;
     setEmailError("");
     setPasswordError("");
     setValidation(null);
@@ -118,6 +130,7 @@ const LoginScreen = () => {
       return;
     }
 
+    submitting.current = true;
     setIsLoading(true);
 
     try {
@@ -136,17 +149,15 @@ const LoginScreen = () => {
         setValidation(response.data?.message || "Login failed");
       }
     } catch (error) {
-      if (error.response?.status === 401) {
-        setValidation("Invalid email or password");
-        track("login_failed", { method: "email", reason: "401" });
-      } else if (error.response?.status === 404) {
-        setValidation("Account not found");
-        track("login_failed", { method: "email", reason: "404" });
+      if (error.response?.status === 401 || error.response?.status === 404) {
+        setValidation("Email or password is incorrect.");
+        track("login_failed", { method: "email", reason: "credentials" });
       } else {
         setValidation("Connection error. Please try again.");
         track("login_failed", { method: "email", reason: "network" });
       }
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };
@@ -209,11 +220,6 @@ const LoginScreen = () => {
           {/* Collapsible email form */}
           <Animated.View style={{ maxHeight: animMaxHeight, overflow: "hidden" }}>
             <View style={styles.emailForm}>
-              {validation && (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorBannerText}>{validation}</Text>
-                </View>
-              )}
 
               {/* Email */}
               <View style={styles.field}>
@@ -233,6 +239,7 @@ const LoginScreen = () => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  textContentType="emailAddress"
                   editable={!isLoading}
                 />
                 {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
@@ -279,6 +286,10 @@ const LoginScreen = () => {
               >
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
+
+              {validation && (
+                <Text style={styles.credentialsError}>{validation}</Text>
+              )}
 
               {/* Sign In Button */}
               <TouchableOpacity
@@ -347,20 +358,11 @@ const styles = StyleSheet.create({
   form: {
     width: "100%",
   },
-  errorBanner: {
-    backgroundColor: "#FFF1F2",
-    borderWidth: 1,
-    borderColor: "#FECDD3",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 22,
-  },
-  errorBannerText: {
-    color: "#BE123C",
-    fontSize: 14,
-    fontWeight: "500",
+  credentialsError: {
+    fontSize: 13,
+    color: "#B91C1C",
     textAlign: "center",
+    marginBottom: 12,
   },
 
   // ── Fields ───────────────────────────────────────────────

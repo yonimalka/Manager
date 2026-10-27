@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
   TouchableOpacity,
   Text,
   StyleSheet,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
@@ -18,6 +19,9 @@ const SERVER_URL = Constants.expoConfig.extra.SERVER_URL;
 
 export default function AppleSignInButton() {
   const navigation = useNavigation();
+  const inflight = useRef(false);
+  const [loading, setLoading] = useState(false);
+
 const signInWithApple = async () => {
   try {
 
@@ -89,28 +93,28 @@ const signInWithApple = async () => {
   }
 };
 const handleLogin = async () => {
-    track("signup_method_selected", { method: "apple" });
-    const result = await signInWithApple();
-
-    if (result.success) {
-
-      console.log("Login success");
-
-      // Navigate to main screen
-      // navigation.replace("Home");
-
+    if (inflight.current) return;
+    inflight.current = true;
+    setLoading(true);
+    try {
+      track("signup_method_selected", { method: "apple" });
+      await signInWithApple();
+    } finally {
+      inflight.current = false;
+      setLoading(false);
     }
-
   };
 
   return (
-    <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85}>
-      {/* <AppleLogo /> */}
-      <Image
-        source={require("../assets/apple-logo.png")}
-        style={styles.icon}
-      />
-      <Text style={styles.text}>Continue with Apple</Text>
+    <TouchableOpacity style={styles.button} onPress={handleLogin} activeOpacity={0.85} disabled={loading}>
+      {loading ? (
+        <ActivityIndicator color="#FFFFFF" size="small" />
+      ) : (
+        <>
+          <Image source={require("../assets/apple-logo.png")} style={styles.icon} />
+          <Text style={styles.text}>Continue with Apple</Text>
+        </>
+      )}
     </TouchableOpacity>
   );
 }

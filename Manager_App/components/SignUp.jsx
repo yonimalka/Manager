@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   StyleSheet,
   Animated,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -60,6 +61,10 @@ export default function SignUp() {
   });
 
   const [errors, setErrors] = useState({});
+  const [emailExistsError, setEmailExistsError] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -84,14 +89,17 @@ export default function SignUp() {
   };
 
   const handleSignUp = async () => {
+    if (submitting.current) return;
     if (!validateStep2()) return;
+    setSubmitError(null);
+    submitting.current = true;
+    setLoading(true);
 
     try {
       if (!auth.currentUser) {
         await signInFirebase();
       } else {
         console.log("false");
-        
       }
 
       const uid = auth.currentUser.uid;
@@ -125,14 +133,27 @@ export default function SignUp() {
           routes: [{ name: "HomeScreen" }],
         });
       }
-
-      Alert.alert("Success", "Account created successfully");
     } catch (err) {
       console.log(err);
-      const step = err?.response ? "server" : "provider";
-      const reason = err?.response?.status ? String(err.response.status) : "server_error";
-      track("signup_failed", { method: "email", step, reason });
-      Alert.alert("Error", "Registration failed. Please try again.");
+      const isEmailExists =
+        (err?.response?.status === 409 && err?.response?.data?.code === "EMAIL_EXISTS") ||
+        (err?.response?.status === 401 && err?.response?.data?.message === "user already exist");
+
+      if (isEmailExists) {
+        setStep(1);
+        setEmailExistsError(true);
+        track("signup_failed", { method: "email", step: "server", reason: "email_exists" });
+      } else if (!err?.response) {
+        setSubmitError("Couldn't connect. Check your internet and try again.");
+        track("signup_failed", { method: "email", step: "server", reason: "network" });
+      } else {
+        const message = err?.response?.data?.message;
+        setSubmitError("Something went wrong. Please try again.");
+        track("signup_failed", { method: "email", step: "server", reason: "server", ...(message && { message }) });
+      }
+    } finally {
+      submitting.current = false;
+      setLoading(false);
     }
   };
 
@@ -249,17 +270,39 @@ export default function SignUp() {
 
                   <Input label="Email" icon="mail-outline" error={errors.email}>
                     <TextInput
-                      style={[styles.input, errors.email && styles.inputError]}
+                      style={[
+                        styles.input,
+                        errors.email && styles.inputError,
+                        emailExistsError && { borderColor: "#FCA5A5", borderWidth: 1.5 },
+                      ]}
                       keyboardType="email-address"
                       autoCapitalize="none"
+                      autoCorrect={false}
+                      textContentType="emailAddress"
                       value={formData.email}
                       placeholder="john@example.com"
                       placeholderTextColor="#9CA3AF"
-                      onChangeText={(t) =>
-                        setFormData({ ...formData, email: t })
-                      }
+                      onChangeText={(t) => {
+                        setFormData({ ...formData, email: t });
+                        if (emailExistsError) setEmailExistsError(false);
+                      }}
                     />
                   </Input>
+                  {emailExistsError && (
+                    <View style={{ marginTop: -12, marginBottom: 16 }}>
+                      <Text style={{ fontSize: 13, color: "#B91C1C" }}>
+                        There's already an account with this email.
+                      </Text>
+                      <TouchableOpacity
+                        style={{ minHeight: 44, justifyContent: "center" }}
+                        onPress={() => navigation.navigate("LoginScreen", { email: formData.email })}
+                      >
+                        <Text style={{ fontSize: 15, fontWeight: "600", color: "#2563EB" }}>
+                          Sign in instead ›
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
 
                   <Input
                     label="Password"
@@ -374,6 +417,11 @@ export default function SignUp() {
                     </TouchableOpacity>
                   </View>
 
+                  {submitError && (
+                    <Text style={{ fontSize: 13, color: "#B91C1C", marginBottom: 12, textAlign: "center" }}>
+                      {submitError}
+                    </Text>
+                  )}
                   <View style={styles.buttonRow}>
                     <TouchableOpacity
                       style={styles.secondaryBtn}
@@ -388,6 +436,7 @@ export default function SignUp() {
                       onPress={handleSignUp}
                       activeOpacity={0.8}
                       style={styles.primaryBtnWrapper}
+                      disabled={loading}
                     >
                       <LinearGradient
                         colors={["#3B82F6", "#2563EB"]}
@@ -395,8 +444,11 @@ export default function SignUp() {
                         end={{ x: 1, y: 0 }}
                         style={styles.primarySolid}
                       >
-                        <Text style={styles.primaryText}>Create Account</Text>
-                        {/* <Icon name="checkmark" size={20} color="#fff" /> */}
+                        {loading ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <Text style={styles.primaryText}>Create Account</Text>
+                        )}
                       </LinearGradient>
                     </TouchableOpacity>
                   </View>
