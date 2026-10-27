@@ -304,9 +304,9 @@ app.post("/GoogleSignIn", async (req, res)=>{
 
   try {
     const emailNorm = normEmail(email);
-    let user = await UserModel.findOne({
-      $or: [{ googleId }, { email: emailNorm }]
-    }).collation({ locale: "en", strength: 2 });
+    const orGoogle = [{ googleId }];
+    if (emailNorm) orGoogle.push({ email: emailNorm });
+    let user = await UserModel.findOne({ $or: orGoogle }).collation({ locale: "en", strength: 2 });
 
     const isNewUser = !user;
 
@@ -314,7 +314,7 @@ app.post("/GoogleSignIn", async (req, res)=>{
 
       user = new UserModel({
         googleId,
-        email: emailNorm,
+        email: emailNorm || undefined,
         name,
         logo: avatar,
       });
@@ -370,10 +370,9 @@ app.post("/AppleSignIn", async (req, res) => {
 
     const appleId = appleData.sub;
     const emailNorm = normEmail(appleData.email);
-
-    let user = await UserModel.findOne({
-      $or: [{ appleId }, { email: emailNorm }]
-    }).collation({ locale: "en", strength: 2 });
+    const orApple = [{ appleId }];
+    if (emailNorm) orApple.push({ email: emailNorm });
+    let user = await UserModel.findOne({ $or: orApple }).collation({ locale: "en", strength: 2 });
 
     const isNewUser = !user;
 
@@ -381,7 +380,7 @@ app.post("/AppleSignIn", async (req, res) => {
 
       user = new UserModel({
         appleId,
-        email: emailNorm,
+        email: emailNorm || undefined,
         name: [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ") || "Apple User",
       });
 
