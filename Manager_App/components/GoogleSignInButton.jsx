@@ -30,8 +30,12 @@ export default function GoogleSignInButton() {
     if (!response) return;
     try {
       if (response.type === "success") {
-        const accessToken = response.authentication.accessToken;
-        await handleGoogleLogin(accessToken);
+        const accessToken = response.authentication?.accessToken;
+        if (!accessToken) {
+          track("signup_failed", { method: "google", step: "provider", reason: "no_token" });
+        } else {
+          await handleGoogleLogin(accessToken);
+        }
       } else {
         track("signup_failed", { method: "google", step: "provider", reason: response.type });
       }
@@ -98,12 +102,18 @@ export default function GoogleSignInButton() {
     <Pressable
       style={[styles.button, (!request || loading) && { opacity: 0.5 }]}
       disabled={!request || loading}
-      onPress={() => {
+      onPress={async () => {
         if (inflight.current) return;
         inflight.current = true;
         setLoading(true);
         track("signup_method_selected", { method: "google" });
-        promptAsync();
+        try {
+          await promptAsync();
+        } catch {
+          // promptAsync rejected before producing a response (e.g. OS browser error)
+          inflight.current = false;
+          setLoading(false);
+        }
       }}
     >
       {loading ? (
