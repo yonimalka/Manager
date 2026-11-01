@@ -430,7 +430,7 @@ app.post("/refresh", (req, res) => {
     return;
   }
 
-  return res.status(401).json({ message: "No token provided" });
+  return res.status(401).json({ message: "No refresh token provided" });
 });
 
 if (process.env.NODE_ENV !== "production") {
