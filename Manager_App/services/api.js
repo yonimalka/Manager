@@ -171,10 +171,10 @@ api.interceptors.response.use(
 
     // ── 1 & 2: Token lifecycle ────────────────────────────────────────────────
     if (!isAuthEndpoint && hasStoredToken) {
-      // Expired token: 401 TOKEN_EXPIRED or legacy 403 from auth middleware
+      // Expired token: explicit TOKEN_EXPIRED code (any status), or bare 403 legacy path
       const isExpiredToken =
-        (status === 401 && code === "TOKEN_EXPIRED") ||
-        (status === 403 && !cfg?.url?.includes("/refresh"));
+        code === "TOKEN_EXPIRED" ||
+        (status === 403 && !code && !cfg?.url?.includes("/refresh"));
 
       if (isExpiredToken && !cfg._retry) {
         cfg._retry = true;
@@ -204,8 +204,8 @@ api.interceptors.response.use(
         }
       }
 
-      // Invalid token or failed refresh → sign out silently
-      if (status === 401 || (cfg?.url?.includes("/refresh") && status === 403)) {
+      // Explicitly invalid token → sign out silently (refresh failure is handled in catch above)
+      if (code === "TOKEN_INVALID" || (cfg?.url?.includes("/refresh") && (status === 401 || status === 403))) {
         await clearSessionAndRedirect();
         return Promise.reject(error);
       }
