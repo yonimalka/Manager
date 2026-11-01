@@ -47,6 +47,9 @@ const doRefresh = async () => {
   const res = await axios.post(`${BASE_URL}/refresh`, { token: refreshToken });
   const newToken = res.data.accessToken;
   await AsyncStorage.setItem("token", newToken);
+  if (res.data.refreshToken) {
+    await AsyncStorage.setItem("refreshToken", res.data.refreshToken);
+  }
   return newToken;
 };
 
@@ -74,6 +77,15 @@ const checkStartupRefresh = () => {
   }
   return startupPromise;
 };
+
+// ── Auth endpoints: their error responses must reach the caller unchanged ──────
+const AUTH_ENDPOINTS = [
+  "/SignInDetails",
+  "/NewUser",
+  "/GoogleSignIn",
+  "/AppleSignIn",
+  "/refresh",
+];
 
 // ── Network error banner events ────────────────────────────────────────────────
 export const NETWORK_BANNER_SHOW = "maggo_network_show";
@@ -140,45 +152,52 @@ api.interceptors.response.use(
     const cfg = error.config;
     const status = error.response?.status;
     const code = error.response?.data?.code;
-    const isRefreshUrl = cfg?.url?.includes("/refresh");
 
-    // ── 1. Expired token: 401 TOKEN_EXPIRED or legacy 403 from auth middleware ─
-    const isExpiredToken =
-      (status === 401 && code === "TOKEN_EXPIRED") ||
-      (status === 403 && !isRefreshUrl);
+    // Auth endpoints and unauthenticated requests bypass token lifecycle handling
+    // so their 401/409 responses reach the calling screen unchanged.
+    const isAuthEndpoint = AUTH_ENDPOINTS.some((ep) => cfg?.url?.includes(ep));
+    const hasStoredToken = !!cfg?.headers?.Authorization;
 
-    if (isExpiredToken && !cfg._retry) {
-      cfg._retry = true;
+    // ── 1 & 2: Token lifecycle ────────────────────────────────────────────────
+    if (!isAuthEndpoint && hasStoredToken) {
+      // Expired token: 401 TOKEN_EXPIRED or legacy 403 from auth middleware
+      const isExpiredToken =
+        (status === 401 && code === "TOKEN_EXPIRED") ||
+        (status === 403 && !cfg?.url?.includes("/refresh"));
 
-      if (isRefreshing) {
-        // Queue behind the in-flight refresh — don't start a second one
-        return new Promise((resolve, reject) => {
-          refreshQueue.push({ resolve, reject });
-        }).then((newToken) => {
+      if (isExpiredToken && !cfg._retry) {
+        cfg._retry = true;
+
+        if (isRefreshing) {
+          // Queue behind the in-flight refresh — don't start a second one
+          return new Promise((resolve, reject) => {
+            refreshQueue.push({ resolve, reject });
+          }).then((newToken) => {
+            cfg.headers = { ...cfg.headers, Authorization: `Bearer ${newToken}` };
+            return api(cfg);
+          });
+        }
+
+        isRefreshing = true;
+        try {
+          const newToken = await doRefresh();
+          processQueue(null, newToken);
           cfg.headers = { ...cfg.headers, Authorization: `Bearer ${newToken}` };
           return api(cfg);
-        });
+        } catch (refreshErr) {
+          processQueue(refreshErr);
+          await clearSessionAndRedirect();
+          return Promise.reject(refreshErr);
+        } finally {
+          isRefreshing = false;
+        }
       }
 
-      isRefreshing = true;
-      try {
-        const newToken = await doRefresh();
-        processQueue(null, newToken);
-        cfg.headers = { ...cfg.headers, Authorization: `Bearer ${newToken}` };
-        return api(cfg);
-      } catch (refreshErr) {
-        processQueue(refreshErr);
+      // Invalid token or failed refresh → sign out silently
+      if (status === 401 || (cfg?.url?.includes("/refresh") && status === 403)) {
         await clearSessionAndRedirect();
-        return Promise.reject(refreshErr);
-      } finally {
-        isRefreshing = false;
+        return Promise.reject(error);
       }
-    }
-
-    // ── 2. Invalid token or failed refresh → sign out silently ────────────────
-    if (status === 401 || (isRefreshUrl && status === 403)) {
-      await clearSessionAndRedirect();
-      return Promise.reject(error);
     }
 
     // ── 3. Network error: retry GET once after 1.5 s ──────────────────────────
@@ -194,7 +213,7 @@ api.interceptors.response.use(
 
     // ── 4. Remaining failures: banner for network, analytics for all ──────────
     const isNetworkErr = !error.response;
-    const isSilent = status === 404;
+    const isSilent = status === 404 || status === 401;
 
     if (!isSilent) {
       if (isNetworkErr) emitBannerShow();
