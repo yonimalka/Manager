@@ -3,13 +3,17 @@ const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET || "yourSecretKey";
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
+  const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) return res.status(401).json({ message: "Token missing" });
+  if (!token) return res.status(401).json({ code: "TOKEN_INVALID", message: "Token missing" });
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ message: "Invalid token" });
-
+    if (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(401).json({ code: "TOKEN_EXPIRED", message: err.message });
+      }
+      return res.status(401).json({ code: "TOKEN_INVALID", message: err.message });
+    }
     req.userId = decoded.userId;
     next();
   });

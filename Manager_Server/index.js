@@ -404,17 +404,42 @@ app.post("/AppleSignIn", async (req, res) => {
 });
 
 app.post("/refresh", (req, res) => {
-  const { token } = req.body; // refresh token
+  const { token, legacyAccessToken } = req.body;
 
-  if (!token) return res.status(401).json({ message: "No refresh token provided" });
+  // Normal rolling-refresh flow
+  if (token) {
+    jwt.verify(token, JWT_REFRESH_SECRET, (err, user) => {
+      if (err) return res.status(403).json({ message: "Invalid refresh token" });
+      const newAccessToken = generateAccessToken({ _id: user.userId });
+      const newRefreshToken = generateRefreshToken({ _id: user.userId });
+      res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+    });
+    return;
+  }
 
-  jwt.verify(token, JWT_REFRESH_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: "Invalid refresh token" });
+  // Bridge for existing users who never got a refresh token stored
+  if (legacyAccessToken) {
+    jwt.verify(legacyAccessToken, JWT_SECRET, { ignoreExpiration: true }, (err, decoded) => {
+      if (err) return res.status(403).json({ message: "Invalid token" });
+      const ageDays = (Math.floor(Date.now() / 1000) - decoded.iat) / 86400;
+      if (ageDays > 30) return res.status(403).json({ message: "Token too old" });
+      const newAccessToken = generateAccessToken({ _id: decoded.userId });
+      const newRefreshToken = generateRefreshToken({ _id: decoded.userId });
+      res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+    });
+    return;
+  }
 
-    const newAccessToken = generateAccessToken({ _id: user.userId });
-    res.json({ accessToken: newAccessToken });
-  });
+  return res.status(401).json({ message: "No refresh token provided" });
 });
+
+if (process.env.NODE_ENV !== "production") {
+  app.get("/dev/expired-token", authMiddleware, (req, res) => {
+    const token = jwt.sign({ userId: req.userId }, JWT_SECRET, { expiresIn: "-1s" });
+    res.json({ token });
+  });
+}
+
 app.get("/getUserDetails", authMiddleware, async (req, res) => {
   const userId = req.userId;
   try {
