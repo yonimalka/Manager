@@ -27,6 +27,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
 import SubscriptionCard from "./SubscriptionCard";
 import { refreshSubscriptionStatus } from "../services/subscription";
+import { hasRealName } from "../utils/displayName";
 
 const isRTL = I18nManager.isRTL;
 
@@ -253,8 +254,14 @@ export default function ProfileDetails() {
                     </View>
                   )}
                 </View>
-                <Text style={styles.heroName}>{userDetails.name || "Your Name"}</Text>
-                <Text style={styles.heroBiz}>{userDetails.businessName || "Business Name"}</Text>
+                {hasRealName(userDetails) ? (
+                  <Text style={styles.heroName}>{userDetails.businessName || userDetails.name}</Text>
+                ) : (
+                  <TouchableOpacity onPress={() => setIsEditing(true)}>
+                    <Text style={[styles.heroName, { color: "#2563EB" }]}>Add your name</Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.heroBiz}>{userDetails.businessName || userDetails.email || ""}</Text>
                 <TouchableOpacity style={styles.editPill} onPress={() => setIsEditing(true)}>
                   <Pencil size={11} color="#2563eb" />
                   <Text style={styles.editPillText}>Edit profile</Text>
@@ -271,7 +278,9 @@ export default function ProfileDetails() {
                 <View style={styles.row}>
                   <View style={[styles.rowIcon, { backgroundColor: "#5e5ce6" }]}><Ionicons name="person" size={14} color="#fff" /></View>
                   <Text style={styles.rowLabel}>Name</Text>
-                  <Text style={styles.rowVal}>{userDetails.name || "—"}</Text>
+                  <Text style={[styles.rowVal, !hasRealName(userDetails) && { color: "#2563EB" }]}>
+                    {hasRealName(userDetails) ? userDetails.name : "Add"}
+                  </Text>
                   {/* <Ionicons name="chevron-forward" size={14} color="#c7c7cc" /> */}
                 </View>
                 <View style={styles.rowDivider} />

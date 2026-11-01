@@ -30,6 +30,7 @@ import BottomSheet from "./BottomSheet";
 import { useUndoToast } from "./UndoToast";
 import { hasAnyPaymentMethod } from "../utils/paymentMethods";
 import Toggle from "./Toggle";
+import { displayName as getDisplayName, hasRealName } from "../utils/displayName";
 
 // ─── Phone helpers ──────────────────────────────────────────────────────────
 
@@ -352,7 +353,8 @@ export default function OwedSection({
   const getRemindMessage = (invoice, payUrl = null) => {
     if (!invoice) return "";
     const clientFirst = (invoice.client || "there").trim().split(/\s+/)[0];
-    const userFirst = (userName || "").trim().split(/\s+/)[0] || "me";
+    const dn = getDisplayName({ name: userName });
+    const userFirst = dn ? dn.trim().split(/\s+/)[0] : "";
     const amt = formatCurrency(invoice.amount || 0, currency, locale);
     const days = calcDayDiff(invoice.dueDate);
     let body;
@@ -365,7 +367,8 @@ export default function OwedSection({
       body = `Hi ${clientFirst}, a friendly heads-up that the ${amt} payment is due in ${days} day${days !== 1 ? "s" : ""}.`;
     }
     const payPart = payUrl ? ` You can pay here: ${payUrl}` : "";
-    return `${body}${payPart} Thanks, ${userFirst}`;
+    const signOff = userFirst ? ` Thanks, ${userFirst}` : " Thanks!";
+    return `${body}${payPart}${signOff}`;
   };
 
   const handleLongPress = useCallback(
@@ -837,6 +840,14 @@ export default function OwedSection({
           </View>
         )}
 
+        {!hasRealName({ name: userName }) && (
+          <TouchableOpacity
+            style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
+            onPress={() => { track("name_prompt_tapped", { from: "remind" }); setRemindSheetVisible(false); navigation.navigate("ProfileDetails"); }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "600", color: "#2563EB", flex: 1 }}>Add your name so clients know who's asking ›</Text>
+          </TouchableOpacity>
+        )}
         <View style={{ backgroundColor: "#F8FAFC", borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: "#E2E8F0" }}>
           <Text style={{ fontSize: 13, color: "#0F172A", lineHeight: 20 }}>
             {getRemindMessage(remindInvoice, includePayLink && !payLinkLoading ? payLinkUrl : null)}

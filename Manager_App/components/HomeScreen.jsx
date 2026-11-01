@@ -40,6 +40,7 @@ import Project from "./Project";
 import { ValueProvider } from "./ValueContext";
 import BottomNavBar from "../components/BottomNavBar";
 import { useAuth } from "./useAuth";
+import { displayName, hasRealName } from "../utils/displayName";
 import api from "../services/api";
 import { signInAnonymously } from "firebase/auth";
 import { auth } from "./firebase";
@@ -678,9 +679,9 @@ const HomeScreen = () => {
                   ? "Good Afternoon"
                   : "Good Evening"}
               </Text>
-              <Text style={styles.greetingName}>
-                {userName == "Apple User" ? "Hey there..." : userName}
-              </Text>
+              {hasRealName(userDetails) && (
+                <Text style={styles.greetingName}>{displayName(userDetails)}</Text>
+              )}
             </View>
           </View>
 
