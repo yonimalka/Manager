@@ -43,8 +43,19 @@ const processQueue = (err, token = null) => {
 
 const doRefresh = async () => {
   const refreshToken = await AsyncStorage.getItem("refreshToken");
-  if (!refreshToken) throw new Error("no_refresh_token");
-  const res = await axios.post(`${BASE_URL}/refresh`, { token: refreshToken });
+
+  let body;
+  if (refreshToken) {
+    body = { token: refreshToken };
+  } else {
+    // Bridge for existing users (email/Google) who never had a refresh token stored.
+    // Server accepts the expired access token once to issue a full token pair.
+    const legacyToken = await AsyncStorage.getItem("token");
+    if (!legacyToken) throw new Error("no_token");
+    body = { legacyAccessToken: legacyToken };
+  }
+
+  const res = await axios.post(`${BASE_URL}/refresh`, body);
   const newToken = res.data.accessToken;
   await AsyncStorage.setItem("token", newToken);
   if (res.data.refreshToken) {

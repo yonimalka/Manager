@@ -345,6 +345,34 @@ export default function ProfileDetails() {
                 <Text style={styles.deleteText}>Delete account</Text>
               </TouchableOpacity>
 
+              {__DEV__ && (
+                <View style={{ marginTop: 16, gap: 10 }}>
+                  <TouchableOpacity
+                    style={styles.devBtn}
+                    onPress={async () => {
+                      try {
+                        const res = await api.get("/dev/expired-token");
+                        await AsyncStorage.setItem("token", res.data.token);
+                        Alert.alert("Dev", "Token replaced with an already-expired copy.");
+                      } catch (e) {
+                        Alert.alert("Dev", "Failed: " + (e?.message || "unknown error"));
+                      }
+                    }}
+                  >
+                    <Text style={styles.devBtnText}>Expire my token</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.devBtn}
+                    onPress={async () => {
+                      await AsyncStorage.removeItem("refreshToken");
+                      Alert.alert("Dev", "Refresh token removed.");
+                    }}
+                  >
+                    <Text style={styles.devBtnText}>Remove refresh token</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -517,4 +545,7 @@ const styles = StyleSheet.create({
 
   deleteBtn:        { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16, paddingVertical: 14, borderRadius: 12, backgroundColor: "#fff", borderWidth: 0.5, borderColor: "rgba(60,60,67,0.10)" },
   deleteText:       { fontSize: 15, fontWeight: "500", color: "#ff3b30" },
+
+  devBtn:           { paddingVertical: 12, borderRadius: 10, backgroundColor: "#fef9c3", borderWidth: 1, borderColor: "#fde047", alignItems: "center" },
+  devBtnText:       { fontSize: 13, fontWeight: "600", color: "#713f12" },
 });
