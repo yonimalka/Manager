@@ -412,7 +412,8 @@ app.post("/refresh", (req, res) => {
     if (err) return res.status(403).json({ message: "Invalid refresh token" });
 
     const newAccessToken = generateAccessToken({ _id: user.userId });
-    res.json({ accessToken: newAccessToken });
+    const newRefreshToken = generateRefreshToken({ _id: user.userId });
+    res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
   });
 });
 app.get("/getUserDetails", authMiddleware, async (req, res) => {
