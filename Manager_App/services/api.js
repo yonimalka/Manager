@@ -171,10 +171,10 @@ api.interceptors.response.use(
 
     // ── 1 & 2: Token lifecycle ────────────────────────────────────────────────
     if (!isAuthEndpoint && hasStoredToken) {
-      // Expired token: explicit TOKEN_EXPIRED code (any status), or bare 403 legacy path
+      // Expired token: explicit TOKEN_EXPIRED code, or 401 with no code (pre-deploy moment)
       const isExpiredToken =
         code === "TOKEN_EXPIRED" ||
-        (status === 403 && !code && !cfg?.url?.includes("/refresh"));
+        (status === 401 && !code);
 
       if (isExpiredToken && !cfg._retry) {
         cfg._retry = true;
