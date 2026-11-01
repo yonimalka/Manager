@@ -440,13 +440,6 @@ app.post("/refresh", (req, res) => {
   return res.status(401).json({ message: "No refresh token provided" });
 });
 
-if (process.env.ALLOW_DEV_TOOLS === "1") {
-  app.get("/dev/expired-token", authMiddleware, (req, res) => {
-    const token = jwt.sign({ userId: req.userId }, JWT_SECRET, { expiresIn: "-1s" });
-    res.json({ token });
-  });
-}
-
 app.get("/getUserDetails", authMiddleware, async (req, res) => {
   const userId = req.userId;
   try {

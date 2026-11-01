@@ -354,6 +354,7 @@ export default function ProfileDetails() {
                 <Text style={styles.deleteText}>Delete account</Text>
               </TouchableOpacity>
 
+
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -526,4 +527,5 @@ const styles = StyleSheet.create({
 
   deleteBtn:        { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16, paddingVertical: 14, borderRadius: 12, backgroundColor: "#fff", borderWidth: 0.5, borderColor: "rgba(60,60,67,0.10)" },
   deleteText:       { fontSize: 15, fontWeight: "500", color: "#ff3b30" },
+
 });

@@ -71,10 +71,10 @@ export default function GoogleSignInButton() {
       },
     { headers: { "Content-Type": "application/json" } });
 
-      const { token, isNewUser: serverIsNewUser } = response.data;
+      const { token, refreshToken, isNewUser: serverIsNewUser } = response.data;
 
-      // Save login token locally
       await AsyncStorage.setItem("token", token);
+      if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
       const res = await api.get("/getUserDetails");
 
       if (serverIsNewUser === true) {

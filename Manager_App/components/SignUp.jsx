@@ -125,8 +125,9 @@ export default function SignUp() {
       });
 
       if (response.status === 200) {
-        const { token } = response.data;
+        const { token, refreshToken } = response.data;
         await AsyncStorage.setItem("token", token);
+        if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
         track("signup_completed", { method: "email" });
         navigation.reset({
           index: 0,

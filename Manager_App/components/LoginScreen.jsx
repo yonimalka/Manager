@@ -141,8 +141,9 @@ const LoginScreen = () => {
       );
 
       if (response.status === 200) {
-        const { token } = response.data;
+        const { token, refreshToken } = response.data;
         await AsyncStorage.setItem("token", token);
+        if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
         track("login_completed", { method: "email" });
         navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
       } else {
