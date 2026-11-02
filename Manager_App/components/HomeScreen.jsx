@@ -694,7 +694,11 @@ const HomeScreen = () => {
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitials}>
-                  {userName ? userName.trim().split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() : "?"}
+                  {(() => {
+                    const dn = displayName(userDetails);
+                    if (dn) return dn.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+                    return userDetails?.email?.[0]?.toUpperCase() || "?";
+                  })()}
                 </Text>
               </View>
             )}
@@ -923,7 +927,7 @@ const HomeScreen = () => {
               </View>
               <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14 }}>
                 <Text style={{ fontSize: 17, fontWeight: "600", color: "#F8FAFC", letterSpacing: -0.3, marginBottom: 4, lineHeight: 22 }}>
-                  Ready, {userName?.split(" ")[0]}.
+                  Ready, {(() => { const dn = displayName(userDetails); return dn ? dn.trim().split(/\s+/)[0] : "there"; })()}.
                 </Text>
                 <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", lineHeight: 19, marginBottom: 14 }}>
                   Log your first payment and watch your balance update live.
@@ -1548,7 +1552,7 @@ const styles = StyleSheet.create({
   // Scroll Content
   scrollContent: {
     paddingTop: 8,
-    paddingBottom: 100,
+    paddingBottom: 111,
     paddingHorizontal: 20,
   },
 
