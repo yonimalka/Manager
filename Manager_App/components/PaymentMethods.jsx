@@ -17,6 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../services/api";
 import { track } from "../utils/analytics";
+import { displayName as getDisplayName } from "../utils/displayName";
 export const PM_UPDATED_EVENT = "maggo:paymethods-updated";
 
 const METHODS = [
@@ -141,7 +142,6 @@ export default function PaymentMethods() {
   useEffect(() => {
     api.get("/getUserDetails").then((res) => {
       const pm = res.data?.paymentMethods;
-      const name = res.data?.name || "";
       if (pm) {
         setValues({
           paypalMe: pm.paypalMe || "",
@@ -151,7 +151,8 @@ export default function PaymentMethods() {
           bank:     pm.bank     || "",
         });
       }
-      setFirstName(name.trim().split(/\s+/)[0] || "");
+      const dn = getDisplayName(res.data || {});
+      setFirstName(dn ? dn.trim().split(/\s+/)[0] : "");
       setPmLoaded(true);
     }).catch(() => setPmLoaded(true));
   }, []);

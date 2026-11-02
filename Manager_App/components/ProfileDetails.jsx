@@ -27,6 +27,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, auth, signInFirebase } from "./firebase";
 import SubscriptionCard from "./SubscriptionCard";
 import { refreshSubscriptionStatus } from "../services/subscription";
+import { displayName, hasRealName } from "../utils/displayName";
 
 const isRTL = I18nManager.isRTL;
 
@@ -232,6 +233,21 @@ export default function ProfileDetails() {
     );
   };
 
+  const avatarInitials = (() => {
+    const dn = displayName(userDetails);
+    if (dn) return dn.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+    return userDetails?.email?.[0]?.toUpperCase() || "?";
+  })();
+
+  const heroSubtitle = (() => {
+    if (userDetails.businessName) {
+      const rn = userDetails.name && userDetails.name !== "Apple User" && userDetails.name !== userDetails.businessName
+        ? userDetails.name : null;
+      return rn || userDetails.email || "";
+    }
+    return userDetails.email || "";
+  })();
+
   if (!isEditing) {
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -249,12 +265,18 @@ export default function ProfileDetails() {
                     <Image source={{ uri: image || userDetails.logo }} style={styles.avatarImg} />
                   ) : (
                     <View style={styles.avatarFallback}>
-                      <Text style={styles.avatarInitial}>{userDetails?.name?.[0]?.toUpperCase() || "U"}</Text>
+                      <Text style={styles.avatarInitial}>{avatarInitials}</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.heroName}>{userDetails.name || "Your Name"}</Text>
-                <Text style={styles.heroBiz}>{userDetails.businessName || "Business Name"}</Text>
+                {hasRealName(userDetails) ? (
+                  <Text style={styles.heroName}>{userDetails.businessName || userDetails.name}</Text>
+                ) : (
+                  <TouchableOpacity onPress={() => setIsEditing(true)}>
+                    <Text style={[styles.heroName, { color: "#2563EB" }]}>Add your name</Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.heroBiz}>{heroSubtitle}</Text>
                 <TouchableOpacity style={styles.editPill} onPress={() => setIsEditing(true)}>
                   <Pencil size={11} color="#2563eb" />
                   <Text style={styles.editPillText}>Edit profile</Text>
@@ -268,12 +290,19 @@ export default function ProfileDetails() {
 
               <Text style={styles.sectionLabel}>Personal</Text>
               <View style={styles.group}>
-                <View style={styles.row}>
-                  <View style={[styles.rowIcon, { backgroundColor: "#5e5ce6" }]}><Ionicons name="person" size={14} color="#fff" /></View>
-                  <Text style={styles.rowLabel}>Name</Text>
-                  <Text style={styles.rowVal}>{userDetails.name || "—"}</Text>
-                  {/* <Ionicons name="chevron-forward" size={14} color="#c7c7cc" /> */}
-                </View>
+                {hasRealName(userDetails) ? (
+                  <View style={styles.row}>
+                    <View style={[styles.rowIcon, { backgroundColor: "#5e5ce6" }]}><Ionicons name="person" size={14} color="#fff" /></View>
+                    <Text style={styles.rowLabel}>Name</Text>
+                    <Text style={styles.rowVal}>{userDetails.name}</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.row} onPress={() => setIsEditing(true)}>
+                    <View style={[styles.rowIcon, { backgroundColor: "#5e5ce6" }]}><Ionicons name="person" size={14} color="#fff" /></View>
+                    <Text style={styles.rowLabel}>Name</Text>
+                    <Text style={[styles.rowVal, { color: "#2563EB" }]}>Add</Text>
+                  </TouchableOpacity>
+                )}
                 <View style={styles.rowDivider} />
                 <View style={styles.row}>
                   <View style={[styles.rowIcon, { backgroundColor: "#ff453a" }]}><Ionicons name="mail" size={14} color="#fff" /></View>
@@ -345,6 +374,7 @@ export default function ProfileDetails() {
                 <Text style={styles.deleteText}>Delete account</Text>
               </TouchableOpacity>
 
+
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -372,7 +402,7 @@ export default function ProfileDetails() {
                   <Image source={{ uri: image || userDetails.logo }} style={styles.avatarImg} />
                 ) : (
                   <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarInitial}>{userDetails?.name?.[0]?.toUpperCase() || "U"}</Text>
+                    <Text style={styles.avatarInitial}>{avatarInitials}</Text>
                   </View>
                 )}
                 <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
@@ -517,4 +547,5 @@ const styles = StyleSheet.create({
 
   deleteBtn:        { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16, paddingVertical: 14, borderRadius: 12, backgroundColor: "#fff", borderWidth: 0.5, borderColor: "rgba(60,60,67,0.10)" },
   deleteText:       { fontSize: 15, fontWeight: "500", color: "#ff3b30" },
+
 });

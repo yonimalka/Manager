@@ -24,6 +24,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import api from "../services/api";
 import { hasAnyPaymentMethod } from "../utils/paymentMethods";
+import { displayName as getDisplayName } from "../utils/displayName";
 import Toggle from "./Toggle";
 import { formatCurrency } from "../services/formatCurrency";
 import { track } from "../utils/analytics";
@@ -44,14 +45,16 @@ const DUE_OPTIONS = [
 
 const buildMsg = ({ client, amount, description, dueDate }, userName, currency, locale) => {
   const clientFirst = (client || "there").trim().split(/\s+/)[0];
-  const userFirst   = (userName || "").trim().split(/\s+/)[0] || "";
+  const dn          = getDisplayName({ name: userName });
+  const userFirst   = dn ? dn.trim().split(/\s+/)[0] : "";
   const amt         = formatCurrency(amount || 0, currency, locale);
   const descPart    = description ? ` for ${description}` : "";
   const due         = dueDate ? new Date(dueDate) : null;
   const future      = due && due > new Date();
   const dateStr     = due ? due.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
   const timePart    = future ? `is due ${dateStr}` : "is now due";
-  return `Hi ${clientFirst}, a friendly reminder that the ${amt}${descPart} ${timePart}. Thanks, ${userFirst}`;
+  const signOff     = userFirst ? ` Thanks, ${userFirst}` : " Thanks!";
+  return `Hi ${clientFirst}, a friendly reminder that the ${amt}${descPart} ${timePart}.${signOff}`;
 };
 
 const buildWaUrl = (phone, msg, region) => {

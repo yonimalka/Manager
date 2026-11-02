@@ -8,6 +8,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { View } from "react-native";
 import MainApp from "./MainApp";
 import InAppBanner from "./InAppBanner";
+import NetworkBanner from "./NetworkBanner";
 import { UndoToastProvider } from "./UndoToast";
 import { usePostHogBridge } from "../utils/analytics";
 import useNotificationTracking from "../utils/useNotificationTracking";
@@ -70,6 +71,7 @@ const App = () => {
             <View style={{ flex: 1 }}>
               <MainApp />
               <InAppBanner />
+              <NetworkBanner />
             </View>
           </PostHogProvider>
         </UndoToastProvider>
