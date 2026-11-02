@@ -77,6 +77,10 @@ async function generateInvoiceToken() {
   throw new Error("Could not generate unique invoice token");
 }
 
+function displayName(user) {
+  return (user.businessName || (user.name && user.name !== "Apple User" ? user.name : "") || "").trim();
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
@@ -377,15 +381,18 @@ app.post("/AppleSignIn", async (req, res) => {
     const isNewUser = !user;
 
     if (!user) {
-
       user = new UserModel({
         appleId,
         email: emailNorm || undefined,
-        name: [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ") || "Apple User",
+        name: [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ") || undefined,
       });
-
       await user.save();
-
+    } else if (!displayName(user)) {
+      const newName = [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ");
+      if (newName) {
+        user.name = newName;
+        await user.save();
+      }
     }
 
     const token = generateAccessToken(user);
@@ -432,13 +439,6 @@ app.post("/refresh", (req, res) => {
 
   return res.status(401).json({ message: "No refresh token provided" });
 });
-
-if (process.env.ALLOW_DEV_TOOLS === "1") {
-  app.get("/dev/expired-token", authMiddleware, (req, res) => {
-    const token = jwt.sign({ userId: req.userId }, JWT_SECRET, { expiresIn: "-1s" });
-    res.json({ token });
-  });
-}
 
 app.get("/getUserDetails", authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -2371,7 +2371,8 @@ cron.schedule("0 * * * *", async () => {
 
       const hoursSinceSignup = (now - new Date(user.createdAt)) / (1000 * 60 * 60);
       const n = user.notificationsSent || {};
-      const firstName = user.name?.split(" ")[0] || "there";
+      const dn = displayName(user);
+      const firstName = dn ? dn.split(" ")[0] : "there";
 
       if (!n.welcome && hoursSinceSignup >= 2 && hoursSinceSignup < 48) {
         await sendPush(
@@ -2534,9 +2535,10 @@ function buildPayPage({ invoice, user, token }) {
   const claimed = !isPaid && !!invoice.claimedAt;
   const pm      = user.paymentMethods || {};
 
-  const displayName = esc(user.businessName || user.name || "");
-  const initial     = ((user.businessName || user.name || "M").trim()[0] || "M").toUpperCase();
-  const firstName   = esc(((user.businessName || user.name || "Us").trim().split(/\s+/)[0]));
+  const dn          = displayName(user);
+  const displayNameEsc = esc(dn);
+  const initial     = dn ? (dn.trim()[0] || "").toUpperCase() : "$";
+  const firstName   = dn ? esc(dn.trim().split(/\s+/)[0]) : "";
   const logoSrc     = user.logo ? esc(user.logo) : "";
   const clientName  = esc(invoice.client || "");
   const descText    = esc(invoice.description || "");
@@ -2579,7 +2581,7 @@ function buildPayPage({ invoice, user, token }) {
       bodyMsg   = stamp ? `This payment was confirmed on ${esc(stamp)}.` : "This payment has been confirmed.";
     } else {
       titleText = clientName ? `Thanks, ${clientName}` : "Thanks";
-      bodyMsg   = `${firstName} has been notified that you paid. You can close this page.`;
+      bodyMsg   = firstName ? `${firstName} has been notified that you paid. You can close this page.` : `They've been notified that you paid. You can close this page.`;
     }
 
     const methodRow = methodLabel
@@ -2591,7 +2593,7 @@ function buildPayPage({ invoice, user, token }) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Payment request from ${displayName}</title>
+<title>${displayNameEsc ? `Payment request from ${displayNameEsc}` : "Payment request"}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8FAFC;color:#0F172A;min-height:100vh}
@@ -2624,7 +2626,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
   <h1 class="ty-h">${esc(titleText)}</h1>
   <p class="ty-b">${bodyMsg}</p>
   <div class="rc-card">
-    <div class="rc-row"><span class="rc-lbl">Paid to</span><span class="rc-val" style="display:flex;align-items:center;gap:8px">${logoSrc ? `<img src="${logoSrc}" alt="${displayName} logo" width="24" height="24" style="border-radius:6px;object-fit:contain;background:#fff;border:1px solid #E2E8F0;padding:2px" onerror="this.style.display='none'">` : ""}${displayName}</span></div>
+    <div class="rc-row"><span class="rc-lbl">Paid to</span><span class="rc-val" style="display:flex;align-items:center;gap:8px">${logoSrc ? `<img src="${logoSrc}" alt="${displayNameEsc} logo" width="24" height="24" style="border-radius:6px;object-fit:contain;background:#fff;border:1px solid #E2E8F0;padding:2px" onerror="this.style.display='none'">` : ""}${displayNameEsc || "&mdash;"}</span></div>
     <div class="rc-row"><span class="rc-lbl">For</span><span class="rc-val">${descText || "&mdash;"}</span></div>
     ${methodRow}
     <div class="rc-row"><span class="rc-lbl">Amount</span><span class="rc-val rc-amt">${amtEsc}</span></div>
@@ -2725,18 +2727,18 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
   // CTA buttons
   let ctaHtml;
   if (activeMethods.length === 0) {
-    ctaHtml = `<button id="cta-p" class="btn-p" data-type="claim" data-href="" onclick="ctaClick(this)">I’ve paid, let ${firstName} know</button>`;
+    ctaHtml = `<button id="cta-p" class="btn-p" data-type="claim" data-href="" onclick="ctaClick(this)">I’ve paid, let ${firstName || "them"} know</button>`;
   } else {
     const first  = activeMethods[0];
     const goUrl0 = first.type === "link" ? `/p/${token}/go/${first.goSlug}` : "";
     const lbl0   = esc(first.ctaLabel);
     ctaHtml = `<button id="cta-p" class="btn-p" data-type="${first.type}" data-href="${esc(goUrl0)}" onclick="ctaClick(this)">${lbl0}</button>`;
-    ctaHtml += `\n      <button class="btn-s" onclick="submitClaim()">Already paid? Let ${firstName} know</button>`;
+    ctaHtml += `\n      <button class="btn-s" onclick="submitClaim()">Already paid? Let ${firstName || "them"} know</button>`;
   }
 
   const methodsSection = activeMethods.length > 0
     ? `<div class="mlist">${methodRowsHtml}\n    </div>`
-    : `<div class="no-m"><p>Ask ${firstName} how to pay. Once you’ve paid, let them know below.</p></div>`;
+    : `<div class="no-m"><p>Ask ${firstName || "them"} how to pay. Once you’ve paid, let them know below.</p></div>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -2745,9 +2747,9 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:#F8
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0F172A">
-<meta property="og:title" content="${displayName} · ${amtEsc}">
+<meta property="og:title" content="${displayNameEsc ? `${displayNameEsc} · ${amtEsc}` : amtEsc}">
 <meta property="og:description" content="${ogDesc}">
-<title>Payment request from ${displayName}</title>
+<title>${displayNameEsc ? `Payment request from ${displayNameEsc}` : "Payment request"}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#0F172A}
@@ -2809,10 +2811,10 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;min-height:100
   <div class="top">
     <div class="urow">
       <div class="av" data-i="${esc(initial)}">${logoSrc
-        ? `<img src="${logoSrc}" alt="${displayName} logo" onerror="this.parentNode.textContent=this.parentNode.dataset.i">`
+        ? `<img src="${logoSrc}" alt="${displayNameEsc} logo" onerror="this.parentNode.textContent=this.parentNode.dataset.i">`
         : esc(initial)}</div>
       <div class="unblock">
-        <div class="uname">${displayName}</div>
+        ${displayNameEsc ? `<div class="uname">${displayNameEsc}</div>` : ""}
         <div class="usub">requests a payment</div>
       </div>
     </div>
@@ -2828,7 +2830,7 @@ body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;min-height:100
     ${ctaHtml}
     <div class="trust">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      <span class="trust-t">You pay ${firstName} directly. Maggo never holds your money.</span>
+      <span class="trust-t">You pay${firstName ? ` ${firstName}` : ""} directly. Maggo never holds your money.</span>
     </div>
   </div>
   <div class="foot"><span>Sent with <b>Maggo</b> &middot; <a href="/p/${token}/app">Get paid like this, free</a></span></div>
