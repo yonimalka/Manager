@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Alert,
   Animated,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
+import { track } from "../utils/analytics";
 import {
   VictoryPie ,
   VictoryChart,
@@ -46,8 +47,22 @@ const CATEGORY_COLORS = {
   general:   "#94A3B8",
 };
 
-const getCategoryColor = (cat) =>
-  CATEGORY_COLORS[(cat || "").toLowerCase().trim()] || "#94A3B8";
+const FALLBACK_COLORS = ["#F59E0B", "#8B5CF6", "#06B6D4", "#3B82F6", "#10B981", "#EC4899", "#F97316", "#6366F1", "#14B8A6", "#EAB308"];
+const KEYWORDS = [
+  ["material", "materials"], ["labor", "labor"], ["wage", "labor"], ["salary", "labor"],
+  ["equip", "equipment"], ["tool", "tools"], ["fuel", "fuel"], ["gas", "fuel"], ["petrol", "fuel"],
+  ["rent", "rent"], ["software", "software"], ["subscri", "software"], ["fixed", "fixed"],
+];
+const getCategoryColor = (cat) => {
+  const key = (cat || "").toLowerCase().trim();
+  if (!key || key === "general") return "#94A3B8";
+  if (CATEGORY_COLORS[key]) return CATEGORY_COLORS[key];
+  const kw = KEYWORDS.find(([k]) => key.includes(k));
+  if (kw) return CATEGORY_COLORS[kw[1]];
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return FALLBACK_COLORS[h % FALLBACK_COLORS.length];
+};
 
 const getCategoryBg = (cat) => {
   const color = getCategoryColor(cat);
@@ -56,9 +71,6 @@ const getCategoryBg = (cat) => {
 
 export default function CashFlow() {
   const { userId, userDetails } = useAuth();
-  if (!userDetails){
-    return <ActivityIndicator size="large"/>
-  }
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState("month");
@@ -74,6 +86,12 @@ export default function CashFlow() {
     if (!userId) return;
     fetchData();
   }, [userId, period]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) fetchData();
+    }, [userId, period])
+  );
 
   const fetchData = async () => {
     try {
@@ -117,10 +135,16 @@ export default function CashFlow() {
 
   /* ---------------- CHART DATA ---------------- */
 
-  const donutData = useMemo(() => [
-    { x: "Income",   y: totalIncome   || 0.001 },
-    { x: "Expenses", y: totalExpenses || 0.001 },
-  ], [totalIncome, totalExpenses]);
+  const isEmpty = totalIncome === 0 && totalExpenses === 0;
+  const donutSlices = useMemo(() => {
+    if (isEmpty) return [{ x: "None", y: 1, color: "#E5E7EB" }];
+    return [
+      { x: "Income",   y: totalIncome,   color: "#22C55E" },
+      { x: "Expenses", y: totalExpenses, color: "#F43F5E" },
+    ].filter((s) => s.y > 0);
+  }, [totalIncome, totalExpenses, isEmpty]);
+  const donutData   = donutSlices.map(({ x, y }) => ({ x, y }));
+  const donutColors = donutSlices.map((s) => s.color);
 
   const expenseByCategory = useMemo(() => {
     const map = {};
@@ -128,7 +152,7 @@ export default function CashFlow() {
       const cat = item.payments.category || "General";
       map[cat] = (map[cat] || 0) + (Number(item.payments.sumOfReceipt) || 0);
     });
-    return Object.entries(map)
+    const sorted = Object.entries(map)
       .map(([category, amount]) => ({
         category,
         amount,
@@ -136,7 +160,25 @@ export default function CashFlow() {
         color: getCategoryColor(category),
       }))
       .sort((a, b) => b.amount - a.amount);
+    const usedColors = new Set();
+    let fbIdx = 0;
+    return sorted.map((item) => {
+      let color = item.color;
+      if (usedColors.has(color)) {
+        while (fbIdx < FALLBACK_COLORS.length && usedColors.has(FALLBACK_COLORS[fbIdx])) fbIdx++;
+        color = FALLBACK_COLORS[fbIdx % FALLBACK_COLORS.length];
+        fbIdx++;
+      }
+      usedColors.add(color);
+      return { ...item, color };
+    });
   }, [expenses, totalExpenses]);
+
+  const categoryColorMap = useMemo(() => {
+    const m = {};
+    expenseByCategory.forEach(({ category, color }) => { m[category] = color; });
+    return m;
+  }, [expenseByCategory]);
 
   const breakdownData = expenseByCategory.length > 0
     ? expenseByCategory.map((c) => ({ x: c.category, y: c.amount }))
@@ -147,19 +189,12 @@ export default function CashFlow() {
     : ["#E5E7EB"];
 
 const Skeleton = ({ width, height, radius = 12, style }) => (
-  <View
-    style={[
-      {
-        width,
-        height,
-        borderRadius: radius,
-        backgroundColor: "#E5E7EB",
-      },
-      style,
-    ]}
-  />
+  <View style={[{ width, height, borderRadius: radius, backgroundColor: "#E5E7EB" }, style]} />
 );
 
+  if (!userDetails) {
+    return <ActivityIndicator size="large" style={{ flex: 1 }} />;
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 140 }}>
@@ -254,9 +289,9 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
                 height={240}
                 innerRadius={82}
                 radius={110}
-                padAngle={2.5}
+                padAngle={(chartMode === "overview" ? donutData.length : breakdownData.length) > 1 ? 2.5 : 0}
                 labels={() => null}
-                colorScale={chartMode === "overview" ? ["#22C55E", "#F43F5E"] : breakdownColors}
+                colorScale={chartMode === "overview" ? donutColors : breakdownColors}
                 style={{ parent: { overflow: "hidden" } }}
               />
               {/* Center */}
@@ -265,15 +300,15 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
                   <>
                     <Text style={styles.donutCenterLabel}>Net Cash Flow</Text>
                     <Text
-                      style={[styles.donutCenterValue, { color: netCashFlow >= 0 ? "#16A34A" : "#E11D48" }]}
+                      style={[styles.donutCenterValue, { color: isEmpty ? "#94A3B8" : netCashFlow >= 0 ? "#16A34A" : "#E11D48" }]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                     >
                       {formatCurrency(netCashFlow || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US")}
                     </Text>
-                    <View style={[styles.donutCenterBadge, { backgroundColor: netCashFlow >= 0 ? "#DCFCE7" : "#FFE4E6" }]}>
-                      <Text style={[styles.donutCenterBadgeText, { color: netCashFlow >= 0 ? "#16A34A" : "#E11D48" }]}>
-                        {netCashFlow >= 0 ? "▲ Positive" : "▼ Negative"}
+                    <View style={[styles.donutCenterBadge, { backgroundColor: isEmpty ? "#F1F5F9" : netCashFlow >= 0 ? "#DCFCE7" : "#FFE4E6" }]}>
+                      <Text style={[styles.donutCenterBadgeText, { color: isEmpty ? "#64748B" : netCashFlow >= 0 ? "#16A34A" : "#E11D48" }]}>
+                        {isEmpty ? "No activity yet" : netCashFlow >= 0 ? "▲ Positive" : "▼ Negative"}
                       </Text>
                     </View>
                   </>
@@ -285,7 +320,7 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
                     </Text>
                     <View style={[styles.donutCenterBadge, { backgroundColor: "#FFF1F2" }]}>
                       <Text style={[styles.donutCenterBadgeText, { color: "#E11D48" }]}>
-                        {expenseByCategory.length} categories
+                        {expenseByCategory.length === 0 ? "No expenses yet" : `${expenseByCategory.length} categories`}
                       </Text>
                     </View>
                   </>
@@ -346,6 +381,14 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
         color="#34C759"
         icon="trending-up"
         userDetails={userDetails}
+        type="income"
+        period={period}
+        totalIncome={totalIncome}
+        categoryColorMap={{}}
+        onLogPayment={() => {
+          track("cashflow_log_payment_tapped", { empty: incomes.length === 0 });
+          navigation.navigate("HomeScreen", { openLogIncome: true });
+        }}
       />
 
       {/* EXPENSE LIST */}
@@ -356,6 +399,18 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
         color="#FF3B30"
         icon="trending-down"
         userDetails={userDetails}
+        type="expense"
+        period={period}
+        totalIncome={totalIncome}
+        categoryColorMap={categoryColorMap}
+        onAddExpense={() => {
+          track("cashflow_add_expense_tapped", { empty: expenses.length === 0 });
+          navigation.navigate("HomeScreen", { openAddExpense: true });
+        }}
+        onAddMonthly={() => {
+          track("cashflow_add_fixed_tapped", { empty: expenses.length === 0 });
+          navigation.navigate("Finance");
+        }}
       />
     </ScrollView>
   );
@@ -377,75 +432,172 @@ const SummaryCard = ({ title, value, icon, color, userDetails, compact }) => (
   </View>
 );
 
-const TransactionSection = ({ title, data, amountKey, color, icon, userDetails }) => {
+const TransactionSection = ({
+  title, data, amountKey, color, icon, userDetails,
+  type, period, totalIncome, categoryColorMap,
+  onLogPayment, onAddExpense, onAddMonthly,
+}) => {
+  const periodLabel = period === "quarter" ? "quarter" : period === "year" ? "year" : "month";
+  const fmt = (v) => formatCurrency(v || 0, userDetails?.currency || "USD", userDetails?.locale || "en-US");
+
   const handleTransactionType = (item) => {
-    if (item.type == "income") {
-      if(item.source == "project"){
-        return "Project Payment"
-      } else {
-        return item.payer
-      }
-    } else {
-      return item.payments.category
+    if (item.type === "income") {
+      return item.source === "project" ? "Project Payment" : item.payer;
     }
-  }
+    return item.payments.category;
+  };
+
+  const rows = data.slice(0, 8);
+
+  /* ── Empty states ── */
+  const incomeEmpty = (
+    <View style={{ alignItems: "center", paddingVertical: 20, paddingHorizontal: 20, gap: 8 }}>
+      <Text style={{ fontSize: 15, fontWeight: "650", color: "#0F172A", textAlign: "center" }}>
+        No income this {periodLabel}
+      </Text>
+      <Text style={{ fontSize: 13, color: "#64748B", lineHeight: 19, maxWidth: 280, textAlign: "center" }}>
+        When a client pays you, log it here to see what you really made.
+      </Text>
+      <TouchableOpacity
+        onPress={onLogPayment}
+        style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#16A34A", borderRadius: 12, height: 44, paddingHorizontal: 16, marginTop: 6 }}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={18} color="#fff" />
+        <Text style={{ fontSize: 14, fontWeight: "650", color: "#fff" }}>Log payment</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const expenseEmpty = (
+    <View style={{ alignItems: "center", paddingVertical: 20, paddingHorizontal: 20, gap: 8 }}>
+      {totalIncome > 0 ? (
+        <>
+          <Text style={{ fontSize: 15, fontWeight: "650", color: "#0F172A", textAlign: "center" }}>
+            Is {fmt(totalIncome)} really what you kept?
+          </Text>
+          <Text style={{ fontSize: 13, color: "#64748B", lineHeight: 19, maxWidth: 280, textAlign: "center" }}>
+            Add rent, phone or insurance once as monthly costs. They repeat on their own, so your net stays honest.
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text style={{ fontSize: 15, fontWeight: "650", color: "#0F172A", textAlign: "center" }}>
+            No expenses this {periodLabel}
+          </Text>
+          <Text style={{ fontSize: 13, color: "#64748B", lineHeight: 19, maxWidth: 280, textAlign: "center" }}>
+            Rent, phone or insurance? Add them once as monthly costs and they repeat on their own.
+          </Text>
+        </>
+      )}
+      <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
+        <TouchableOpacity
+          onPress={onAddMonthly}
+          style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#0F172A", borderRadius: 12, height: 44, paddingHorizontal: 14 }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="repeat" size={16} color="#fff" />
+          <Text style={{ fontSize: 14, fontWeight: "650", color: "#fff" }}>Add monthly cost</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onAddExpense}
+          style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fff", borderRadius: 12, height: 44, paddingHorizontal: 14, borderWidth: 1, borderColor: "#E2E8F0" }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={16} color="#0F172A" />
+          <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Add expense</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  /* ── Footer action rows (when there are entries) ── */
+  const incomeFooter = (
+    <View style={{ paddingTop: 12, paddingBottom: 4, borderTopWidth: 1, borderTopColor: "#F1F5F9" }}>
+      <TouchableOpacity
+        onPress={onLogPayment}
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 44, borderRadius: 12, backgroundColor: "#F0FDF4", borderWidth: 1, borderColor: "#BBF7D0" }}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={16} color="#15803D" />
+        <Text style={{ fontSize: 14, fontWeight: "650", color: "#15803D" }}>Log payment</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const expenseFooter = (
+    <View style={{ flexDirection: "row", gap: 8, paddingTop: 12, paddingBottom: 4, borderTopWidth: 1, borderTopColor: "#F1F5F9" }}>
+      <TouchableOpacity
+        onPress={onAddMonthly}
+        style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 44, borderRadius: 12, borderWidth: 1, borderColor: "#E2E8F0" }}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="repeat" size={15} color="#0F172A" />
+        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Monthly cost</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onAddExpense}
+        style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 44, borderRadius: 12, borderWidth: 1, borderColor: "#E2E8F0" }}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={15} color="#0F172A" />
+        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>Expense</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-  <View style={styles.section}>
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {/* <TouchableOpacity style={[styles.addBtn, { backgroundColor: color }]}>
-        <MaterialIcons name="add" size={18} color="#fff" />
-      </TouchableOpacity> */}
-    </View>
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
 
-    <View style={styles.summaryCard}>
-      {data.slice(0, 8).map((item, idx) => {
-        const amount = Number(item?.payments?.[amountKey]) || 0;
-        return (
-          <View key={idx} style={styles.transaction}>
-            <View style={[styles.transactionIcon, { backgroundColor: `${color}22` }]}>
-              <MaterialIcons name={icon} size={16} color={color} />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.transactionTitle}>
-                {item.projectName || "Unknown"}
-              </Text>
-              <View style={styles.transactionDetails}>
-                <Calendar size={12} color={"#94A3B8"}/>
-                <Text style={styles.transactionDate}>{new Date(item.payments.date).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  }) ?? ''}</Text>
-                {item.type === "expense" && item.payments.category ? (
-                  <View style={[styles.categoryPill, { backgroundColor: getCategoryBg(item.payments.category) }]}>
-                    <Text style={[styles.categoryPillText, { color: getCategoryColor(item.payments.category) }]}>
-                      {item.payments.category}
-                    </Text>
+      <View style={styles.summaryCard}>
+        {rows.length === 0 ? (
+          type === "income" ? incomeEmpty : expenseEmpty
+        ) : (
+          <>
+            {rows.map((item, idx) => {
+              const amount = Number(item?.payments?.[amountKey]) || 0;
+              const isLast = idx === rows.length - 1;
+              const catColor = item.type === "expense" && item.payments.category
+                ? (categoryColorMap[item.payments.category] || getCategoryColor(item.payments.category))
+                : null;
+              const catBg = catColor ? catColor + "22" : null;
+              return (
+                <View key={idx} style={[styles.transaction, isLast && { borderBottomWidth: 0 }]}>
+                  <View style={[styles.transactionIcon, { backgroundColor: `${color}22` }]}>
+                    <MaterialIcons name={icon} size={16} color={color} />
                   </View>
-                ) : (
-                  <>
-                    <Tag size={12} color="#94A3B8"/>
-                    <Text style={styles.transactionAbout}>{handleTransactionType(item)}</Text>
-                  </>
-                )}
-              </View>
-            </View>
-
-            <Text style={[styles.transactionAmount, { color }]}>
-              {formatCurrency(
-                 amount || 0,
-                 userDetails?.currency || "USD",
-                 userDetails?.locale || "en-US"
-                )}
-            </Text>
-          </View>
-        );
-      })}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.transactionTitle}>{item.projectName || "Unknown"}</Text>
+                    <View style={styles.transactionDetails}>
+                      <Calendar size={12} color="#94A3B8" />
+                      <Text style={styles.transactionDate}>
+                        {new Date(item.payments.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) ?? ""}
+                      </Text>
+                      {item.type === "expense" && item.payments.category ? (
+                        <View style={[styles.categoryPill, { backgroundColor: catBg }]}>
+                          <Text style={[styles.categoryPillText, { color: catColor }]}>{item.payments.category}</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Tag size={12} color="#94A3B8" />
+                          <Text style={styles.transactionAbout}>{handleTransactionType(item)}</Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <Text style={[styles.transactionAmount, { color }]}>{fmt(amount)}</Text>
+                </View>
+              );
+            })}
+            {type === "income" ? incomeFooter : expenseFooter}
+          </>
+        )}
+      </View>
     </View>
-  </View>
-  )
+  );
 };
 
 const styles = StyleSheet.create({

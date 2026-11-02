@@ -372,6 +372,17 @@ const HomeScreen = () => {
     return () => { refreshSub.remove(); claimSub.remove(); pmSub.remove(); };
   }, []);
 
+  useEffect(() => {
+    const params = route.params;
+    if (params?.openLogIncome) {
+      setLogIncomeVisible(true);
+      navigation.setParams({ openLogIncome: undefined });
+    }
+    if (params?.openAddExpense) {
+      setReceiptModalVisible(true);
+      navigation.setParams({ openAddExpense: undefined });
+    }
+  }, [route.params]);
 
   /* ── Demo project seeding ── */
   const DEMO_PROJECTS = {
