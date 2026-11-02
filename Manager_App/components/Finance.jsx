@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Alert,
 } from "react-native";
 import { Plus, ChevronDown, ChevronUp, ListChevronsUpDown, Repeat, CloudUpload, BanknoteArrowUp, Calendar, DollarSign, Tag, ListChecks  } from "lucide-react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
@@ -42,7 +42,9 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 export default function FinanceFixedExpenses() {
   const navigation = useNavigation();
+  const route = useRoute();
   const { userId, userDetails } = useAuth();
+  const autoOpenedRef = useRef(false);
 
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState("");
@@ -63,6 +65,11 @@ export default function FinanceFixedExpenses() {
   const [uploadingFor, setUploadingFor] = useState(null);
 
   const toggleExpand = () => {
+    if (expanded && autoOpenedRef.current && route.params?.returnTo === "CashFlow") {
+      autoOpenedRef.current = false;
+      navigation.goBack();
+      return;
+    }
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(!expanded);
   };
@@ -168,14 +175,29 @@ const openExpenseOccurrences = async (expense) => {
     setDayOfWeek(null);
     setMonth(null);
     setExpanded(false);
+    autoOpenedRef.current = false;
+    if (route.params?.returnTo === "CashFlow") {
+      navigation.goBack();
+    }
   };
   const fetchFixedExpenses = async () => {
   const res = await api.get("/fixedExpenses"); 
   setFixedExpenses(res.data);
   };
   useEffect(() => {
-  fetchFixedExpenses();
+    fetchFixedExpenses();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.openAddFixed) {
+        autoOpenedRef.current = true;
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpanded(true);
+        navigation.setParams({ openAddFixed: undefined });
+      }
+    }, [route.params?.openAddFixed])
+  );
   const toggleActive = async (id) => {
   await api.patch(`/fixedExpense/${id}/toggle`);
   fetchFixedExpenses();

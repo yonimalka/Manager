@@ -409,7 +409,7 @@ const Skeleton = ({ width, height, radius = 12, style }) => (
         }}
         onAddMonthly={() => {
           track("cashflow_add_fixed_tapped", { empty: expenses.length === 0 });
-          navigation.navigate("Finance");
+          navigation.navigate("Finance", { openAddFixed: true, returnTo: "CashFlow" });
         }}
       />
     </ScrollView>
